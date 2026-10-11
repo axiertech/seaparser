@@ -1,0 +1,28 @@
+# Hemligheter och lokal konfiguration
+.env
+.env.*
+!.env.example
+app.env
+config/
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Frontend
+node_modules/
+dist/
+coverage/
+
+# Lokala verktyg och data
+.codex/
+*.log
+data/
+tmp/
