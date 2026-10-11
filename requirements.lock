@@ -1,0 +1,2 @@
+# SeaParser: inga externa Pythonberoenden, 2026-10-12.
+# Installera senare med pip --require-hashes -r requirements.lock.

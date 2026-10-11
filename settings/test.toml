@@ -1,0 +1,6 @@
+environment = "test"
+[database]
+host = "127.0.0.1"
+port = 5432
+name = "seaparser_test"
+user = "seaparser_test"

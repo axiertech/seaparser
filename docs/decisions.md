@@ -68,3 +68,14 @@
 - Detta ersätter tidigare uppskjutande av hinderkontroll endast för
   syntetiska rektanglar. Djup, sjökort och verklig navigerbarhet återstår.
 - Leveransstatus, acceptanskriterier och nästa uppgifter hålls i progress.md.
+
+## Kontrollerat utvecklingsmandat 2026-10-12
+
+- Projektändringar, tester/offlinekontroller, egna granskade lokala commits,
+  .venv och låsfilstyrd npm ci godkända av användaren. AGENTS.md uppdaterad.
+- Inga systempaket/sudo. Databasoperationer och push ännu inte godkända.
+- Testdatabas/roll föreslås som seaparser_test, lokal SCRAM över IPv4-loopback
+  och explicit HBA-reject för testrollen mot andra databaser/anslutningsvägar.
+  Utvecklingsdatabasens PUBLIC-rättigheter ändras inte i administratörsunderlaget.
+- SQL, HBA och verifieringsordning finns i database-test-runbook.md; inget kördes
+  mot PostgreSQL. PostGIS behövs inte för den aktuella schemabaslinjen.

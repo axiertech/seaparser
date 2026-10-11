@@ -27,3 +27,21 @@ Okända eller gamla prognoser får inte behandlas som säkra. Landmask är inte 
 Planera nästa begränsade leverans, implementera, verifiera och redovisa resultat samt kvarvarande osäkerhet. Ingen självgående bakgrundsaktivitet eller serveråtkomst från en annan chatt ska förutsättas.
 
 Rekommendera starkare eller annan AI-modell när en konkret uppgift motiverar det. Ange förväntad nytta och verifierad kostnad om tillgänglig. Byt inte modell eller köp tjänster automatiskt. AI-modeller ersätter inte tester eller maritim sakkunnig validering.
+
+## Godkänt utvecklingsmandat 2026-10-12
+
+Agenten får självständigt ändra SeaParsers projektfiler, köra tester och
+lokala offlinekontroller samt göra lokala commits av egna granskade ändringar.
+Bevara andra lokala ändringar; använd aldrig generell staging som tar med dem.
+
+Agenten får skapa projektets .venv och installera projektberoenden där samt
+köra npm ci med repositoryts låsfil i frontend/. Använd officiella paketregister
+(PyPI och npm), verifiera officiella versioner före nya paketinstallationer och
+versionsstyr exakta beroenden med låsfiler. Installera inte globalt, ändra inte
+systempaket och använd inte sudo. Om systemstöd saknas: redovisa hindret.
+
+Databasskapande, databasanslutningar, migrationer mot databas, ändringar av
+serverns anslutningsregler och privata konfigurationsfiler kräver separat
+uttryckligt godkännande. Push, publicering och nya betalda resurser ingår inte.
+Uppdatera arbetsloggen med aktuell uppgift, verifierat resultat och nästa steg.
+Mandatet gäller arbete i aktiva sessioner, inte fristående bakgrundsaktivitet.

@@ -1,0 +1,7 @@
+# ADMINISTRATÖRSUNDERLAG: infoga detta block FÖRE breda befintliga regler.
+# Minsta tillåtna väg är TCP över 127.0.0.1, exakt databas och roll, SCRAM.
+# Sockets, IPv6 och andra adresser/databaser nekas för testrollen.
+host    seaparser_test    seaparser_test    127.0.0.1/32    scram-sha-256
+local   all               seaparser_test                       reject
+host    all               seaparser_test    0.0.0.0/0       reject
+host    all               seaparser_test    ::/0            reject

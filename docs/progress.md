@@ -3,7 +3,8 @@
 ## Arbetsform
 
 Lokala, reversibla leveranser inom axiertech/seaparser. Befintliga lokala
-ändringar bevaras. Ingen installation, databasändring, publicering eller push.
+ändringar bevaras. Projektinstallationer och lokala commits är godkända enligt
+AGENTS.md. Databasoperationer, publicering och push kräver separat godkännande.
 Dokumentet uppdateras efter varje genomförd leverans. Ingen bakgrundsaktivitet
 förutsätts efter att arbetet har stannat för granskning.
 
@@ -85,3 +86,47 @@ Ingen omväg väljs automatiskt ännu. Leveransen stannar här för granskning.
 
 Verkliga polarer/prognoser, geodetik, djup, sjökort, prognosålder, UI/editor,
 API, databas och drift återstår. Prototypen är inte verifierad för verklig navigation.
+
+## Miljöförberedelse 2026-10-12
+
+Aktuell uppgift: förbereda en isolerad, kontrollerad utvecklingsmiljö utan
+installation, databasanslutning, commit eller push. Förslag och mandat finns i
+[development-environment.md](development-environment.md).
+
+AGENTS.md, docs/ och befintlig prototyp/testkod lästa. Körning sker som seaparser.
+De fyra befintligt ändrade prototypfilerna lämnades orörda.
+Verifierat: Python 3.14.4, Node 22.22.1 och npm 9.2.0; sex kända privata
+konfigurationsnycklar har värden (värden ej utskrivna). 38 prototyptester och fyra
+nya miljöskyddstester passerar. Syntax/TOML/beroendebas/domänimportkontroll och
+frontendsyntax passerar. Frontend har noll produkttester. Migrationsplan körd
+utan anslutning. Git diff --check passerar.
+
+Förberett: versionsfiler, tomma beroendelås, venv-kommandon, skilda inställningar,
+testroll/databasunderlag, checksumskyddade SQL-migrationer, CI och arbetsmandat.
+Inte verifierat: faktisk DB-isolering/anslutning, migrationer i PostgreSQL eller
+GitHub Actions. CI-revisioner ska låsas efter officiell granskning före aktivering.
+Nästa steg: användaren granskar och godkänner exakt de separata åtgärder som anges
+i miljöförslaget. Ingen bakgrundsaktivitet fortsätter efter denna leverans.
+
+## Mandat och administratörsunderlag 2026-10-12
+
+Aktuell uppgift: dokumentera användarens godkända mandat och förbereda SQL,
+minsta HBA/behörigheter, exakta verifierings-/migrationskommandon och CI-beskrivning.
+AGENTS.md, miljöförslag och beslutslogg uppdaterade. Administratörsunderlaget
+begränsar testrollen till egen databas över IPv4-loopback och SCRAM; utvecklingens
+PUBLIC-behörigheter lämnas orörda. HBA-blocket måste placeras före bredare regler.
+
+Verifierat: npm ci med officiella npm-registret lyckades (tom beroendegraf).
+make prepare-python försöktes men misslyckades: ensurepip saknas. .venv är delvis
+skapad med include-system-site-packages=false, inte färdiginstallerad. Ingen sudo
+eller systeminstallation gjord. Administratören behöver tillhandahålla
+python3.14-venv/ensurepip innan förberedelsen kan slutföras. psql finns lokalt.
+38 prototyptester och 4 miljötester passerar med befintlig Python. Syntax/TOML,
+domän-/beroendekontroller, frontendsyntax och git diff --check passerar.
+Frontend har fortfarande noll produkttester. Migrationsplan körd utan anslutning.
+Befintliga ändringar i prototype/ jämförda med startens diff och är identiska.
+
+SQL/HBA granskade mot officiell PostgreSQL-dokumentation; aldrig körda mot server.
+CI-jobb och behörigheter dokumenterade, inte körda. Nästa steg: administratörsstöd
+för venv och separat godkännande av testdatabas/HBA/lösenord samt därefter
+anslutningsverifiering och testmigrationer. Push kräver fortfarande godkännande.
