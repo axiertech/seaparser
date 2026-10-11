@@ -13,6 +13,18 @@
 - Designer ska kunna ändra befintlig layout visuellt utan programmerare.
 - Modellbehov utvärderas veckovis och under aktivt arbete vid behov. Dyrare alternativ rekommenderas med konkret motivering.
 
+## Avgränsad beräkningsprototyp 2026-10-11
+
+- Python med enbart standardbiblioteket, lokalt öst/nord-plan i meter och UTC.
+- Explicit mittpunktsintegration av båtens vattenhastighet plus ström vid
+  simulerad position och tid. Syntetisk, uppskattad konstant båtprofil.
+- Saknad, ogiltig eller tidsmässigt otäckande ström avbryter som standard.
+  Nollström som fallback måste väljas aktivt och redovisas per uppslag.
+- Det lokala strömförslaget i `stromhantering.md` har lästs tillsammans med
+  grundkraven. Geodetik, kurskompensation, polarer, interpolation, ETA och
+  hinderkontroll skjuts upp; detta är en rörelseprototyp, inte ruttplanering.
+- Körinstruktioner, referenser och toleranser finns i `../prototype/README.md`.
+
 ## Föreslaget, ännu inte beslutat
 
 - Python/FastAPI, PostgreSQL/PostGIS och React/TypeScript.
@@ -31,3 +43,28 @@
 - Exakt definition av abonnemangens uppdateringar.
 - Docker eller annan reproducerbar drift och tillåtna serveroperationer.
 - Godkännande av första GitHub-publiceringen av dessa grundfiler.
+
+## Målfärd i lokalt plan 2026-10-11
+
+- Den tidigare rörelseprototypen har utökats med rak färd till mål, kompenserad
+  styrkurs och restid. Tidigare uppskjutande av kurskompensation/ETA ovan
+  beskriver första leveransen och ersätts för denna avgränsade modell.
+- Fart genom vattnet antas konstant och vindavdrift uttryckligen noll.
+  Styrningen antas omedelbar; ingen polar eller seglingsvinkelkontroll finns.
+- Målpositionstolerans 0,01 m, minsta framdrift större än 0,01 m/s,
+  tidsgräns 86400 s och steggräns 100000 som konfigurerbara standardvärden.
+- Saknade strömdata, omöjlig kurs, otillräcklig framdrift och körgräns ger
+  uttryckliga avbrottsstatusar utan vanlig restid. Ingen väntan optimeras.
+- Referenser, halverade tidssteg och kvarvarande numeriska begränsningar
+  dokumenteras i prototype/README.md. Hinderkontroll, segelpolar, geodetik
+  och ruttoptimering återstår. Ingen installation, databas eller publicering.
+
+## Syntetisk hinderkontroll 2026-10-11
+
+- Slutna axelparallella rektanglar i lokalt plan, med valfri explicit marginal.
+  Hela integrerade färdsegment testas geometriskt; kantkontakt blockeras.
+- Samma kontroll används i tidsbegränsad rörelse och målfärd. Målfärd ger
+  `blocked` utan restid; blockerade steg accepteras inte som färd.
+- Detta ersätter tidigare uppskjutande av hinderkontroll endast för
+  syntetiska rektanglar. Djup, sjökort och verklig navigerbarhet återstår.
+- Leveransstatus, acceptanskriterier och nästa uppgifter hålls i progress.md.
