@@ -627,3 +627,29 @@ Verifierat: make check,144 Python-tester och övriga offline-/frontendkontroller
 passerar. Föregående prognosunderlags CI är success på0fd50948. Tidigare76 lokala
 loggrader bevaras ostagade. Arbetsbranch development/forecast-validation.
 Nästa del efter denna commits CI: kontinuerligt datastöd över integrerade segment.
+
+## Segmentens prognosstöd 2026-10-12
+
+Föregående mandat/backlog-commit e4ff070 har godkänd GitHub CI.
+Nästa backlogdel implementerad: ForecastDataset verifierar interpolationsstödet
+över hela accepterade affina numeriska färdsegment, genom korsade rum/tid-cellplan.
+Saknade stödnoder, masker inklusive gränser och extrapolation avvisar hela steget
+innan position/komfort uppdateras. Aktiverad WeatherPolicy kräver alla tre
+produkterna; matematiska anrop utan policy kontrollerar strömstöd. Legacy
+callbacks är fortsatt punktkontrollerade. Ingen nätverkshämtning tillkommer.
+Datastöd skiljs uttryckligen från kontinuerligt godkända vädervärden i export.
+
+Verifierat: make check med135 prototyp- och17 övriga Python-tester (152 totalt),
+alla godkända; åtta nya tester täcker smala rum-/tidsgap, missing-noder, diagonal/
+kantpassage, täckning/sluttid, simulering och samtliga jämförelsealternativ,
+kontrolltak4096, halverat steg och komplett säker omväg.100 m vid1 m/s ger100 s
+även med halverat steg; en1 m bred mask mellan ordinarie uppslag avvisas utan
+accepterad rörelse eller exponering. Rörelse fram till valid_until bevaras,
+medan ankomstkontrollen fortsatt avvisar utgångna data.
+
+Syntax/konfiguration/importgränser/Actions-SHA och frontendkontroller passerar;
+frontend har0 produkttester. git diff --check passerar. Begränsning: kontrollerad
+lokal numerisk bana/datastöd är inte verifierade kontinuerliga hårda vädervärden
+eller verklig båttrajektoria. Inga server-/databasändringar eller nya tjänster.
+Tidigare76 lokala loggrader bevaras ostagade. Nästa del efter granskning/push och
+godkänd CI: reproducerbart syntetiskt planeringsscenario med spårbara indata.

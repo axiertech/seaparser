@@ -119,6 +119,13 @@ def forecast_step(first, position, time, seconds, midpoint):
     raise ValueError("Strömdata saknas: prognosgränserna kunde inte lösas för tidssteget")
 
 
+def check_forecast_segment(environment, start, start_time, end, end_time, weather_policy):
+    checker = getattr(environment, 'validate_segment', None)
+    if checker is not None:
+        checker(start, start_time, end, end_time,
+                required_products=('current', 'wind', 'waves') if weather_policy is not None else ('current',))
+
+
 def simulate(boat: BoatModel, environment: Environment, start, duration, step_seconds=60, position=Vector(0, 0),
              *, allow_missing_current=False, obstacles=(), weather_policy: WeatherPolicy | None = None,
              forecast_policy: ForecastPolicy | None = None, clock: Clock | None = None):
@@ -144,6 +151,7 @@ def simulate(boat: BoatModel, environment: Environment, start, duration, step_se
             first, position, time, dt,
             lambda p, t: evaluate(boat, environment, p, t, allow_missing_current, weather_policy, forecast_policy, planning_time))
         check_segment(position, end, obstacles)
+        check_forecast_segment(environment, position, time, end, time+timedelta(seconds=dt), weather_policy)
         position = end
         time += timedelta(seconds=dt)
         steps.append(Step(first, middle, position, time))
@@ -174,6 +182,7 @@ class Voyage:
     arrival_weather_status: str = "not_requested"
     arrival_observation: Conditions | None = None
     weather_verification_scope: str = WEATHER_VERIFICATION_SCOPE
+    forecast_support_scope: str = "Kontrollerat vid uppslag; inget kontinuerligt datastöd verifierat."
 
 
 def compensated_evaluation(boat: BoatPerformance, direction, environment, position, time,
@@ -240,7 +249,13 @@ def sail_to_target(environment: Environment, start, target: Vector, *, speed_kno
                       if forecast_policy is not None else "not_requested",
                       destination_reached=(target - position).speed <= tolerance_m,
                       arrival_checked_time=arrival_checked_time, arrival_weather_status=arrival_weather_status,
-                      arrival_observation=arrival_observation)
+                      arrival_observation=arrival_observation,
+                      forecast_support_scope=(
+                          "Hela accepterade integrerade segment: datastöd för vind/ström/vågor; vädervärden endast vid uppslag."
+                          if weather_policy is not None else
+                          "Hela accepterade integrerade segment: strömmens datastöd; övriga produkter endast vid uppslag.")
+                      if getattr(environment, 'validate_segment', None) is not None else
+                      "Kontrollerat vid uppslag; inget kontinuerligt datastöd verifierat.")
 
     obstacles = tuple(obstacles)
     try:
@@ -283,6 +298,8 @@ def sail_to_target(environment: Environment, start, target: Vector, *, speed_kno
             if dt < 1e-6:
                 return result("limit_reached", "Tidsupplösningen räcker inte för målpassagen")
             check_segment(position, end, obstacles)
+            check_forecast_segment(environment, position, time, end,
+                                   start+timedelta(seconds=elapsed+dt), weather_policy)
         except ObstacleCollision as exc:
             return result("blocked", str(exc))
         except WeatherLimitExceeded as exc:

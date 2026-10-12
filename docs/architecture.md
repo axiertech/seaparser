@@ -43,5 +43,6 @@ vind/ström/vågor. Det implementerar miljögränssnittet utan SQL, HTTP eller l
 callbacks. Rutt-/avgångsmotorn får samma underlag hela jämförelsen; byte av
 prognos sker endast genom ett nytt explicit underlag/anrop. Transport ingår inte
 i den syntetiska adaptern. Lokalt geografiskt origo, enheter, referensramar,
-interpolationsregel och gap/masker valideras före planering; punktkontroller
-ersätter fortfarande inte kontinuerlig täckningsvalidering mellan uppslag.
+interpolationsregel och gap/masker valideras före planering. För frysta rutnät
+kontrolleras dessutom interpolationsstöd längs hela accepterade integrerade
+segment. Hårda vädervärden verifieras fortfarande endast vid uppslag och ankomst.

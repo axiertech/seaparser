@@ -1,6 +1,6 @@
 """Frozen normalized grid snapshot; deterministic interpolation, no I/O."""
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from math import atan2, degrees, hypot, isfinite
 
 from .environment import Conditions, WaveData
@@ -90,10 +90,11 @@ class GridProduct:
             raise ValueError('Ogiltig cellmask')
         object.__setattr__(self, 'invalid_cells', cells)
 
-    def interpolate(self, position, time):
+    def interpolate(self, position, time, *, allow_validity_end=False):
         time = utc_time(time, 'Uppslagstid')
         m = self.metadata
-        if not m.valid_from <= time < m.valid_until:
+        if not (m.valid_from <= time < m.valid_until
+                or allow_validity_end and m.valid_from <= time == m.valid_until):
             raise DataUnavailable('Utanför produktens giltighet [från,till); extrapolation avvisad')
         if not m.coverage.contains(position):
             raise DataUnavailable('Utanför geografisk täckning; extrapolation avvisad')
@@ -134,6 +135,48 @@ class GridProduct:
         return tuple(result)
 
 
+    def validate_segment(self, start, start_time, end, end_time, *, max_intervals=4096):
+        """Prove support along one affine space/time segment, not weather values.
+
+        Split at all crossed grid planes; check endpoints and each open cell.
+        An accepted movement can end at valid_until; arrival remains exclusive.
+        """
+        start_time, end_time = utc_time(start_time, 'Segmentstart'), utc_time(end_time, 'Segmentslut')
+        if end_time < start_time:
+            raise DataUnavailable('Segmenttider måste vara stigande')
+        if not isinstance(max_intervals, int) or isinstance(max_intervals, bool) or max_intervals <= 0:
+            raise ValueError('Positiv segmentkontrollgräns krävs')
+        # Endpoint checks also reject unknown/nonfinite/outside coverage.
+        self.interpolate(start, start_time)
+        self.interpolate(end, end_time, allow_validity_end=end_time > start_time)
+        fractions = {0.0, 1.0}
+        duration = (end_time-start_time).total_seconds()
+        delta = end-start
+        axes = ((self.east_m, start.east, delta.east),
+                (self.north_m, start.north, delta.north))
+        for axis, origin, change in axes:
+            if change:
+                for boundary in axis:
+                    fraction = (boundary-origin)/change
+                    if 0 < fraction < 1:
+                        fractions.add(fraction)
+                        if len(fractions)-1 > max_intervals:
+                            raise DataUnavailable('Segmentets cellkontrollgräns nådd')
+        if duration:
+            for boundary in self.times:
+                fraction = (boundary-start_time).total_seconds()/duration
+                if 0 < fraction < 1:
+                    fractions.add(fraction)
+                    if len(fractions)-1 > max_intervals:
+                        raise DataUnavailable('Segmentets cellkontrollgräns nådd')
+        ordered = sorted(fractions)
+        checks = ordered[1:-1] + [(a+b)/2 for a, b in zip(ordered, ordered[1:])]
+        for fraction in checks:
+            self.interpolate(start+delta.scaled(fraction),
+                             start_time+timedelta(seconds=duration*fraction),
+                             allow_validity_end=True)
+
+
 @dataclass(frozen=True)
 class ForecastDataset:
     dataset_id: str
@@ -153,6 +196,17 @@ class ForecastDataset:
         if len(origins) != 1:
             raise ValueError('Alla produkter måste använda samma geografiska origo')
         object.__setattr__(self, 'products', products)
+
+    def validate_segment(self, start, start_time, end, end_time, *,
+                         required_products=('current', 'wind', 'waves')):
+        by_name = {p.metadata.product: p for p in self.products}
+        for name in required_products:
+            if name not in by_name:
+                raise DataUnavailable(f'{name}: produkt saknas för segmentkontroll')
+            try:
+                by_name[name].validate_segment(start, start_time, end, end_time)
+            except DataUnavailable as error:
+                raise DataUnavailable(f'{name}: segmentets datastöd saknas: {error}') from error
 
     @property
     def product_metadata(self):

@@ -66,6 +66,11 @@ class Environment(Protocol):
     def evaluate(self, position: Vector, time: datetime) -> Conditions: ...
 
 
+class SegmentEnvironment(Environment, Protocol):
+    def validate_segment(self, start: Vector, start_time: datetime, end: Vector,
+                         end_time: datetime, *, required_products: tuple[str, ...]) -> None: ...
+
+
 @dataclass(frozen=True)
 class SyntheticEnvironment:
     field: Callable[[Vector, datetime], Conditions]

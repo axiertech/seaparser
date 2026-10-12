@@ -176,3 +176,17 @@ via enhetsvektorer; odefinierad riktning blir datalucka. Produkten är testdata,
 inte en verifierad prognosadapter eller geodetisk modell. Punktkontroller ger
 fortfarande inte kontinuerligt täckningsbevis mellan uppslag. Verklig integration
 kräver granskad projektion, källformat och intervall-/maskvalidering.
+
+## 2026-10-12: Segmentkontroll av prognosens interpolationsstöd
+
+Frysta rutnätsprodukter kontrollerar varje traverserad rum/tid-cell över hela det
+accepterade affina numeriska färdsegmentet. Markerade ogiltiga celler, saknade
+stödnoder och rum/tid utanför täckning avvisar hela steget före positions- och
+komfortuppdatering. En aktiverad väderpolicy kräver vind/ström/vågor; utan policy
+kontrolleras strömmens stöd. Rörelse kan avslutas vid giltighetens exkluderade
+sluttid, men separat ankomstkontroll kräver fortfarande giltiga data.
+Tak4096 delintervall per produkt/segment ger uttryckligt avbrott vid exhaustion.
+Detta verifierar datastöd för det lokala integrerade segmentet, inte kontinuerliga
+hårda vädervärden, källnoggrannhet eller verklig navigation. Legacy miljöcallbacks
+saknar detta kontrakt. Tidigare begränsning om missade markerade maskceller är
+ersatt endast för frysta rutnät med aktiverad segmentkontroll.

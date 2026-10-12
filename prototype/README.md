@@ -728,3 +728,40 @@ Begränsning kvarstår: start-/mittpunkts-/ankomstkontroller bevisar inte kontin
 täckning mellan uppslag. Ett segment kan fortfarande hoppa över en smal mask eller
 vädertopp om inget uppslag träffar den. Ingen landmask, projektion eller verklig
 prognostjänst har kopplats, och inga maritima säkerhetsgarantier lämnas.
+
+## Datastöd över hela integrerade segment
+
+ForecastDataset.validate_segment utökar tidigare punktkontroller: det accepterade
+raka numeriska färdsegmentet modelleras affint i position och UTC-tid. För varje
+krävd produkt delas segmentet vid alla korsade öst-/nord-/tidsplan i rutnätet.
+Stödet kontrolleras på segmentets ändpunkter, korsningar och varje delintervalls
+mittpunkt. Därmed testas varje traverserad interpolationscell, inklusive slutna
+maskgränser. En smal markerad cell eller saknad stödnod mellan de vanliga start-/
+mittpunktsuppslagen kan inte hoppas över. Ingen väderhämtning tillkommer.
+
+simulate och sail_to_target anropar det valfria SegmentEnvironment-kontraktet
+**innan** rörelsen/komforten accepteras. Vid fel avvisas hela steget, tidigare
+accepterade steg bevaras och en målfärd ger data_unavailable med produkt/orsak.
+Rutt-/avgångsjämförelser återanvänder samma skydd. Aktiverad WeatherPolicy kräver
+stödet för ström, vind och vågor; matematiska anrop utan policy verifierar här
+endast strömmens stöd. Med frysta rutnät är kontrollen strikt även om legacy-
+strömfallback valts; luckor blir inte kontinuerligt godkända genom nollantagande.
+Legacy SyntheticEnvironment saknar segmentkontrakt och är fortsatt punktkontrollerat.
+Voyage.forecast_support_scope redovisar faktiskt tillgänglig kontrollomfattning.
+
+Segmentet får avsluta rörelsen exakt vid valid_until, utan att extrapolera rörelse
+efter gränsen. En separat ankomstkontroll är fortfarande exklusiv: vid denna tid
+får den utgångna produkten inte godkännas. Geografiska kanter är slutna. För varje
+produkt finns ett fast tak på4096 delintervall per segment. För många korsningar
+avvisas uttryckligen; inga celler hoppas över för att hålla kontrollbudgeten.
+Kontrollen gäller den integrerade raka banan i lokalt plan och flyttals-/mikrosekund-
+upplösning, inte en exakt verklig båttrajektoria eller geodetisk båge.
+
+Detta ersätter den tidigare begränsningen om missade **markerade** cellmasker i
+ForecastDataset. Ett komplett interpolationsstöd är däremot inte ett bevis på
+kontinuerligt tillåtna vind-/vågvärden, entydig interpolerad vågriktning eller
+verklig källkvalitet. Dessa värden kontrolleras fortsatt vid ordinarie uppslag och
+ankomst. Omarkerade fel/toppar och legacy-callbacks kräver fortsatt annan validering.
+Åtta nya regressionstester använder tunna rum-/tidsceller, missing-noder, diagonal
+passage/kantkontakt, exklusiv ankomstgräns, kontrollbudget, båda beräkningsflödena,
+rutt-/avgångsval, säker omväg och halverat tidssteg.
