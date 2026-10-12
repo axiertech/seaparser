@@ -8,6 +8,7 @@ from .environment import Environment
 from .model import Vector, BoatPerformance
 from .weather import WeatherPolicy, COMFORT_MODEL, WEATHER_VERIFICATION_SCOPE
 from .forecast import ForecastPolicy, Clock, FixedClock, capture_planning_time
+from .forecast_metadata import ProductMetadata
 
 
 @dataclass(frozen=True)
@@ -59,6 +60,9 @@ class RouteComparison:
     forecast_policy: ForecastPolicy | None = None
     planning_time: datetime | None = None
     weather_verification_scope: str = WEATHER_VERIFICATION_SCOPE
+    dataset_id: str | None = None
+    dataset_version: str | None = None
+    forecast_products: tuple[ProductMetadata, ...] = ()
 
 
 def compare_routes(environment: Environment, start: datetime, target: Vector,
@@ -154,4 +158,8 @@ def compare_routes(environment: Environment, start: datetime, target: Vector,
                            tuple(results), fastest, comfortable=comfortable,
                            weather_policy=weather_policy, max_comfort_extra_seconds=max_comfort_extra_seconds,
                            comfort_model=COMFORT_MODEL if weather_policy is not None else None,
-                           forecast_policy=forecast_policy, planning_time=planning_time)
+                           forecast_policy=forecast_policy, planning_time=planning_time,
+                           dataset_id=getattr(environment, 'dataset_id', None),
+                           dataset_version=getattr(environment, 'version', None)
+                           if getattr(environment, 'dataset_id', None) is not None else None,
+                           forecast_products=getattr(environment, 'product_metadata', ()))

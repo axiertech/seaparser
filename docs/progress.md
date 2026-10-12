@@ -563,3 +563,55 @@ Endast avgångsleveransen och mandat/logg ingår. Tidigare76 lokala loggrader
 bevaras ostagade. Arbetsbranch: development/departure-comparison.
 Nästa steg: normal push av arbetsbranchen och kontroll av CI på exakt commit-SHA;
 ingen force-push, main-merge, branchradering eller databasändring.
+
+## Fryst prognosunderlag och adapterkontrakt 2026-10-12
+
+Aktuell uppgift: oföränderligt leverantörsoberoende prognosunderlag på
+arbetsbranchen development/forecast-data. ForecastDataset/GridProduct/
+ProductMetadata/Coverage införda med separata dataset/version/källa/utfärdandetid/
+giltighet/geografisk täckning/enheter/referensramar för vind, ström och vågor.
+Normalisering ligger i infrastructure/forecast_adapter.py, utanför motorn.
+ForecastAdapter.normalize returnerar ett materialiserat underlag; transport,
+autentisering och verkliga leverantörer ingår inte. Syntetiska fixtures är
+uppskattade testdata. Metadata följer uppslag och resultatsammanfattning även
+för avvisade rutter utan accepterade färdsteg.
+
+Underlagets nästlade värden/axlar/tider/masker kopieras till tuples och metadata
+är frysta. Ursprungliga mutable indata kan inte ändra ett skapat underlag.
+Ny prognos kräver explicit nytt underlag/anrop; alla alternativ inom en
+jämförelse får samma dataset. Produkter får separat geografiskt/tidsmässigt
+stöd och dataluckor, med gemensamt explicit WGS84-origo för lokala öst/nord-metrar.
+Vind/ström normaliseras till markrelativa SI-motvektorer; vindens externa
+från-konvention skiljs från strömmens mot-konvention. Vågornas Tm02/från-vektor
+har egen metadata. Polarens vind förblir W_ground-C_ground.
+
+Bilinjära vektorkomponenter i rum och linjär UTC-tidsinterpolation dokumenterad;
+vågornas riktning interpoleras via enhetsvektorer. Odefinierad riktning ger gap.
+Extrapolation, okänd täckning, saknade stödnoder och markerade ogiltiga celler
+inklusive deras gränser avvisas. Giltighet är halvöppen även vid destination.
+Separata utfärdandetider kontrolleras mot den gemensamma frysta planeringstiden.
+Ett avrundningsfel upptäcktes i första viktade summan: konstant våghöjd kunde
+bli marginellt över gränsen. Stabil interpolation bevarar nu konstanta värden
+exakt och håller komponenterna inom stödintervallet; regressionstest tillagt.
+
+Verifierat: make check passerar med127 prototyp- och17 övriga Python-tester
+(144 totalt). Alla tidigare tester bevarade,16 nya tester täcker oberoende
+linjär referens (u=2,08/v=-1,745), enheter och från/mot,359°/1°, odefinierad
+vågriktning, separata gap/täckningar, masker/gränser, extrapolation, felaktiga
+metadata, immutabilitet även efter mutation av originalpayload, separata åldrar/
+giltighet och ankomstgräns, explicit prognosbyte, gemensamt dataset i rutter/
+avgångar/export, saknad produkt, nätverks-/adapterförbud under jämförelse samt
+exakt hård gräns. Standardkonstantfält ger100 s för100 m; nytt strömunderlag
+med0,5 m/s medström ger66,6667 s utan att det gamla underlaget ändras.
+Syntax/TOML/domänimporter/beroenden/Actions-SHA/frontendsyntax passerar;
+frontend har0 produkttester. Migrations-/PostgreSQL-testplan passerar offline,
+utan privat konfiguration eller anslutning. git diff --check passerar.
+
+Begränsningar: lokalt plan med geografiskt origo, ingen verklig projektion eller
+leverantörsintegration. Interpolationsregler är syntetiska, inte fysiskt/maritimt
+validerade. Punktuppslag ger fortfarande inget kontinuerligt täckningsbevis;
+smala cellmasker/vädertoppar kan missas mellan uppslag. Legacy callbacks kan
+inte garanteras frysta; adapterflöden använder ForecastDataset. Inga betalda
+tjänster, databasändringar eller main-merge. Tidigare76 orelaterade loggrader
+bevaras ostagade. Nästa steg: granskad commit, normal push enligt arbetsbranch-
+mandatet och verifiering av GitHub CI för exakt SHA.

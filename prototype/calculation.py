@@ -6,6 +6,7 @@ from math import isfinite
 from .model import BoatModel, BoatPerformance, ConstantBoat, Vector, CourseUnavailable, CROSS_TRACK_TOLERANCE
 from .environment import Environment, WaveData, Conditions
 from .forecast import ForecastPolicy, Clock, capture_planning_time
+from .forecast_metadata import ProductMetadata
 from .weather import WeatherPolicy, WeatherLimitExceeded, synthetic_comfort_rate, COMFORT_MODEL, WEATHER_VERIFICATION_SCOPE
 from .obstacles import check_segment, ObstacleCollision
 
@@ -32,6 +33,11 @@ class Evaluation:
     issued_at: datetime | None = None
     forecast_checked: bool = False
     planning_time: datetime | None = None
+    wind_metadata: ProductMetadata | None = None
+    current_metadata: ProductMetadata | None = None
+    waves_metadata: ProductMetadata | None = None
+    dataset_id: str | None = None
+    dataset_version: str | None = None
 
 
 @dataclass(frozen=True)
@@ -76,7 +82,9 @@ def evaluate_conditions(boat, weather, position, time, allow_missing_current=Fal
                       getattr(boat, "assumptions", ()), weather.wind, weather.wind_reference,
                       weather.waves, weather_policy is not None,
                       synthetic_comfort_rate(weather.waves, water.course) if weather_policy is not None else None,
-                      weather.issued_at, forecast_policy is not None, planning_time)
+                      weather.issued_at, forecast_policy is not None, planning_time,
+                      weather.wind_metadata, weather.current_metadata, weather.waves_metadata,
+                      weather.dataset_id, weather.dataset_version)
 
 
 def forecast_step_seconds(sample, start, seconds):
@@ -84,6 +92,8 @@ def forecast_step_seconds(sample, start, seconds):
     if sample.current_status == "valid" and sample.valid_from is not None and sample.valid_from > start:
         raise ValueError("Strömdata saknas för hela tidssteget: före prognosens giltighetstid")
     boundaries = [sample.valid_from, sample.valid_until]
+    if sample.wind_metadata is not None:
+        boundaries += [sample.wind_metadata.valid_from, sample.wind_metadata.valid_until]
     if sample.weather_checked:
         if sample.waves.valid_from > start:
             raise ValueError("Vågdata täcker inte hela tidssteget")

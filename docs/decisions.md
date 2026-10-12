@@ -159,3 +159,20 @@
 - Legacy utan ålderspolicy/väderpolicy märks not_requested och är ingen verifierad
   bedömning för verkliga prognoser. Båda krävs med tillförlitlig källmetadata inför
   framtida integration; inga externa prognoskällor kopplas i denna leverans.
+
+## 2026-10-12: Fryst prognosunderlag före rutt-/avgångsjämförelse
+
+Leverantörsadaptrar normaliserar färdighämtade payloads utanför beräkningsmotorn
+till ett helt materialiserat, oföränderligt ForecastDataset. Varje vind-, ström-
+och vågprodukt behåller egen identitet/version, källa, utfärdandetid, giltighet,
+täckning, SI-enheter, referensram och dataluckor. Samma underlag används för alla
+alternativ; nytt prognosunderlag innebär ett nytt explicit planeringsanrop.
+Ingen nätverkshämtning eller lazy adapter körs under jämförelsen.
+
+Första implementationen är ett syntetiskt lokalt rutnät med WGS84-origo och
+komponentinterpolation i rum/tid. Extrapolation, okänd täckning, saknade stödnoder
+och markerade ogiltiga celler avvisas. Vågornas riktning interpoleras cirkulärt
+via enhetsvektorer; odefinierad riktning blir datalucka. Produkten är testdata,
+inte en verifierad prognosadapter eller geodetisk modell. Punktkontroller ger
+fortfarande inte kontinuerligt täckningsbevis mellan uppslag. Verklig integration
+kräver granskad projektion, källformat och intervall-/maskvalidering.

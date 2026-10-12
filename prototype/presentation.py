@@ -43,6 +43,8 @@ def export_route_comparison(comparison):
                        'comfort_model': comparison.comfort_model,
                        'forecast_policy': asdict(comparison.forecast_policy) if comparison.forecast_policy else None,
                        'planning_time': comparison.planning_time,
+                       'dataset_id': comparison.dataset_id, 'dataset_version': comparison.dataset_version,
+                       'forecast_products': [asdict(m) for m in comparison.forecast_products],
                        'weather_verification_scope': comparison.weather_verification_scope, 'candidates': rows}, default=lambda value: value.isoformat(),
                       ensure_ascii=False, indent=2)
 

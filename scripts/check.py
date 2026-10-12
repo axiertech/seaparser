@@ -13,7 +13,7 @@ root = Path(__file__).resolve().parents[1]
 for folder in ("prototype", "infrastructure", "scripts", "tests"):
     for path in (root / folder).rglob("*.py"):
         tree = ast.parse(path.read_text(), filename=str(path.relative_to(root)))
-        if path.name in ("calculation.py", "model.py", "environment.py", "obstacles.py", "routes.py", "polar.py", "sailing.py", "weather.py", "forecast.py", "departures.py"):
+        if path.name in ("calculation.py", "model.py", "environment.py", "obstacles.py", "routes.py", "polar.py", "sailing.py", "weather.py", "forecast.py", "departures.py", "forecast_data.py", "forecast_metadata.py"):
             allowed = {"dataclasses", "datetime", "math", "typing"}
             for node in ast.walk(tree):
                 if isinstance(node, (ast.Import, ast.ImportFrom)):

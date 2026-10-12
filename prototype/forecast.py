@@ -46,7 +46,13 @@ class ForecastPolicy:
     def check(self, weather, planning_time):
         planning_time = utc_time(planning_time, 'Planeringstid')
         records = [('Vind/ström', weather.issued_at)]
-        if weather.waves is not None:
+        if weather.dataset_id is not None or any(m is not None for m in (
+                weather.wind_metadata, weather.current_metadata, weather.waves_metadata)):
+            records = [(name, metadata.issued_at if metadata is not None else None)
+                       for name, metadata in (('Vind', weather.wind_metadata),
+                                              ('Ström', weather.current_metadata),
+                                              ('Vågor', weather.waves_metadata))]
+        elif weather.waves is not None:
             records.append(('Vågor', weather.waves.issued_at))
         for name, issued_at in records:
             issued_at = utc_time(issued_at, f'{name}: utfärdandetid')

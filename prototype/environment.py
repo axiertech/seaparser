@@ -5,6 +5,7 @@ from math import isfinite
 from typing import Callable, Protocol
 
 from .model import Vector, velocity
+from .forecast_metadata import ProductMetadata
 
 
 @dataclass(frozen=True)
@@ -20,6 +21,7 @@ class WaveData:
     period_kind: str = "tm02"
     direction_reference: str = "ground-from-true-north"
     issued_at: datetime | None = None
+    metadata: ProductMetadata | None = None
 
     def __post_init__(self):
         if self.period_kind != "tm02" or self.direction_reference != "ground-from-true-north":
@@ -43,6 +45,11 @@ class Conditions:
     wind_reference: str = "ground"
     waves: WaveData | None = None
     issued_at: datetime | None = None
+    wind_metadata: ProductMetadata | None = None
+    current_metadata: ProductMetadata | None = None
+    waves_metadata: ProductMetadata | None = None
+    dataset_id: str | None = None
+    dataset_version: str | None = None
 
     def __post_init__(self):
         if self.wind_reference not in ("ground", "water"):

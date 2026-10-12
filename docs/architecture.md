@@ -35,3 +35,13 @@ Låsfiler och fasta deploymentversioner, kontrollerade beroendeuppdateringar, au
 Utveckling använder endast databas och roll seaparser. Enhetstester kräver ingen
 databas. Databastester begränsas till rollback och testegna objekt. Inför drift
 ska miljön separeras och en ny driftroll skapas; utvecklingsuppgifter återanvänds inte.
+
+Prognosadaptrar ligger i infrastrukturlagret och normaliserar färdighämtade
+externa payloads till domänens ForecastDataset. Underlaget är en helt
+materialiserad, fryst uppsättning GridProduct med separat ProductMetadata för
+vind/ström/vågor. Det implementerar miljögränssnittet utan SQL, HTTP eller lazy
+callbacks. Rutt-/avgångsmotorn får samma underlag hela jämförelsen; byte av
+prognos sker endast genom ett nytt explicit underlag/anrop. Transport ingår inte
+i den syntetiska adaptern. Lokalt geografiskt origo, enheter, referensramar,
+interpolationsregel och gap/masker valideras före planering; punktkontroller
+ersätter fortfarande inte kontinuerlig täckningsvalidering mellan uppslag.

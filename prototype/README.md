@@ -646,3 +646,85 @@ Ingen sammanvägd ”bästa avgång” eller global komfortoptimering införs.
 att inget undersökt alternativ klarade kontrollerna. Exporten anger begränsad
 sökomfattning och bevarar varje rutts kontrollomfattning: kontroller mellan
 uppslag är fortfarande inte kontinuerligt verifierade.
+
+## Fryst prognosunderlag och adapterkontrakt
+
+`ForecastDataset` i `prototype/forecast_data.py` är ett oföränderligt, helt
+materialiserat underlag som implementerar Environment.evaluate. Det innehåller
+bundle-dataset_id/version och högst ett GridProduct vardera för vind, ström och
+vågor. Varje produkt har eget dataset_id/version, källa, utfärdandetid,
+giltighet [valid_from,valid_until), geografisk täckning, enheter och referensram.
+Metadata följer både uppslagen och resultatsammanfattningens forecast_products,
+även när kandidaten avvisas innan första steget. Olika produktcykler kan kombineras
+explicit; åldern kontrolleras separat mot samma frysta planeringstid. Inget
+automatiskt prognosbyte eller arv av en annan produkts godkända ålder sker.
+
+Vind/ström normaliseras till **mot-vektorer** i sanna öst/nord-axlar, m/s,
+relativt mark. Vädergränsen använder markrelativ vind; polarens vattenrelativa
+vind beräknas fortfarande som W_ground-C_ground. Normaliserade vågor lagrar Hs(m),
+Tm02(s) och enhetsvektor för **från-riktningen** i sanna markaxlar. Från-riktning
+omvandlas till kompassvinkel endast vid uppslag. Varje produkt får separat rutnät,
+giltighet, täckning och mask; saknad produkt/nod eller ogiltig cell redovisas som
+datalucka med produktnamn/orsak, utan att andra giltiga produkter tas bort.
+
+Täckningen är en sluten rektangel i lokala öst/nord-metrar med **explicit WGS84-
+origo** (latitud/longitud). Detta identifierar det geografiska området i
+prototypens lokala referensram. Alla produkter i ett underlag måste ha samma
+origo. Täckningen måste exakt motsvara rutnätets ytterkanter; okänd täckning,
+okända enheter/referensramar och deklarerad giltighet utanför tidsnoderna avvisas
+vid skapande. Ingen verklig projektion/geodetisk koordinattransformation ingår;
+planeringspositioner måste redan vara i detta lokala koordinatsystem. Verkliga
+lat/lon-raster behöver en framtida granskad transformation utanför motorn.
+
+Interpolationen är bilinjär i öst/nord och därefter linjär i UTC-tid, komponent
+för komponent (u,v), aldrig direkt i vindstyrka eller kompassvinkel. Vågornas Hs
+och Tm02 interpoleras skalärt; från-riktningens enhetsvektorkomponenter
+interpoleras och omvandlas med atan2. Nästan utsläckta riktningar (<1e-12 i
+vektorlängd) ger en uttrycklig datalucka. 359°/1° passerar därmed norr, inte söder.
+Interpolation bevarar konstanta värden exakt och håller varje komponent inom
+stödvärdenas intervall, så avrundning inte skapar ett överskridande vid en konstant
+hård gräns. Detta är en syntetisk interpolationsregel, inte fysisk validering av
+vågspektra eller verklig väderutveckling.
+
+Ingen extrapolation tillåts i rum eller tid. Geografiska ytterkanter ingår;
+valid_until ingår inte, även vid destinationen. Alla åtta hörn i den valda
+rum/tid-cellen måste vara kända, **även hörn med noll vikt** vid en exakt nod.
+En None-nod gör därför hela dess interpolationsstöd otillgängligt. Markerade
+invalid_cells anges som (tidsindex,nordindex,östindex); de avvisar uppslag även
+på sina slutna gränser, så intilliggande giltiga celler inte kan användas för
+att kringgå masken. Inget byte till närmaste giltiga nod görs. Vid interna noder
+väljs cellen mot större koordinat/tid, utom sista rumskanten som använder sista
+cellen. Konservativa regler kan avvisa användbara enstaka noder nära luckor.
+
+`infrastructure/forecast_adapter.py` definierar leverantörsoberoende
+ForecastAdapter.normalize(payload)->ForecastDataset. Adaptergränsen ligger
+utanför ruttmotorn. Transport/autentisering/hämtning måste utföras **före**
+normalisering; normalize är ren och returnerar inga callbacks eller lazy data.
+Den syntetiska adapterimplementeringen tar en redan inläst mapping. Fixtureformat:
+
+- Bundle: dataset_id, version, products.
+- Varje produkt: product, dataset_id/version/source, issued_at, valid_from/until,
+  coverage (gränser/origo enligt ovan), east_m/north_m, times, values och valfri
+  invalid_cells. Datum är explicit tidszonsmedvetna datetime, normaliserade till UTC.
+- values är [tid][nord][öst][komponent]. Vindnoder är [fart,från-kompassvinkel],
+  strömnoder [fart,mot-kompassvinkel], med units ["m/s","deg"] eller ["kn","deg"].
+  Referensram är ground-from-true-north respektive ground-to-true-north.
+- Vågnoder är [Hs,Tm02,från-kompassvinkel], units ["m","s","deg"], referensram
+  ground-from-true-north-tm02. None markerar en saknad nod. Negativa/icke-finita
+  värden, okända format och ofullständiga metadata avvisas, inte repareras tyst.
+
+Exempel på kompletta **uppskattade syntetiska testdata** finns i
+`prototype/tests/test_forecast_data.py:fixture`. Skapa snapshot med
+`SyntheticFixtureAdapter().normalize(payload)` en gång före compare_routes eller
+compare_departures och skicka samma snapshot till hela jämförelsen. Alla nästlade
+listor/masker kopieras till tuples; metadata/dataclasses är frysta. Ändring av
+ursprungligt payload kan därför inte ändra underlaget. Ny prognos normaliseras
+till ett **nytt** underlag/version för ett nytt planeringsanrop; det gamla förblir
+oförändrat. Legacy SyntheticEnvironment för matematiska tester finns kvar och
+kan inte garantera ett godtyckligt callbacks stabilitet; nya adapterflöden använder
+ForecastDataset. Domänens importkontroll förbjuder nätverk/I/O i uppslagsmotorn.
+
+Begränsning kvarstår: start-/mittpunkts-/ankomstkontroller bevisar inte kontinuerlig
+täckning mellan uppslag. Ett segment kan fortfarande hoppa över en smal mask eller
+vädertopp om inget uppslag träffar den. Ingen landmask, projektion eller verklig
+prognostjänst har kopplats, och inga maritima säkerhetsgarantier lämnas.

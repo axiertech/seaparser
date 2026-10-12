@@ -64,12 +64,14 @@ class WeatherPolicy:
 
     def check(self, weather, time):
         known_interval(weather.valid_from, weather.valid_until, time, 'Vind/ström')
+        if weather.wind_metadata is not None:
+            known_interval(weather.wind_metadata.valid_from, weather.wind_metadata.valid_until, time, 'Vind')
         current = weather.current
         if current is None or not all(isfinite(v) for v in (current.east, current.north)):
-            raise ValueError('Strömdata krävs med aktiverad väderpolicy; ingen fallback')
+            raise ValueError('Strömdata krävs med aktiverad väderpolicy; ingen fallback: ' + weather.reason)
         wind = weather.wind
         if wind is None or not all(isfinite(v) for v in (wind.east, wind.north)):
-            raise ValueError('Vinddata krävs för den hårda markrelativa gränsen')
+            raise ValueError('Vinddata krävs för den hårda markrelativa gränsen: ' + weather.reason)
         if weather.wind_reference == 'water':
             wind = wind + current
         if not isfinite(wind.speed):
@@ -78,7 +80,7 @@ class WeatherPolicy:
             raise WeatherLimitExceeded(f'Hård vindgräns överskriden: {wind.speed:g} > {self.max_wind_m_s:g} m/s (markrelativ vind)')
         waves = weather.waves
         if waves is None:
-            raise ValueError('Vågdata saknas')
+            raise ValueError('Vågdata saknas: ' + weather.reason)
         known_interval(waves.valid_from, waves.valid_until, time, 'Vågor')
         height = number(waves.height_m, 'Signifikant våghöjd')
         if height < 0:
