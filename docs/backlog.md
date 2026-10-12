@@ -11,9 +11,9 @@ progress.md är arbetslogg, inte en aktuell komplett backlog.
 | Reproducerbart syntetiskt planeringsscenario | Klar, CI godkänd på ef9f261 | Offlinekommando med fryst dataset, båtmodell, parametrar och spårbar resultatidentitet; körbar referens för framtida integration |
 | Kontinuerliga hårda vädergränser | Klar, CI godkänd på 5d3d710 | Konservativa cellhöljen för markvind/Hs; osäkert bevis får inte godkännas |
 | HTML-granskningsvisning | Klar, CI godkänd på dacfaaf | Fem syntetiska scenarier, separerad presentation, exakt JSON-export; ingen editor vald |
-| Automatisk polygonomväg i lokalt plan | Implementerad och lokalt verifierad; CI kontrolleras efter push | Exakta segment-/marginalpredikat och begränsad graf; kompletta tidsberoende kandidater |
-| Geografiska koordinater och kartvisning | Näst efter polygonrouting | Explicit CRS/axelordning, begränsad projektion, kartbakgrund separerad från hinder; oberoende tester |
-| Export av planerade vägpunkter | Därefter | Exempelvis GPX-rutt till plotter, ordning/koordinater/schemavalidering; ingen GPS-följning |
+| Automatisk polygonomväg i lokalt plan | Klar, CI godkänd på 3573814 | Exakta segment-/marginalpredikat och begränsad graf; kompletta tidsberoende kandidater |
+| Geografiska koordinater, API och kartvisning | Implementerad teknisk demo, verifieras i leveransen | WGS84 AEQD, tunt API med separata processer, Leaflet-klick och GeoJSON; syntetisk bakgrund/hinder |
+| Export av planerade vägpunkter | Implementerad GPX 1.1-demonstration | Planerade rtept, ordning/lat/lon och roundtrip testas; verklig plotterimport återstår |
 | Verkliga kart-/hinder-/prognoskällor | Källbeslut före integration | Region, täckning, kvalitet, kommersiell licens, offline/export/attribution och kostnad; ingen källa vald |
 | Djupgående och säkerhetsmarginal | Planerad, före djupbaserad navigerbarhet | Explicit okänt djup; kompatibla vertikala datum krävs för tidvatten/djup |
 | Tidvatten och stationsström | Adapter-/region-/licensbeslut återstår | Separata vattenståndsdatum och strömriktning/djup; ingen områdesextrapolation utan verifierad modell |

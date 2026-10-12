@@ -1,9 +1,9 @@
 # Offlinevisning för granskning
 
 `make check` verifierar lokala HTML/CSS-resurser och Python-tester för rapport,
-export, säker textåtergivning och kontrollstatus. Node-testkörningen har ännu
-0 tester; de åtta visningstesterna ligger i tests/test_scenario_html.py.
-Inga frontendberoenden har tillkommit; package-lock.json låser beroendegrafen.
+export, säker textåtergivning och kontrollstatus. Den statiska rapportens åtta tester ligger i tests/test_scenario_html.py.
+Den interaktiva kartintegrationen har fyra Node-tester. Leaflet/jsdom och deras
+beroenden är versionslåsta med integritet i package-lock.json.
 
 Generera en självförsörjande visning med fem reproducerbara scenarier:
 
@@ -31,3 +31,12 @@ fryst planeringstid, datasetversion, avbrottsorsaker och ankomstkontroll visas.
 Detta är ett granskningsverktyg. Visuell editor väljs separat efter utvärdering;
 HTML/CSS uppfyller inte ensamt kravet på visuell redigering. AIS är fortsatt
 lågprioriterat. Ingen GPS, övervakning eller kollisionsrådgivning ingår.
+
+## Interaktiv geografisk teknisk demo
+
+`npm run build` genererar endast publika filer i dist/. Kör sedan från repo:
+`.venv/bin/python -B -m scripts.local_demo` och öppna http://127.0.0.1:8765/.
+Kartklick → FastAPI-jobb → beräknad GeoJSON → planerad GPX. Leaflet distribueras
+lokalt; bakgrund och alla prognos-/hinderdata är syntetiska. `npm test` provar
+flödet med verkligt loopback-API och Leaflet i jsdom, inte en visuell browseraudit.
+Se docs/geographic-api-demo.md och deployment/README.md; inget publiceras automatiskt.

@@ -842,3 +842,39 @@ vägar. Två CLI-körningar ger byteidentisk JSON. Diff/whitespace granskade.
 Inga nya paket/konton/betalningar, databasändringar, publiceringar eller main-merge.
 Nästa steg: verifiera push-CI för exakt commit; därefter begränsad geografisk
 koordinatadapter och waypointexport enligt dokumenterade kontrakt.
+
+## 2026-10-12: Geografiska koordinater → API → interaktiv karta → GPX
+
+Sammanhängande leverans på development/geographic-api-map från polygonroutingen
+3573814 (CI godkänd). WGS84 AEQD vid 58°N 11°E, högst 1000 m projektionstöd;
+syntetiskt prognosområde -50…150 m öst/-50…50 m nord. Referenstoleranser och
+axelordning är dokumenterade i geographic-api-demo.md. Befintlig motor,
+polygon-/marginal-, prognos-, väder- och ankomstkontroller behålls.
+
+FastAPI validerar och lämnar planering till applikationslagret och separata
+killbara barnprocesser: 2 aktiva jobb, 20 s/job, 8 jobb/300 s, 8192 byte kropp
+samt fasta domänbudgetar. Leaflet visar geografiska kartval, kompletta kandidater,
+accepterade delbanor, hinder/marginal, vägpunkter, resultat och avbrottsorsaker.
+GPX 1.1 rte/rtept exporterar planerade modellvägpunkter med rätt lat/lon/ordning,
+ingen GPS/AIS. Syntetisk lokal bakgrund väljs för demon; OpenSeaMap/OpenWaters
+utvärderade från aktuella officiella sidor i map-sources.md, inget verkligt
+routingunderlag eller hosted tile-policy antas utifrån kartbilder.
+
+Verifierat: riktade tester under utvecklingen och en slutlig make check efter
+ändringar passerar 201 Python-tester (158 domän +43 övriga) och 4 frontendtester.
+Helhetsprovet kör faktiskt loopback-FastAPI och barnprocess, kartklick och riktig
+Leaflet i jsdom, ruttvisning och hämtad GPX. Detta är inte en visuell browseraudit.
+Koordinatreferenser omfattar separat geod-direktlösning och meridianintegral;
+API-tester avvisar ogiltiga positioner/gränser/stora kroppar, 429, väderfel och
+GPX för avbrutna rutter. Tidsgräns dödar/återtar process, även vid avbrott under
+start. Lås-/pip-/HTML/CSS-/domängränskontroller passerar. Beroenden installerade
+endast i .venv/frontend, exakta officiellt verifierade versioner/hasher/integritet.
+
+Deployment/systemtjänst och Apache-proxy är konkreta filer i deployment/.
+systemd-analyze verify passerar; en varning gäller värdens befintliga XFS-slice,
+inte den nya filen. Inget installerat/aktiverat i systemet. Ny frontendbuild
+ligger bara i frontend/dist, inte i public. API endast tillfälligt på loopback
+under avslutade tester; inga tjänster lämnas igång. Ingen databasändring,
+ny extern publicering, kostnad eller main-merge. Äldre 76 lokala arbetsloggrader
+bevaras separat. Nästa steg: verifiera push-CI för exakt commit; offentlig demo
+kräver samlat administratörs-/publiceringsgodkännande enligt deployment/README.md.

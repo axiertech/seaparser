@@ -77,3 +77,9 @@ application/obstacle_planning.py redovisar sökstatus separat från färdresulta
 Geografisk transformation, kartpresentation och waypointexport för plotter är
 nästa steg; ingen GPS-följning. Se geographic-routing.md för avgränsningar,
 metadata och kompatibla vertikala datum för djup/tidvatten.
+
+Teknisk geografisk integration: api/ validerar/hanterar HTTP; JobStore i
+infrastructure/ kör separata tidsbegränsade processer. application/geographic_plan.py
+återanvänder planering, presentation/gpx.py exporterar och frontend/map/
+skiljer layout, kartkomponent och transport. AEQD-transformering ligger utanför
+domänen. Ingen SQL eller offentlig API-deployment ingår. Se geographic-api-demo.md.

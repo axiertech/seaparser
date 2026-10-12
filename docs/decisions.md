@@ -265,3 +265,14 @@ eller global optimalitet påstås. Budgetar och söktrunkering följer resultate
 Exakta rationella predikat avser lagrade lokala tal, inte verklig källprecision.
 Geografiska koordinater, kartvisning och GPX förbereds i geographic-routing.md;
 inga nya paket, verkliga källor, betalningar, publiceringar eller databasändringar.
+
+## 2026-10-12: Sammanhängande geografisk/API/kartdemo
+
+FastAPI med två killbara jobbprocesser och frysta scenarier; en API-worker.
+WGS84 AEQD vid 58°N 11°E med 1000 m projektionstak; prognosområdet är mindre.
+Leaflet 1.9.4 väljs för teknisk integration med lokal syntetisk bakgrund;
+OpenSeaMap/OpenWaters granskas separat i map-sources.md, ingen livekälla vald.
+GPX 1.1 exporterar planerade vägpunkter, inte GPS-spår.
+Isolerade PyPI/npm-beroenden låses exakt med hashar/integritet och CI installeras
+från låsfiler. Ingen editor vald. Apache/systemtjänst förbereds i deployment/
+och kräver samlat administratörs-/publiceringsgodkännande innan aktivering.
