@@ -24,3 +24,17 @@ def export_voyage(voyage):
     data.update(json.loads(export(voyage.steps)))
     return json.dumps(data, default=lambda value: value.isoformat(),
                       ensure_ascii=False, indent=2)
+
+
+def export_route_comparison(comparison):
+    """Present every candidate and its scope, including failed partial voyages."""
+    rows = []
+    for route in comparison.candidates:
+        row = asdict(route)
+        row['legs'] = [json.loads(export_voyage(leg)) for leg in route.legs]
+        rows.append(row)
+    return json.dumps({'status': comparison.status, 'scope': comparison.scope,
+                       'fastest_candidate': (comparison.fastest.candidate.name
+                                             if comparison.fastest else None),
+                       'candidates': rows}, default=lambda value: value.isoformat(),
+                      ensure_ascii=False, indent=2)

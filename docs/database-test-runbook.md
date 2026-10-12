@@ -69,11 +69,17 @@ Officiella referenser granskade 2026-10-12:
 [libpq SSL](https://www.postgresql.org/docs/18/libpq-ssl.html) och
 [anslutningsparametrar inklusive GSS](https://www.postgresql.org/docs/18/libpq-connect.html).
 
-## Förberedda PostgreSQL-integrationstester – inte körda
+## PostgreSQL-integrationstester – användarbekräftat lyckade
 
 Offlineplan: `.venv/bin/python -B -m scripts.verify_migrations_integration`.
 Framtida uttryckligen godkänd körning använder samma kommando med --run.
 Ingen automatisk körning i make check eller CI, ingen separat databas/roll/lösenord.
+
+Användaren bekräftade 2026-10-12 att databasdiagnostik och PostgreSQL-tester för
+rollback, samtidighetslås och städning har lyckats. Detta är användarens verifiering;
+agenten har inte återkört testerna i ruttleveransen eller granskat rå körlogg.
+Bekräftelsen anger inte vilket certifikat-/TLS-verifieringsläge som användes.
+Planen nedan bevaras för framtida uttryckligen godkända omkörningar.
 
 Varje fall använder seaparser-identiteten men genererar ett unikt
 seaparser_it_<UUID>-schema och en slumpad separat 64-bitars advisory-låsnyckel.

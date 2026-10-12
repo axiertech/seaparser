@@ -75,10 +75,9 @@ Ingen omväg väljs automatiskt ännu. Leveransen stannar här för granskning.
 
 ## Nästa leveranser i beroendeordning
 
-1. Enkel begränsad referenssökning över fördefinierade vägpunkter och hela
-   alternativa färder. Behåll tidsberoende tillstånd, undvik att slå ihop
-   olika ankomsttider per plats. Ange sökgränser och att ingen global optimalitet
-   utanför kandidatmängden utlovas. Testa omväg och inget genomförbart alternativ.
+1. Genomförd 2026-10-12: komplett jämförelse av fördefinierade kandidatrutter
+   med tidsberoende tillstånd, omväg och inget genomförbart alternativ.
+   Se ruttjämförelseleveransen nedan; global optimalitet utlovas inte.
 2. Generalisera målfärdens båtprestanda och inför spårbar syntetisk polar,
    förbjudna vindvinklar och konsekventa manöverantaganden. Kurskompensation
    måste återutvärdera kursberoende fart; konstantfartsformeln räcker inte.
@@ -277,3 +276,55 @@ täckning. Okända luckor mellan uppslag, rumslig täckning och prognosålder ä
 fortfarande inte bevisade; tidsgränskontrollen är ingen verklig navigationsvalidering.
 Nästa steg: separat granskning av kvarvarande loggar och godkännande av den
 förberedda, isolerade PostgreSQL-testplanen innan någon integrationskörning.
+
+
+## Databastester och begränsad ruttjämförelse 2026-10-12
+
+Användaren bekräftar att databasdiagnostik samt PostgreSQL-tester för rollback
+vid migrationsfel, avvisning vid samtidigt lås och städning har lyckats.
+Detta dokumenterar användarens verifiering; ingen rå körlogg granskades och
+agenten har inte återkört databaskommandon i denna leverans. Använt TLS-/CA-läge
+anges inte i bekräftelsen. Serverkonfiguration, privata filer och databasen orörda.
+
+Aktuell uppgift: nästa begränsade referensleverans med kompletta explicita
+kandidatrutter via fördefinierade vägpunkter runt syntetiska hinder. Acceptans:
+fri direktväg, blockerad direktväg med omväg, inget genomförbart alternativ och
+tidsberoende ström som ändrar vinnare; ingen geografisk sammanslagning av tillstånd.
+
+Implementerat i prototype/routes.py: varje kandidat startar oberoende från samma
+position/tid; sail_to_target återanvänds för varje delsträcka med faktisk
+slutposition och ankomsttid. Ingen snapping till vägpunkt eller återställning av
+ström/prognostid. Samma integrerade segmentkontroll, prognosgränsskydd och
+absoluta kurs-/framdriftsgränser gäller. Endast kompletta arrived-kandidater får
+positiv totalrestid/ankomst och kan vinna. Avbrott behåller slutförda delsträckor
+med status och orsak. Ingen genomförbar kandidat ger no_feasible_route.
+
+Samma fart, data, hinder och budgets för alla kandidater. Max 100 kandidater,
+32 mellanvägpunkter, 86400 s och 100000 steg per komplett kandidat som standard.
+Ingen väntan/svängkostnad eller automatisk waypointgenerering. Exakt lika
+restid väljer först angiven kandidat. JSON-export redovisar scope och alla utfall;
+domänen har inga I/O-, SQL-, HTTP- eller UI-beroenden och omfattas av importskyddet.
+
+Verifierat: make check passerar med 54 prototyp- och 17 övriga tester (71 totalt).
+Tolv nya kravbaserade ruttester inkluderar senare genomförbar ankomst vid samma
+geografiska waypoint (får inte prunas), fortsatt verklig tid/position, slutande
+prognos på andra delsträckan, hela ruttens budget, determinism och export.
+Analytiska referenser: 100 m/1 m/s=100 s (<=1e-6 s); omväg
+2*sqrt(30²+20²)+40 m och tidsberoende x=t+t²/200 (<=0,03 s).
+Utan ström väljs norr (112,11 s) framför söder (124,85 s); med tidsberoende ström
+väljs söder (94,40/94,07 s vid steg 2/1 s). Halverat steg bevarar vinnare; den
+rumsliga diskontinuiteten ger fortfarande numerisk tidskänslighet. Lokalt tog
+100 tvåkandidatjämförelser med steg 1 s totalt 1,137 s; inget generellt prestandalöfte.
+
+Syntax/TOML/beroenden/domängränser och Actions-SHA-kontroll passerar.
+Frontendens syntax passerar och produkttester saknas (0). Migrationsplan och
+integrationstestplan passerar offline utan konfigurationsläsning/anslutning;
+git diff --check passerar. Ingen ny installation, databasändring eller push.
+Befintliga 76 fristående miljö-/anslutningsloggrader bevaras ostagade.
+
+Antaganden: deterministisk syntetisk miljö, lokalt meterplan, uppskattad konstant
+båtprestanda och omedelbara kursbyten. Resultatet gäller endast angiven
+kandidatmängd, inte global optimalitet eller verklig navigerbarhet. Tolerans
+0,01 m per waypoint och mikrosekundsupplösning påverkar fortsatt färd.
+Nästa steg: spårbar syntetisk polar/vind och sedan hårda vädergränser/komfort,
+se beslutslogg och tidigare beroendeordning. Ingen bakgrundsaktivitet.

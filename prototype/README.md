@@ -223,3 +223,68 @@ måltoleransen. Rörelsesimulering ger `ObstacleCollision`. Ett förkortat
 slutsteg kontrolleras till sin faktiska beräknade slutposition. Geometrin
 kontrollerar numeriska raka segment; fysisk bana, djup, verkliga sjökort och
 ruttoptimering återstår. Uppdaterad status finns i ../docs/progress.md.
+
+
+## Begränsad jämförelse av kandidatrutter
+
+`routes.compare_routes` utvärderar kompletta `RouteCandidate(name, waypoints)`
+från samma startposition och UTC-avgång till ett gemensamt mål. En tom lista av
+mellanvägpunkter definierar direktvägen; den läggs inte till automatiskt.
+Varje kandidat får sitt eget förlopp; inte ens gemensamma vägpunkter slår ihop
+olika ankomsttider. Resultatet är `selected` med `fastest`, eller
+`no_feasible_route` med alla kandidatresultat och deras avbrottsorsaker.
+Endast fullständigt `arrived`-resultat kan vinna. Exakta tidslikheter väljer
+först angiven kandidat, reproducerbart för samma deterministiska miljö/indata.
+
+```python
+from prototype.routes import RouteCandidate, compare_routes
+from prototype.presentation import export_route_comparison
+
+comparison = compare_routes(
+    environment, departure, Vector(100, 0),
+    [RouteCandidate("direct"),
+     RouteCandidate("north", (Vector(30, 20), Vector(70, 20)))],
+    obstacles=[Rectangle("synthetic", 40, -10, 60, 10)],
+    speed_knots=1 / KNOT,
+)
+print(export_route_comparison(comparison))
+```
+
+Exemplet använder tidigare definierade environment/departure och importerade
+Vector/Rectangle/KNOT. JSON redovisar scope, vinnarnamn, alla kandidater och varje
+delsträckas uppslag, giltighet, bansegment och status. Blockerad/ofullständig
+kandidat har ingen vanlig restid eller ankomsttid; redan slutförd bana bevaras.
+
+Färdberäkningen återanvänds per delsträcka med föregående faktiska slutposition och
+sista accepterade stegets end_time. Positionen flyttas inte artificiellt till
+vägpunkten inom toleransen. Ny ström utvärderas vid delsträckans simulerade
+position/tid; ingen återställning till avgångens prognos eller ström. Kursbyte
+antas omedelbart utan svängkostnad. Hela segment testas mot samma hinder och
+prognosgränsskyddet gäller även senare delsträckor. Ingen nollströmsfallback i
+ruttjämförelsen. Saknade data eller omöjlig kurs gör kandidaten ogenomförbar.
+
+Standardgränser: 100 kandidater och 32 mellanvägpunkter per kandidat, steg 60 s,
+positionstolerans 0,01 m och minsta framdrift >0,01 m/s. Tid 86400 s och 100000
+integrerade steg gäller hela varje kandidat, inte varje delsträcka. UTC-tider har
+mikrosekundsupplösning; totalrestid är faktisk ankomst minus avgång. Per-vägpunktens
+tolerans och numerisk integration påverkar restid; inga generella felgarantier.
+Beräkningen är linjär i antalet undersökta kandidater/delsträckor/steg och begränsas
+av dessa parametrar. Ingen geografisk grid eller global sökoptimering införs.
+
+Regressioner kontrollerar fri direktväg (100 m / 1 m/s = 100 s), blockerad direktväg
+med omväg (2*sqrt(30²+20²)+40 m), inga genomförbara alternativ, ändrad vinnare med
+tidsberoende ström, korrekt fortsatt tid/position, gemensam vägpunkt med både tidig
+och sen genomförbarhet, prognosslut på senare delsträcka, hela ruttens tids-/stegbudget,
+validering, deterministiska likheter och JSON-export. Analytiska konstantreferenser
+har tidsfel <=0,03 s; den enkla direkta referensen <=1e-6 s. Grovt/halverat steg
+provas för hinder och strömval. Sökningen gäller endast den definierade
+kandidatmängden. Verkliga sjökort/djup, prognosålder, polarer och komfort återstår;
+detta är inte navigationsstöd för verklig användning.
+
+
+Mätt lokalt 2026-10-12 i referensscenariot: norr 112,11 s och söder 124,85 s
+utan ström; med tidsberoende sydlig medström söder 94,40/94,07 s för steg 2/1 s.
+Vinnarvalet är stabilt vid halverat steg; skillnaden i söder visar integrationens
+känslighet vid den rumsliga strömdiskontinuiteten, inte en generell tidsfelgaranti.
+100 jämförelser med två kandidater och steg 1 s tog 1,137 s totalt i denna körning.
+Det är en lokal observation, inget prestandalöfte för andra kandidatmängder.

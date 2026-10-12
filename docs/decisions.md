@@ -90,3 +90,18 @@
   hemligheter får inte visas eller hamna i Git. Första migrationen godkändes och
   tillämpades senare samma dag; framtida migrationer och push kräver godkännande.
 - Inför drift separeras miljön och en ny driftroll skapas med minsta rättigheter.
+
+
+## Fördefinierade kandidatrutter 2026-10-12
+
+- Kompletta explicita vägpunktsekvenser utvärderas oberoende från samma avgång.
+  Ingen grafpruning, positionsbaserad sammanslagning eller automatisk vägpunktssökning.
+- Återanvänd sail_to_target per delsträcka; verklig slutposition och ankomsttid
+  förs vidare. Hela integrerade segment och prognosgränser kontrolleras som tidigare.
+- Kortast beräknad totalrestid väljs bland endast arrived-kandidater. Vid exakt
+  lika restid väljs först angiven kandidat. Inget globalt optimalitetslöfte.
+- Samma fart, hinder, prognoser och gränser för alla; max tid/steg gäller hela
+  varje kandidatrutt. Standard: 100 kandidater, 32 mellanvägpunkter per kandidat,
+  86400 s och 100000 integrerade steg per kandidat. Ingen väntan eller svängkostnad.
+- Syntetiskt lokalt plan och uppskattad konstant båtmodell; verklig navigation,
+  polarer, prognosålder och snabbast/bekvämast-jämförelse återstår.
