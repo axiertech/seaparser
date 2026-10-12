@@ -16,6 +16,7 @@ async function until(predicate, timeout = 10000) {
 }
 const root = new URL('../../', import.meta.url);
 async function server() {
+  if (process.env.SEAPARSER_DEMO_URL) return { url: process.env.SEAPARSER_DEMO_URL.replace(/\/$/, ''), async close() {} };
   const local = new URL('.venv/bin/python', root);
   const python = existsSync(local) ? local.pathname : 'python';
   const child = spawn(python, ['-B', '-m', 'uvicorn', 'api.main:app', '--host', '127.0.0.1', '--port', '0', '--no-access-log'], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -31,7 +32,18 @@ test('kartklick → verklig API-process → Leaflet-rutter → GPX', async () =>
   let view;
   try {
     const fetcher = (path, options) => fetch(api.url + path, options);
-    const dom = new JSDOM(readFileSync(new URL('../map/index.html', import.meta.url), 'utf8'), { url: api.url, pretendToBeVisual: true });
+    let html = readFileSync(new URL('../map/index.html', import.meta.url), 'utf8');
+    if (process.env.SEAPARSER_DEMO_URL) {
+      const response = await fetch(api.url + '/'); assert.equal(response.status, 200);
+      html = await response.text();
+      assert.equal(html, readFileSync(new URL('../dist/index.html', import.meta.url), 'utf8'));
+      for (const name of ['map.css', 'main.mjs', 'map-component.mjs', 'controller.mjs', 'client.mjs', 'vendor/leaflet.js', 'vendor/leaflet.css']) {
+        const asset = await fetch(api.url + '/' + name); assert.equal(asset.status, 200);
+        if (name.endsWith('.mjs')) assert.match(asset.headers.get('content-type') || '', /javascript/);
+        assert.deepEqual(Buffer.from(await asset.arrayBuffer()), readFileSync(new URL('../dist/' + name, import.meta.url)));
+      }
+    }
+    const dom = new JSDOM(html, { url: api.url, pretendToBeVisual: true });
     globalThis.window = dom.window; globalThis.document = dom.window.document;
     Object.defineProperty(globalThis, 'navigator', { value: dom.window.navigator, configurable: true });
     dom.window.SVGSVGElement.prototype.createSVGRect = () => ({});

@@ -898,3 +898,34 @@ eller ändrade projektversioner. Officiell registryversion/Node-kompatibilitet
 verifierad. Exakta CI-kommandon för npm ci, check och test passerar lokalt,
 inklusive alla 4 frontendtester och kart/API/GPX-flödet. Backend är oförändrad
 från 201 godkända tester. Ny korrigeringscommit följs med förnyad exakt CI-kontroll.
+
+## 2026-10-12: Godkänd offentlig aktivering – root-steg förberedda
+
+Användaren godkänner systemtjänst, SeaParser-/api/-proxy och interaktiv frontend.
+Ingen ändring av rättigheter/TLS/privat konfiguration/databas tillåts; 403 är löst.
+Verifierat som seaparser: port8765 ledig, proxy/proxy_http ej laddade men tillgängliga,
+seaparser-api ej installerad. Befintlig HTTPS-visning svarar200 och är byteidentisk
+med backup. Publik JavaScript-MIME är korrekt.
+
+Backup utanför webbroten: /home/web/seaparser/backups/activation-20261012-c6b0b4f/.
+SeaParsers Apache-konfiguration och hela tidigare publika visningen kopierade och
+hashverifierade innan förändring. apache-ready.conf ändrar endast en Include-rad
+i rätt HTTPS-vhost; TLS och övrig konfiguration bevaras. originals.sha256 stoppar
+aktivering vid ändrad ursprunglig Apache/index. Inga nycklar/app.env kopierades.
+13 genererade publika resurser kopierade av seaparser och byteverifierade via HTTPS;
+gamla index.html behålls tills root-skriptets API/proxykontroller passerar.
+
+deployment/activate-demo.sh har exakta absoluta vägar, port/hash-/root-kontroll,
+modulaktivering, systemtjänst, configtest före reload, lokal/publik health,
+indexbyte sist och faktiskt publikt kartklick/API/Leaflet/GPX-prov via HTTP/DOM.
+Vid fel efter ändringsstart återställs Apache/index och tjänsten stoppas.
+deployment/rollback-demo.sh återställer samma filer med configtest före reload;
+ingen chmod/chown eller radering/global avaktivering av moduler. Underlag i
+ deployment/README.md. Root-skripten har inte körts av agenten.
+
+Verifierat: bash-syntax och slutlig make check, 201 Python +4 frontendtester godkända.
+Nya HTTP/DOM-verifieringsläget passerar mot en tillfällig loopback-demoserver,
+som sedan stoppats; ingen visuell browseraudit. Äldre 76 lokala loggrader bevaras.
+Kvarstår: administratören kör exakt root-kommandot; därefter verifieras aktiv
+systemtjänst och faktiskt publikt API-/kart-/GPX-flöde. Ingen root-/TLS-/DB-ändring
+har utförts och offentlig API-aktivering får inte rapporteras som klar ännu.
