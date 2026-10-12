@@ -130,3 +130,47 @@ SQL/HBA granskade mot officiell PostgreSQL-dokumentation; aldrig körda mot serv
 CI-jobb och behörigheter dokumenterade, inte körda. Nästa steg: administratörsstöd
 för venv och separat godkännande av testdatabas/HBA/lösenord samt därefter
 anslutningsverifiering och testmigrationer. Push kräver fortfarande godkännande.
+
+## Första databasmigrationen – verifierad 2026-10-12
+
+Uppgift: dokumentera diagnostik, utreda anslutningshindret och införa versionerade
+migrationer med status och samtidighetsskydd. Användaren godkände uttryckligen
+endast första migrationen i utvecklingsdatabasen. Inga privata filer ändrades.
+Antagande: framtida migrationer körs genom samma verktyg och granskas separat.
+
+Användaren rapporterade lyckad terminaldiagnostik. Egen kontroll som seaparser
+reproducerade PermissionError errno=1 i sandboxens TCP-kontroll. Efter begränsat
+körgodkännande lyckades exakt samma diagnostik utanför sandboxen. Skillnaden är
+körmiljöns nätverksskydd, inte ett påvisat HBA- eller autentiseringsfel. Tidigare
+uppgift om att tillståndsbegäran var avstängd gäller den tidigare sessionen;
+den aktuella sessionen tillät begränsade godkännanden. Inga serverregler ändrades.
+
+Egen skrivskyddad verifiering: databas och roll seaparser; PostgreSQL 18.6;
+PostGIS 3.6.2; CREATE/USAGE i public; rollen är inte superuser och har inga
+rollmedlemskap eller CREATEDB/CREATEROLE/REPLICATION/BYPASSRLS-rättigheter.
+spatial_ref_sys har SELECT men inte INSERT/UPDATE/DELETE för projektrollen.
+
+Första filen 0001_baseline.sql skapar endast public.seaparser_migrations.
+Verktyget registrerar version/checksum/tid i samma transaktion. Ingen separat
+schemaskapning eller ändring av befintliga objekt. Status är skrivskyddad;
+try-advisory-transaktionslås avvisar samtidiga verktygskörningar. Okända versioner,
+ändrade tillämpade filer och befintlig historik utan baslinje avvisas före skrivning.
+Timeout och fel ger rollback. Ingen automatisk downgrade.
+
+Verifierat med `.venv/bin/python -B -m scripts.migrate --environment development`:
+status före körning: 0001_baseline pending. Första --apply lyckades. Andra --apply
+och slutlig --status gav identisk applied-rad, inklusive checksum och tid:
+SHA-256 dae062b34f3332abb78d29034995a9d629bb255ce22a1af96501716d3e397155,
+applied_at 2026-10-12 11:27:23.165308+02. Andra körningens SQL-väg gör ingen DDL
+eller INSERT/UPDATE för tillämpad version. Slutlig diagnostik visar endast den nya
+migrationstabellen utöver tidigare spatial_ref_sys i public; inget seaparser-schema.
+Ingen SQL för att ändra spatial_ref_sys eller andra befintliga objekt kördes.
+
+`make check` passerar: 38 prototyptester, 4 befintliga konfigurationstester och
+4 nya migrationsskyddstester; syntax/TOML/beroenden/domängränser passerar.
+Frontendens syntax passerar, node --test hittar 0 tester. Inga paket installerades.
+Git diff --check passerar. Ändringarna granskas och ingår i lokal commit;
+tidigare lokala ändringar bevaras och dokumentets tidigare tillägg lämnas ostagade.
+Ingen push eller publicering. Nästa steg: separat granskning/godkännande av
+framtida produktmigrationer. Samtidighets- och checksumfel har offlinekontroller;
+felvägarna har inte provocerats mot utvecklingsdatabasen i denna leverans.
