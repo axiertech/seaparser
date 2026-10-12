@@ -295,3 +295,14 @@ begränsat inom API:ts befintliga separata beräkningsprocess. Ingen allmän bä
 rutt eller navigationssäkerhet utses. Karta visar vald marginal ungefärligt;
 motorn använder hela segment och lokal metermarginal. Regional HTML exporteras
 separat och befintlig offentlig tjänst/frontend förblir orörda.
+
+
+## 2026-10-12: Verkliga punktreferenser är inte regionala prognoser
+
+SMHI SNOW och MET Oceanforecast fryses med öppna licenser och tydlig attribution.
+Punktadaptrar normaliserar tidsserier, utan att sprida flyttade kustpunkter till
+ett rutnät. MET:s uppdateringstid är inte bevis för modellutfärdande och saknad
+Tm02 förblir saknad. Regional planering avvisas innan motorn. Native gridimport
+är nästa steg, med mask, köridentitet och faktiska referensramar/djup. Inga konton
+eller köp görs. Offlineaudit kan jämföra kandidatbudget 2/8, men API:s budget
+och publika syntetiska demo ändras inte.

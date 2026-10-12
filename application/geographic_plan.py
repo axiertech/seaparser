@@ -56,10 +56,15 @@ def scene(profile='synthetic'):
             'notice':'Uppskattade syntetiska testdata. Ingen GPS/AIS. Kartbakgrund är inte routingsunderlag.'}
 
 
-def calculate_geographic(payload):
+def calculate_geographic(payload, *, audit_candidate_limit=None):
     if payload.get('profile','synthetic') not in ('synthetic','vinga'):
         raise ValueError('Okänd region')
     regional=payload.get('profile','synthetic')=='vinga'
+    candidate_limit=2 if regional else 8
+    if audit_candidate_limit is not None:
+        if not regional or audit_candidate_limit not in (2,4,8):
+            raise ValueError('Offlineaudit tillåter endast Vinga och 2/4/8 kandidater')
+        candidate_limit=audit_candidate_limit
     convert=land.to_geo if regional else to_geo
     local=land.to_local if regional else to_local
     projection=land.metadata() if regional else metadata()
@@ -76,9 +81,9 @@ def calculate_geographic(payload):
     request=replace(request,position=start,target=target,obstacles=shapes,
                     candidates=request.candidates[:2] if regional else request.candidates,
                     departures=tuple(request.departures[0]+timedelta(seconds=o) for o in offsets),
-                    max_candidates=2 if regional else 8,max_waypoints=waypoints,max_steps=2000,max_seconds=1800,
+                    max_candidates=candidate_limit,max_waypoints=waypoints,max_steps=2000,max_seconds=1800,
                     step_seconds=30 if regional else 10,tolerance_m=.01)
-    raw=json.loads(run_obstacle_plan(request,SearchPolicy(clearance_m=5,max_candidates=2 if regional else 8,
+    raw=json.loads(run_obstacle_plan(request,SearchPolicy(clearance_m=5,max_candidates=candidate_limit,
                                                         max_waypoints=waypoints,max_expansions=1000,max_nodes=26 if regional else 10)))
     features=[]; alternatives=[]
     if raw['planning']:

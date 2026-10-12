@@ -1066,3 +1066,53 @@ HTML/JS/CSS-filer jämfördes byte för byte med aktiva tidigare byggartefakter:
 identiska. Aktiv checkout har fortsatt endast sin tidigare docs/progress.md-
 ändring. Leveransens diff granskas och hemlighetskontrolleras före staging/commit;
 GitHub-CI för exakt pushad commit rapporteras i slutredovisningen.
+
+## 2026-10-12: Verkliga Vinga-prognosreferenser och uttrycklig kvalitetsgräns
+
+Läste AGENTS.md, backlog och kartkällornas dokumentation. Fortsatt i isolerad
+checkout på development/real-map-data. Aktiva publika demonstrationens kod,
+webbrot, tjänst, privata filer, rättigheter, TLS och databas är orörda.
+
+Officiell granskning jämför SMHI SNOW, MET vind/hav, Copernicus Baltic PHY/WAV
+och Open-Meteo: docs/forecast-sources.md. SMHI/MET öppna punktdata kan sparas
+med CC BY-attribution utan konto/kostnad; två begränsade HTTPS-anrop gjordes.
+Open-Meteos gratis hosted API tillåter inte kommersiell produktutveckling,
+så inget anrop gjordes. Copernicus behöver inloggning för nedladdning enligt
+aktuell dokumentation, och licenslänken gav 403; ingen import eller konto.
+THREDDS-länken gick inte att verifiera med webverktyget. Gridåtkomst återstår.
+
+Fryst verklig referens: fixtures/vinga-point-forecast-reference.json, med
+råsvar, URL, UTC hämttid (lokal svarsfils sluttid), rå SHA256 och attribution.
+SMHI vindpunkten ligger 11.609723/57.6395; MET havpunkten 11.5955/57.626,
+båda utanför Vingas testbox. SNOW createdTime bevaras som prognosskapande
+utfärdandebasis, referenceTime som starttid i råsvaret. MET updated_at bevaras
+som datauppdatering; modellens utfärdandetid är uttryckligen okänd.
+
+Utbytbara offlinepunktadaptrar normaliserar markrelativa vind-/strömvektorer
+från/mot-konventioner till öst/nord, våghöjd/från-komponenter och dataluckor.
+Tm02 saknas i havsvaret och förblir None; ingen nollström eller vågperiod
+uppfinns. Strömdjup förblir ospecificerat. Punktadaptrar kompletterar befintliga
+rutnätsadaptrar; inget artificiellt regionalt rutnät skapas från punktdata.
+Tidinterpolation tillåts endast vid faktisk returnerad punkt och inom giltighet.
+`python -B -m scripts.forecast_reference` avvisar regional planering före motorn
+som data_unavailable; inget snabbaste/bekvämaste verkligt alternativ utses.
+Detta är verkliga men otillräckliga prognosreferenser, inte fungerande verklig
+regional väderrouting. Native maskat grid med Tm02/utfärdande/strömdjup krävs.
+
+Fem nya tester kontrollerar verklig inläsning, inputimmutabilitet, oberoende
+359°/1°-komponentinterpolation, ström mot-riktning, explicit ålder vid planering,
+gammalt/färskt/saknat utfärdande, giltighetsgräns, dataluckor/enheter och avvisad
+regional extrapolation/planering. Hela `make check` passerar: 222 Python-tester
+(158 domän + 64 övriga) samt 6 frontendtester. Senare typkontroll av punkt/ålder
+verifierades med riktade fem tester utan ändring i motor/API/frontend.
+
+Offline kandidatgränsaudit (scripts.audit_candidates) använder samma syntetiska
+Vinga-dataset, frysta klocka, polar, hinder/marginal och avgångar med 2 respektive
+8 kandidater; API-gränsen ändras inte. Bästa restid/exponering är oförändrade i
+just denna fixture: 878.214920 s/1499.690716 och 845.858496 s/1434.348747.
+Båda sökningarna är trunkerade; inget globalt optimum/konvergens påstås.
+Fryst granskningsresultat finns i fixtures/vinga-candidate-audit.json.
+Ingen kandidatjämförelse för verkliga prognoser påstås innan datagränsen passerar.
+
+Diff och hemlighetskontroll genomförs före commit/push; exakt CI rapporteras
+vid slutredovisning. Tidigare lokal progress-ändring i aktiva checkouten bevaras.
