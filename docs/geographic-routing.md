@@ -62,3 +62,56 @@ Källgranskning ska redovisas separat för kartbakgrund, land, djup och restrikt
 regional täckning/precision, navigationsstatus, versionsspårning, uppdateringar,
 licens för kommersiellt bruk, offline/cachning och export samt eventuell kostnad.
 Ingen källa är vald; ingen databasändring, hämtning, betalning eller konto ingår.
+
+## Regional Vinga-planering (granskningsbranch)
+
+`GET /api/scene?profile=vinga` ger område, rekommenderade start/mål, fryst OSM-land
+för presentation, sex konservativa routinghöljen och 10 m standardmarginal.
+`POST /api/plans` använder `profile: "vinga"`; utelämnad profil behåller det äldre
+syntetiska scenariot. Hinder-/väder-/polarlogik finns i motorn, inte endpoints.
+Region, koordinater, marginal 0–10 m och högst två fasta avgångar valideras.
+
+Fryst dataset `seaparser-estimated-vinga-weather`, version `vinga-v1-<scenario>`,
+är uppskattat syntetiskt testväder, **ingen aktuell/verklig prognos**.
+Planeringsklockan är 2026-01-01T00:00:00Z; utfärdandetid 100 s före planeringen,
+avgång 02:00Z/02:10Z, giltighet 02:00Z–02:30Z. Prognosålder bedöms vid fryst
+planeringstid. Dataset normaliseras före jämförelsen och är oföränderligt.
+Rutnät: x=[−700,−400,0,300,520], y=[−420,−200,0,200,420] lokala meter,
+t=[0,300,600,1800] sekunder efter 02:00Z. Vind 4 m/s FRÅN 315° över mark;
+ström 0 till 0.2 m/s MOT 90° över mark efter 600 s. Hs 1 m söder om y=0,
+1/3 m norr därom; Tm02 5 s, vågor FRÅN 0° över mark. Samma tidigare dokumenterade
+komponentinterpolation och luck-/segment-/ankomstkontroller används. Polarens
+vattenrelativa vind härleds av modellen, vädergränsen gäller markvind.
+Scenarierna weather-limit, unverified och missing-waves är separata frysta
+versioner med tidigare definierade avvikelser.
+
+Fram: WGS84 AEQD vid 57.633°N 11.605°E, högst 1.5 km radie och bara den frysta
+landtäckningens lat/lon-box. Geodetiska referenstester använder 1000 m och
+0.01 m tolerans. Lokala raka färdsegment och lokala nord/östaxlar är en begränsad
+plan modell; inte en global geodetisk seglingsmodell. Väderområdet är 1220×840 m.
+Utanför dess interpolationsstöd avvisas färden som otillräckligt underlag.
+
+Sökbudget: 26 noder, 1000 expansioner, högst 2 kandidater och 8 mellanvägpunkter,
+två avgångar, 30 s integrationssteg, 1800 s/2000 steg per färd. Hela integrerade
+segment kontrolleras konservativt mot vädergränser samt land/marginal; det är inte
+ett påstående om säkerhet grundat på tät sampling. Kandidatgränsen kan missa
+andra omvägar och den verkligt snabbaste/bekvämaste rutten. Geometrisk längd
+ordnar sökningen, kompletta tidsatta kandidater jämförs sedan av tidigare motor.
+
+`make land-preview` exporterar separat `frontend/land-dist/vinga.html` med samma
+kart-/API-/controllerkomponenter som den syntetiska demonstrationen. Marginalens
+kantbredd är en ungefärlig visning vid aktuell kartskala, uppdateras vid zoom
+eller ändrad marginal; motorns avståndstest använder lokala meter. OSM-bakgrund
+är opt-in och aldrig routingsunderlag. Ingen extern datahämtning sker under
+rutt-/avgångsjämförelsen. Lokal granskning: `.venv/bin/python -B -m scripts.local_demo --profile vinga
+--port 8766` på ledig port, öppna `http://127.0.0.1:8766/vinga.html`. Servern
+binder endast loopback och monterar bara den publika exportkatalogen; API och
+HTML/JS testas tillsammans. Ingen aktiv webbrot eller tjänst uppdateras.
+
+Resultat innehåller landversion/källhash, väderversion, projektion, båtmodell,
+ankomstkontroll och samlad inputidentitet. `depth_status: unknown`,
+`land.completeness: unknown`, `navigational_safety: not_assessed` kvarstår även
+vid verifierade modellgränser. GPX är en planerad granskningsrutt med samma
+osäkerheter, ODbL-attribution och landidentitet; export nekas om väder/ankomst
+inte godkänts. Ingen navigationssäkerhet, djupbaserad passage, tideffekt,
+manöver/kryssplanering eller plotterkompatibilitet garanteras.

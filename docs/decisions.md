@@ -284,3 +284,14 @@ Utveckling fortsätter i separat worktree/venv för att inte ändra kod som den
 aktiva beräkningsprocessen laddar. Fryst ODbL-kustutdrag och konservativa konvexa
 höljen återanvänder segmentmotorn; karttiles förblir separat opt-in-presentation.
 Ingen verifierad navigerbarhet/djup eller ny publik aktivering påstås.
+
+
+## 2026-10-12: Begränsad regional Vinga-planering
+
+Vinga-profilen återanvänder rutt-/väder-/polar-/komfort-/avgångsmotorn med sex
+frysta landhöljen och spårbart, syntetiskt regionalt väder. Fryst planeringstid
+2026-01-01, högst två grafkandidater/två avgångar och 30 s steg håller arbetet
+begränsat inom API:ts befintliga separata beräkningsprocess. Ingen allmän bästa
+rutt eller navigationssäkerhet utses. Karta visar vald marginal ungefärligt;
+motorn använder hela segment och lokal metermarginal. Regional HTML exporteras
+separat och befintlig offentlig tjänst/frontend förblir orörda.

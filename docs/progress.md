@@ -1017,3 +1017,52 @@ körning hittade att egna granskningsfiler låg i syntetiska dist; detta rättad
 med separat frontend/land-dist, utan att ändra regressionstestets allowlist.
 Full `make check` passerade efter denna rättning (exit 0). `make land-preview` genererar
 endast publika granskningsresurser; inget kopierades till /home/web/seaparser/public.
+
+## 2026-10-12: Regional Vinga-planering via API, karta och GPX
+
+development/real-map-data fortsätter i /tmp/seaparser-real-map-data. Läste
+AGENTS.md och backlog; aktiva /home/web/seaparser/app, offentlig webbrot,
+privata filer, rättigheter, TLS, tjänst och databas lämnas orörda. Tidigare
+lokal progress-ändring i aktiva checkouten bevaras.
+
+Profilen vinga kopplar sex frysta OSM-landhöljen till befintlig motor och fryst
+seaparser-estimated-vinga-weather / vinga-v1-baseline (uppskattat syntetiskt
+väder, inte aktuell prognos). Samma frysta planeringstid, dataset, polar och
+hårda gränser används för två avgångar. Begränsad graf söker högst två
+kandidater/1000 expansioner; 30 s integration med tidigare hela-segmentbevis.
+Top-level-identitet inkluderar landfilens SHA, väder/routingindata och projektion.
+Djup och landfullständighet är fortsatt unknown; navigational_safety är
+not_assessed även för en genomförd kandidat med verifierade modellgränser.
+
+`make land-preview` bygger en separat publik allowlist i frontend/land-dist.
+Lokalt: `.venv/bin/python -B -m scripts.local_demo --profile vinga --port 8766`
+(ledig port), därefter http://127.0.0.1:8766/vinga.html. Endast loopback.
+Kartan skiljer ursprungliga landringar, konservativa höljen och opt-in-bakgrund.
+Vald marginal visas från början och vid ändring/zoom som ungefärlig kantbredd;
+beräkningens avståndskontroll sker i lokala meter. GPX märks med syntetiskt
+väder, okända djup/fullständighet, landversion/SHA och ODbL-attribution.
+
+Riktade 12 Python-tester passerar (land/region/API). De kontrollerar att direktväg
+korsar land, att hela planerade och accepterade omvägssegment undviker land med
+10 m marginal, godkända ankomster vid båda avgångar, GPX-koordinater/varningar,
+väderöverskridande och dataluckor utan export, blockerad landposition utan rutt,
+region-/arbetsgränser och frysta metadata. Lokal HTTP/kartintegration passerar:
+serverar genererade HTML/JS/data, kartklick → process → rutt → GPX, därefter
+väderavvisning utan exportlänk. Ingen tilehämtning sker i automatiska tester.
+Första karttestet förbrukade 120 accelererade pollingförsök innan regionala
+jobbet var klart; rättades till klientens ordinarie 250 ms intervall. Ingen
+produktgräns eller testförväntan kring väder/ankomst/export sänktes.
+Full kontroll och exakt GitHub-CI verifieras före slutredovisning.
+
+Begränsningar: konvexa höljen kan stänga verkliga passager, källfullständighet
+är okänd, inga djup/grund/restriktioner utöver fryst land finns. Två grafkandidater
+är ingen global bästa väderrutt. Syntetisk komfort/polar och lokalt plan är
+uppskattade testmodeller. Ingen navigationssäkerhet eller plotterkompatibilitet
+påstås. Offentlig demonstration byts inte ut i leveransen.
+
+Slutkontroll: `make check` exit 0, 217 Python-tester (158 domän + 59 övriga)
+och 6 frontendtester godkända. `git diff --check` passerade. Åtta offentliga
+HTML/JS/CSS-filer jämfördes byte för byte med aktiva tidigare byggartefakter:
+identiska. Aktiv checkout har fortsatt endast sin tidigare docs/progress.md-
+ändring. Leveransens diff granskas och hemlighetskontrolleras före staging/commit;
+GitHub-CI för exakt pushad commit rapporteras i slutredovisningen.

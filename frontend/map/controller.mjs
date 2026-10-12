@@ -12,7 +12,9 @@ export async function mount(document, mapFactory, transport = { loadScene, plan 
   const getPoint = name => ({ latitude: Number(byId(`${name}-lat`).value), longitude: Number(byId(`${name}-lon`).value) });
   let selected = 'start'; let generation = 0; let abort;
   try {
-    const scene = await transport.loadScene();
+    const profile = document.documentElement.dataset.profile || 'synthetic';
+    const scene = await transport.loadScene(undefined, profile);
+    if (scene.default_margin_m !== undefined) byId('margin').value = scene.default_margin_m;
     setPoint('start', { longitude: scene.start[0], latitude: scene.start[1] });
     setPoint('target', { longitude: scene.target[0], latitude: scene.target[1] });
     const view = mapFactory(byId('map'), scene, point => {
@@ -20,24 +22,32 @@ export async function mount(document, mapFactory, transport = { loadScene, plan 
       status.textContent = `${selected === 'start' ? 'Start' : 'Mål'} valt. Beräkna igen för aktuell rutt.`;
       selected = selected === 'start' ? 'target' : 'start';
     });
+    function previewObstacles() {
+      const margin = Number(byId('margin').value);
+      if (!Number.isFinite(margin) || margin < 0 || margin > 10) return scene.obstacles;
+      return { ...scene.obstacles, features: scene.obstacles.features.map(feature => ({ ...feature, properties: { ...feature.properties, margin_m: margin } })) };
+    }
     function invalidate() {
       generation++; abort?.abort(); results.replaceChildren(); byId('provenance').textContent = '';
-      view.show({ routes: { features: [] }, obstacles: scene.obstacles });
+      view.show({ routes: { features: [] }, obstacles: previewObstacles() });
       view.endpoints(getPoint('start'), getPoint('target')); byId('calculate').disabled = false;
     }
     view.endpoints(getPoint('start'), getPoint('target'));
+    view.show({ routes: { features: [] }, obstacles: previewObstacles() });
+    const background = byId('background');
+    if (background && scene.profile === 'vinga') background.addEventListener('click', () => { view.background(); background.disabled = true; }, { once: true });
     for (const name of ['start', 'target']) byId(`choose-${name}`).addEventListener('click', () => { selected = name; status.textContent = `Klicka för att välja ${name === 'start' ? 'start' : 'mål'}.`; });
     byId('plan-form').addEventListener('input', invalidate);
     byId('plan-form').addEventListener('submit', async event => {
       event.preventDefault(); invalidate(); const current = generation; abort = new AbortController();
       byId('calculate').disabled = true; status.textContent = 'Beräknar i separat process…';
       try {
-        const response = await transport.plan({ start: getPoint('start'), target: getPoint('target'), margin_m: Number(byId('margin').value), scenario: byId('scenario').value, departure_offsets_seconds: [0, 600] }, { signal: abort.signal });
+        const response = await transport.plan({ profile, start: getPoint('start'), target: getPoint('target'), margin_m: Number(byId('margin').value), scenario: byId('scenario').value, departure_offsets_seconds: [0, 600] }, { signal: abort.signal });
         if (current !== generation) return;
         const result = response.result; view.show(result);
         const summary = result.geometry_search;
         status.textContent = summary.candidates.length ? `${result.alternatives.length} undersökta rutt-/avgångsalternativ. ${summary.truncated ? 'Begränsad sökning: ' + summary.limit_reason : 'Grafen uttömd; ingen global optimalitet.'}` : 'Ingen genererad kandidat; det bevisar inte att andra möjliga rutter saknas.';
-        byId('provenance').textContent = JSON.stringify({ projection: result.projection, search: summary, input_sha256: result.input_sha256, dataset: result.planning?.manifest.dataset_id, version: result.planning?.manifest.dataset_version, boat: result.planning?.manifest.boat.model, notice: result.notice }, null, 2);
+        byId('provenance').textContent = JSON.stringify({ projection: result.projection, search: summary, input_sha256: result.input_sha256, dataset: result.planning?.manifest.dataset_id, version: result.planning?.manifest.dataset_version, land: result.land, depth: result.depth_status, navigational_safety: result.navigational_safety, boat: result.planning?.manifest.boat.model, notice: result.notice }, null, 2);
         for (const route of result.alternatives) {
           const card = document.createElement('article'); card.className = `route ${category(route)}`;
           const heading = document.createElement('h3'); heading.textContent = `${route.candidate} · avgång ${route.departure_time}`; card.append(heading);

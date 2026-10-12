@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { JSDOM } from 'jsdom';
 import { mount, category } from '../map/controller.mjs';
 import { createMap } from '../map/map-component.mjs';
@@ -15,11 +15,16 @@ async function until(predicate, timeout = 10000) {
   assert.fail('Tidsgräns i integrationskontrollen');
 }
 const root = new URL('../../', import.meta.url);
-async function server() {
+async function server(profile = 'synthetic') {
   if (process.env.SEAPARSER_DEMO_URL) return { url: process.env.SEAPARSER_DEMO_URL.replace(/\/$/, ''), async close() {} };
   const local = new URL('.venv/bin/python', root);
   const python = existsSync(local) ? local.pathname : 'python';
-  const child = spawn(python, ['-B', '-m', 'uvicorn', 'api.main:app', '--host', '127.0.0.1', '--port', '0', '--no-access-log'], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
+  if (profile === 'vinga') {
+    const generated = spawnSync(python, ['-B', '-m', 'scripts.land_preview', '--bundle', '--output', 'frontend/land-dist'], { cwd: root, encoding: 'utf8' });
+    assert.equal(generated.status, 0, 'Regional bundleexport misslyckades');
+  }
+  const app = profile === 'vinga' ? ['scripts.local_demo:regional_app', '--factory'] : ['api.main:app'];
+  const child = spawn(python, ['-B', '-m', 'uvicorn', ...app, '--host', '127.0.0.1', '--port', '0', '--no-access-log'], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
   let log = ''; let url;
   child.stderr.on('data', data => { log += data.toString(); url = log.match(/http:\/\/127\.0\.0\.1:\d+/)?.[0]; });
   try { await until(() => url || child.exitCode !== null); assert.ok(url, 'Lokalt API startade inte'); }
@@ -27,12 +32,20 @@ async function server() {
   return { url, async close() { const done = new Promise(resolve => child.once('exit', resolve)); child.kill('SIGTERM'); await done; } };
 }
 
-test('kartklick → verklig API-process → Leaflet-rutter → GPX', async () => {
-  const api = await server();
+for (const profile of process.env.SEAPARSER_DEMO_URL ? ['synthetic'] : ['synthetic','vinga']) test(`${profile}: kartklick → verklig API-process → Leaflet-rutter → GPX`, async () => {
+  const api = await server(profile);
   let view;
   try {
     const fetcher = (path, options) => fetch(api.url + path, options);
     let html = readFileSync(new URL('../map/index.html', import.meta.url), 'utf8');
+    if (profile === 'vinga') {
+      const page = await fetch(api.url + '/vinga.html'); assert.equal(page.status, 200); html = await page.text();
+      for (const name of ['land.geojson', 'routing.geojson', 'controller.mjs', 'map-component.mjs', 'client.mjs', 'vendor/leaflet.js']) {
+        const asset = await fetch(api.url + '/' + name); assert.equal(asset.status, 200);
+        assert.equal(Buffer.compare(Buffer.from(await asset.arrayBuffer()), readFileSync(new URL('../land-dist/' + name, import.meta.url))), 0);
+      }
+      assert.match(html, /Djup och landfullständighet okända/);
+    }
     if (process.env.SEAPARSER_DEMO_URL) {
       const response = await fetch(api.url + '/'); assert.equal(response.status, 200);
       html = await response.text();
@@ -50,17 +63,25 @@ test('kartklick → verklig API-process → Leaflet-rutter → GPX', async () =>
     const element = document.getElementById('map');
     for (const [name, value] of [['clientWidth', 800], ['clientHeight', 480], ['offsetWidth', 800], ['offsetHeight', 480]]) Object.defineProperty(element, name, { value });
     element.getBoundingClientRect = () => ({ x: 0, y: 0, left: 0, top: 0, right: 800, bottom: 480, width: 800, height: 480 });
-    const L = createRequire(import.meta.url)('leaflet');
-    const transport = { loadScene: () => loadScene(fetcher), plan: (payload, options) => plan(payload, { ...options, fetcher, pause: () => wait(10) }) };
+    const require = createRequire(import.meta.url); delete require.cache[require.resolve('leaflet')];
+    const L = require('leaflet');
+    const transport = { loadScene: () => loadScene(fetcher,profile), plan: (payload, options) => plan(payload, { ...options, fetcher, pause: () => wait(profile === 'vinga' ? 250 : 10) }) };
     view = await mount(document, (node, scene, pick) => createMap(L, node, scene, pick), transport);
     assert.ok(view);
-    const scene = await loadScene(fetcher);
+    const scene = await loadScene(fetcher,profile);
+    assert.ok([...document.querySelectorAll('path[stroke="#9a5830"]')].some(path => Number(path.getAttribute('stroke-width')) > 3), 'Vald routingmarginal saknas på kartan');
+    if (profile === 'vinga') {
+      assert.equal(document.getElementById('margin').value, '10');
+      assert.ok(document.querySelector('#background'));
+      assert.equal(document.querySelectorAll('.leaflet-tile').length, 0, 'Bakgrund måste vara opt-in');
+    }
     view.map.fire('click', { latlng: L.latLng(scene.start[1], scene.start[0]) });
     view.map.fire('click', { latlng: L.latLng(scene.target[1], scene.target[0]) });
     assert.equal(Number(document.getElementById('start-lat').value), Number(scene.start[1].toFixed(10)));
     assert.equal(Number(document.getElementById('target-lon').value), Number(scene.target[0].toFixed(10)));
     document.getElementById('plan-form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
-    await until(() => document.querySelector('a[download]'), 15000);
+    await until(() => !document.getElementById('calculate').disabled, profile === 'vinga' ? 25000 : 15000);
+    assert.ok(document.querySelector('a[download]'), document.getElementById('status').textContent + ' ' + [...document.querySelectorAll('.route')].map(card => card.textContent).join(' | '));
     assert.ok(document.querySelectorAll('.leaflet-overlay-pane path').length > 3, 'Verklig Leaflet-geometri saknas');
     assert.ok(document.querySelectorAll('.route').length > 1);
     const choose = document.querySelector('.route button'); choose.click();
@@ -72,6 +93,15 @@ test('kartklick → verklig API-process → Leaflet-rutter → GPX', async () =>
     assert.ok(xml.querySelectorAll('rtept').length >= 3);
     assert.equal(xml.querySelectorAll('trk').length, 0);
     assert.ok(Number(xml.querySelector('rtept').getAttribute('lat')) > 57);
+    if (profile === 'vinga') {
+      assert.match(xml.querySelector('metadata desc').textContent, /Ej navigationssäkert/);
+      assert.match(document.getElementById('provenance').textContent, /seaparser-estimated-vinga-weather/);
+      assert.match(document.getElementById('provenance').textContent, /"depth": "unknown"/);
+      document.getElementById('scenario').value = 'weather-limit';
+      document.getElementById('plan-form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
+      await until(() => document.querySelector('.route.exceeded'), 25000);
+      assert.equal(document.querySelectorAll('a[download]').length, 0);
+    }
     // Changing any input must remove stale results and the old export link.
     document.getElementById('margin').value = '3';
     document.getElementById('margin').dispatchEvent(new dom.window.Event('input', { bubbles: true }));

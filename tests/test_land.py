@@ -37,9 +37,15 @@ class LandTests(unittest.TestCase):
     def test_export_is_public_only_and_no_automatic_tiles(self):
         with TemporaryDirectory() as directory:
             output=Path(directory); build(output)
-            self.assertEqual({p.name for p in output.iterdir()},{'land.geojson','routing.geojson','land-review.html','land-review.mjs'})
+            self.assertEqual({p.name for p in output.iterdir()},{'land.geojson','routing.geojson','land-review.html','land-review.mjs','vinga.html'})
             self.assertEqual(json.loads((output/'land.geojson').read_text())['metadata']['depth'],'unknown')
             self.assertIn("addEventListener('click'",(output/'land-review.mjs').read_text())
+            html=(output/'vinga.html').read_text()
+            self.assertIn('data-profile="vinga"',html)
+            self.assertIn('Ej navigationssäkert',html)
+            self.assertIn('ungefärlig vald marginal',html)
+            self.assertIn('https://tile.openstreetmap.org',html)
+            self.assertIn('strict-origin-when-cross-origin',html)
 
     def test_geographic_frame_against_independent_geodesic(self):
         from pyproj import Geod
@@ -64,3 +70,20 @@ class LandTests(unittest.TestCase):
             points=(start,*route.waypoints,target)
             for a,b in zip(points,points[1:]):
                 self.assertFalse(shape.intersects(a,b))
+
+    def test_bundle_export_does_not_copy_unrelated_files(self):
+        from unittest.mock import patch
+        from scripts.land_preview import build_bundle
+        copied=[]
+        with TemporaryDirectory() as directory:
+            output=Path(directory)
+            with patch('scripts.land_preview.copyfile',side_effect=lambda source,target: copied.append(target.relative_to(output).as_posix())):
+                build_bundle(output)
+            # Independent public export contract, including the fixed Leaflet assets.
+            expected={'index.html','map.css','main.mjs','map-component.mjs','controller.mjs','client.mjs',
+                      'vendor/leaflet.js','vendor/leaflet.css','vendor/leaflet-LICENSE.txt',
+                      'vendor/images/marker-shadow.png','vendor/images/marker-icon.png','vendor/images/marker-icon-2x.png',
+                      'vendor/images/layers.png','vendor/images/layers-2x.png'}
+            self.assertEqual(set(copied),expected)
+            self.assertEqual(len(copied),14)
+            self.assertFalse(any('config' in name or 'log' in name or name.startswith('.') for name in copied))

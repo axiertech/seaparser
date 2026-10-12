@@ -2,6 +2,7 @@
 import argparse
 import json
 from pathlib import Path
+from shutil import copyfile
 from infrastructure.land import load_land, INVERSE
 
 
@@ -13,6 +14,15 @@ def build(output):
             [list(INVERSE.transform(v.east,v.north)) for v in (*p.vertices,p.vertices[0])]]}}
         for p in snapshot.obstacles]}
     output.mkdir(parents=True,exist_ok=True)
+    regional_html=(Path(__file__).resolve().parents[1]/'frontend/map/index.html').read_text()
+    regional_html=regional_html.replace('<html lang="sv">','<html lang="sv" data-profile="vinga">')
+    regional_html=regional_html.replace("img-src 'self' data:;","img-src 'self' data: https://tile.openstreetmap.org;")
+    regional_html=regional_html.replace('<title>', '<meta name="referrer" content="strict-origin-when-cross-origin"><title>')
+    regional_html=regional_html.replace('Uppskattade syntetiska prognoser, båtdata och hinder.', 'Vinga: fryst OSM-land, uppskattad båt och syntetiskt väder. Djup och landfullständighet okända. Ej navigationssäkert.')
+    regional_html=regional_html.replace('Syntetiskt prognosområde: cirka 200 × 100 meter kring 58°N, 11°E.', 'Fryst syntetiskt väderområde: 1220 × 840 meter kring Vinga, 57.633°N 11.605°E.')
+    regional_html=regional_html.replace('Polygon: syntetiskt hinder; linje runt kanten visar marginal.', 'Orange landringar: OSM. Polygonhöljen: konservativt routingsunderlag. Kantlinjens bredd visar ungefärlig vald marginal vid aktuell skala; motorn använder exakt avstånd i lokala meter.')
+    regional_html=regional_html.replace('Bakgrund: lokalt syntetiskt översiktslager, inga sjökort eller verkliga kartbilder.', '<button id="background" type="button">Aktivera separat OSM-bakgrund</button> Bakgrunden är valfri, ingen tile-prefetch. <a href="land.geojson">Fryst landunderlag, ODbL-attribution och version</a>.')
+    (output/'vinga.html').write_text(regional_html)
     (output/'land.geojson').write_text(snapshot.source_geojson)
     (output/'routing.geojson').write_text(json.dumps(routing))
     (output/'land-review.html').write_text('''<!doctype html><html lang="sv"><meta charset="utf-8">
@@ -25,11 +35,28 @@ Orange: OSM-landringar. Rött: konservativa konvexa routinghöljen med 10 m marg
 Höljen kan stänga vikar och passager. Kartbilder används aldrig av ruttmotorn.</p>
 <p>Den syntetiska planeringsdemonstrationen är oförändrad. Ingen väderrutt beräknas på denna sida.</p>
 <button id="background">Aktivera OSM-bakgrund för manuell granskning</button>
-<p><a href="land.geojson">Fryst ODbL-landunderlag och källmetadata</a> · <a href="routing.geojson">Routinghöljen</a> · <a href="index.html">Syntetiskt regressionstest</a></p>
+<p><a href="land.geojson">Fryst ODbL-landunderlag och källmetadata</a> · <a href="routing.geojson">Routinghöljen</a> · <a href="index.html">Syntetiskt regressionstest</a> · <a href="vinga.html">Regional planering med syntetiskt väder</a></p>
 <div id="map" style="height:65vh"></div><script src="vendor/leaflet.js"></script><script type="module" src="land-review.mjs"></script></html>''')
     (output/'land-review.mjs').write_text((Path(__file__).resolve().parents[1]/'frontend/map/land-review.mjs').read_text())
 
 
+PUBLIC_ASSETS=('index.html','map.css','main.mjs','map-component.mjs','controller.mjs','client.mjs',
+               'vendor/leaflet.js','vendor/leaflet.css','vendor/leaflet-LICENSE.txt',
+               'vendor/images/marker-shadow.png','vendor/images/marker-icon.png','vendor/images/marker-icon-2x.png',
+               'vendor/images/layers.png','vendor/images/layers-2x.png')
+
+
+def build_bundle(output):
+    """Explicit allowlist; no copying repository, config or unknown generated files."""
+    build(output)
+    source=Path(__file__).resolve().parents[1]/'frontend/dist'
+    for name in PUBLIC_ASSETS:
+        target=output/name; target.parent.mkdir(parents=True,exist_ok=True)
+        copyfile(source/name,target)
+
+
 if __name__=='__main__':
     parser=argparse.ArgumentParser(); parser.add_argument('--output',type=Path,default=Path('frontend/land-dist'))
-    build(parser.parse_args().output)
+    parser.add_argument('--bundle',action='store_true')
+    args=parser.parse_args()
+    (build_bundle if args.bundle else build)(args.output)

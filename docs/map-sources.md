@@ -72,5 +72,5 @@ landpunkter ligger i höljet; ett konvext hölje täcker även ringens raka kant
 och insida. Befintlig motor testar hela segment inklusive 10 m marginal.
 Höljet kan spärra vikar/passager och garanterar inte källprecision, strandens
 verkliga läge eller fullständighet. Det är geometriskt underlag, ingen snabbaste
-väderrutt. Koppling av området till fryst väder/API-planering är nästa steg.
+väderrutt. Regional koppling till fryst syntetiskt väder/API-planering finns nu på granskningsbranchen; se geographic-routing.md.
 Djup, djupgåendeutrymme och höjdreferens är okända; inget tidvatten kombineras.

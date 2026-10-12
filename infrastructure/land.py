@@ -58,3 +58,23 @@ def load_land(path=None,margin_m=10):
     if not polygons:
         raise ValueError('Saknat landunderlag')
     return LandSnapshot(meta['version'],hashlib.sha256(payload).hexdigest(),payload.decode(),tuple(polygons))
+
+
+def to_local(latitude,longitude):
+    from .geography import finite
+    if not (finite(latitude) and finite(longitude) and 57.629<=latitude<=57.637 and 11.593<=longitude<=11.614):
+        raise ValueError('Position utanför Vingas begränsade landunderlag')
+    return Vector(*FORWARD.transform(longitude,latitude,errcheck=True))
+
+
+def to_geo(position):
+    from .geography import finite
+    if not all(finite(v) for v in (position.east,position.north)) or position.speed>1500:
+        raise ValueError('Position utanför Vingas lokala projektion')
+    return list(INVERSE.transform(position.east,position.north,errcheck=True))
+
+
+def metadata():
+    from .geography import metadata as base_metadata
+    return base_metadata() | {'definition':FRAME,'origin':[11.605,57.633],'max_radius_m':1500,
+                              'limitations':'Endast Vinga-testområdet. Okänt djup och okänd landfullständighet.'}

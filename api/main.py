@@ -1,5 +1,6 @@
 """Thin HTTP interface to bounded planning jobs; no route calculations here."""
 from contextlib import asynccontextmanager
+from typing import Literal
 from fastapi import FastAPI,HTTPException,Response
 from application.geographic_plan import scene
 from infrastructure.planning_jobs import JobStore,BusyError
@@ -22,8 +23,8 @@ def create_app(store=None):
         return {'status':'ok','synthetic':True}
 
     @app.get('/api/scene')
-    async def get_scene():
-        return scene()
+    async def get_scene(profile:Literal['synthetic','vinga']='synthetic'):
+        return scene(profile)
 
     @app.post('/api/plans',status_code=202)
     async def create_plan(request:PlanInput):

@@ -14,7 +14,7 @@ progress.md är arbetslogg, inte en aktuell komplett backlog.
 | Automatisk polygonomväg i lokalt plan | Klar, CI godkänd på 3573814 | Exakta segment-/marginalpredikat och begränsad graf; kompletta tidsberoende kandidater |
 | Geografiska koordinater, API och kartvisning | Implementerad teknisk demo, verifieras i leveransen | WGS84 AEQD, tunt API med separata processer, Leaflet-klick och GeoJSON; syntetisk bakgrund/hinder |
 | Export av planerade vägpunkter | Implementerad GPX 1.1-demonstration | Planerade rtept, ordning/lat/lon och roundtrip testas; verklig plotterimport återstår |
-| Verkliga kart-/hinder-/prognoskällor | Vinga-land/bakgrund förberett för separat granskning | Fryst ODbL-land, konservativa routinghöljen och opt-in OSM raster; okänt djup/fullständighet. Regionalt fryst väder/API-planering återstår; ingen publik ändring |
+| Verkliga kart-/hinder-/prognoskällor | Vinga-land/bakgrund och regional syntetisk väderplanering implementerade för granskning | Fryst ODbL-land, konservativa routinghöljen och opt-in OSM raster; okänt djup/fullständighet. Regionalt fryst syntetiskt väder/API/karta/GPX; verkliga prognoser återstår, ingen publik ändring |
 | Djupgående och säkerhetsmarginal | Planerad, före djupbaserad navigerbarhet | Explicit okänt djup; kompatibla vertikala datum krävs för tidvatten/djup |
 | Tidvatten och stationsström | Adapter-/region-/licensbeslut återstår | Separata vattenståndsdatum och strömriktning/djup; ingen områdesextrapolation utan verifierad modell |
 | Fler spårbara båtprofiler och manövrer | Beslut behövs före verkliga profiler | Polarrättigheter, representativa båtar och manövermodell; automatisk kryss ingår inte i nuvarande prototyp |
