@@ -1116,3 +1116,34 @@ Ingen kandidatjämförelse för verkliga prognoser påstås innan datagränsen p
 
 Diff och hemlighetskontroll genomförs före commit/push; exakt CI rapporteras
 vid slutredovisning. Tidigare lokal progress-ändring i aktiva checkouten bevaras.
+
+## 2026-10-13: Godkänd Vinga-publicering förbereds, root-steg återstår
+
+Användaren godkände Vinga-planering med verkligt land och tydligt syntetiskt
+väder. Blockerad verklig prognosrouting aktiveras inte. Den tidigare syntetiska
+visningen bevaras som synthetic.html. Läste AGENTS.md och deployment/README.md.
+Befintlig rootägd tjänst/proxy matchar projektunderlaget; korrigerade Directory-
+block har AllowOverride None, hemkatalogen nekas och endast public tillåts.
+De ändras inte. Agenten är UID1000, utan sudo; system-bus är blockerad i sandbox.
+
+Ny begränsad uppgradering i deployment/VINGA.md: separat innehållsverifierad
+release, backup av hela aktuella publika visningen/tjänst/vhost/proxy före ändring,
+service restart med samma beroenden, atomiska publiceringsbyten som seaparser
+som bevarar ägare/grupp/mode. Index byts sist efter API health. Ingen chmod,
+chown, TLS-/privat-/DB-ändring eller Apachekonfigurationsändring. Traps återställer
+befintlig fungerande demo/API vid fel. Backup/release återanvänds endast vid
+exakt verifierat innehåll. Avvikande symlänk/filer/adminändring stoppar.
+
+HTTPS-testläget utökas med Vinga och tidigare syntetisk sida, faktiskt serverade
+resurser, kartklick, synlig marginal, ankomst, GPX, väderavvisning och waves-lucka
+utan export. Fyra nya temporära tester verifierar atomiskt byte, filattribut,
+symlänks-/pendingfilskydd, Apacheändringsskydd och full publik rollback.
+Verifiering, commit/CI och konkret förberedelsereceipt följer innan rootkommando.
+Gridprognosutredningen är inte ersatt eller aktiverad; nya publiceringsuppdraget
+prioriteras enligt användarens styrning.
+
+Slutkontroll för publiceringsleveransen: 226 Python-tester (158 domän + 68 övriga)
+och 6 frontendtester passerade, inklusive bägge lokala kartflöden och vågdatalucka.
+Ny processs release-cwd verifieras även efter rootaktivering. Bashsyntax, Python-
+syntax och riktade rollbacktester passerar. Rootaktivering är inte utförd;
+publik HTTPS-Vinga kan verifieras först efter det förberedda rootkommandot.

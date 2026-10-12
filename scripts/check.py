@@ -67,7 +67,7 @@ for workflow in (root / ".github/workflows").glob("*.yml"):
         match = re.match(r"\s*-?\s*uses:\s*(\S+)", line)
         if match and not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_./-]+@[0-9a-f]{40}", match[1]):
             raise SystemExit("GitHub Actions kräver granskad fullständig commit-SHA")
-subprocess.run(["/bin/bash", "-n", str(root / "deployment/activate-demo.sh"), str(root / "deployment/rollback-demo.sh"), str(root / "deployment/activation-preflight.sh")], check=True)
+subprocess.run(["/bin/bash", "-n", str(root / "deployment/activate-demo.sh"), str(root / "deployment/rollback-demo.sh"), str(root / "deployment/activation-preflight.sh"), str(root / "deployment/activate-vinga.sh"), str(root / "deployment/rollback-vinga.sh")], check=True)
 for suite in ("prototype/tests", "tests"):
     subprocess.run([sys.executable, "-B", "-m", "unittest", "discover", "-s", suite, "-v"], cwd=root, check=True)
 print("Syntax, konfiguration, beroendebas, domängränser och tester godkända")

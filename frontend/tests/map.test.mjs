@@ -32,7 +32,7 @@ async function server(profile = 'synthetic') {
   return { url, async close() { const done = new Promise(resolve => child.once('exit', resolve)); child.kill('SIGTERM'); await done; } };
 }
 
-for (const profile of process.env.SEAPARSER_DEMO_URL ? ['synthetic'] : ['synthetic','vinga']) test(`${profile}: kartklick → verklig API-process → Leaflet-rutter → GPX`, async () => {
+for (const profile of process.env.SEAPARSER_DEMO_URL && process.env.SEAPARSER_DEMO_PROFILE !== 'vinga' ? ['synthetic'] : ['synthetic','vinga']) test(`${profile}: kartklick → verklig API-process → Leaflet-rutter → GPX`, async () => {
   const api = await server(profile);
   let view;
   try {
@@ -47,13 +47,14 @@ for (const profile of process.env.SEAPARSER_DEMO_URL ? ['synthetic'] : ['synthet
       assert.match(html, /Djup och landfullständighet okända/);
     }
     if (process.env.SEAPARSER_DEMO_URL) {
-      const response = await fetch(api.url + '/'); assert.equal(response.status, 200);
+      const pagePath = process.env.SEAPARSER_DEMO_PROFILE === 'vinga' && profile === 'synthetic' ? '/synthetic.html' : '/';
+      const response = await fetch(api.url + pagePath); assert.equal(response.status, 200);
       html = await response.text();
-      assert.equal(Buffer.compare(Buffer.from(html), readFileSync(new URL('../dist/index.html', import.meta.url))), 0, 'Publik index.html avviker från verifierad build');
+      assert.equal(Buffer.compare(Buffer.from(html), readFileSync(new URL(profile === 'vinga' ? '../land-dist/vinga.html' : '../dist/index.html', import.meta.url))), 0, 'Publik index.html avviker från verifierad build');
       for (const name of ['map.css', 'main.mjs', 'map-component.mjs', 'controller.mjs', 'client.mjs', 'vendor/leaflet.js', 'vendor/leaflet.css']) {
         const asset = await fetch(api.url + '/' + name); assert.equal(asset.status, 200);
         if (name.endsWith('.mjs')) assert.match(asset.headers.get('content-type') || '', /javascript/);
-        assert.equal(Buffer.compare(Buffer.from(await asset.arrayBuffer()), readFileSync(new URL('../dist/' + name, import.meta.url))), 0, 'Publik resurs avviker: ' + name);
+        assert.equal(Buffer.compare(Buffer.from(await asset.arrayBuffer()), readFileSync(new URL((profile === 'vinga' ? '../land-dist/' : '../dist/') + name, import.meta.url))), 0, 'Publik resurs avviker: ' + name);
       }
     }
     const dom = new JSDOM(html, { url: api.url, pretendToBeVisual: true });
@@ -101,6 +102,11 @@ for (const profile of process.env.SEAPARSER_DEMO_URL ? ['synthetic'] : ['synthet
       document.getElementById('plan-form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
       await until(() => document.querySelector('.route.exceeded'), 25000);
       assert.equal(document.querySelectorAll('a[download]').length, 0);
+      document.getElementById('scenario').value = 'missing-waves';
+      document.getElementById('plan-form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
+      await until(() => document.querySelector('.route.unknown'), 25000);
+      assert.equal(document.querySelectorAll('a[download]').length, 0);
+      assert.match(document.getElementById('results').textContent, /Otillräckliga data/);
     }
     // Changing any input must remove stale results and the old export link.
     document.getElementById('margin').value = '3';
