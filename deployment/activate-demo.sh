@@ -7,6 +7,7 @@ cd /home/web/seaparser/app
 /usr/sbin/runuser -u seaparser -- /usr/bin/node /home/web/seaparser/app/deployment/node-context.mjs
 activation_backup=/home/web/seaparser/backups/activation-retry-20261012-81522f7
 /usr/bin/test -f "$activation_backup/manifest.json"
+/usr/bin/python3 /home/web/seaparser/app/deployment/prepare_retry.py --verify "$activation_backup"
 source /home/web/seaparser/app/deployment/activation-preflight.sh
 require_owned_or_missing "$activation_backup/seaparser-api.service" /etc/systemd/system/seaparser-api.service
 require_owned_or_missing "$activation_backup/apache-api.conf" /etc/apache2/seaparser-api.conf

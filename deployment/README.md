@@ -28,7 +28,8 @@ Ingen systemkonfiguration, tjänst eller TLS har ändrats av agenten.
 ```
 
 Granska skriptet först. Det kontrollerar UID/ledig port/backups och att befintliga unit-/proxyfiler är vanliga filer med exakt verifierat
-deploymentinnehåll. Avvikande filer och symlänkar stoppar före systemändringar. Alla fil- och programvägar är absoluta. Det aktiverar endast
+deploymentinnehåll och rootägare (UID0). Snapshotens deploymentidentitet och
+SHA-256-kvitto verifieras före återanvändning. Avvikande filer och symlänkar stoppar före systemändringar. Alla fil- och programvägar är absoluta. Det aktiverar endast
 proxy/proxy_http, kopierar den minimalt ändrade vhosten och tjänsten, kör configtest
 före reload och verifierar aktiv systemtjänst, lokal health och publik health.
 Index kopieras sedan och HTTP/DOM-helhetsprovet körs som seaparser mot
@@ -67,3 +68,7 @@ Tjänsten har en webbprocess, 2 samtidiga killbara jobbprocesser, 20 s/job,
 8 jobb/300 s retention. Den binder endast 127.0.0.1:8765 och läser inte app.env.
 API är offentligt med syntetiska data; jobb-id är inte autentisering. Globala
 budgetar ersätter inte framtida perklient-/ingresskontroll. Omstart tappar jobb.
+
+Publikt indexprov ska underkännas före aktivering: rollback har korrekt återställt
+statiska sidan. Inga förväntade frontendbytes ändras. Fullt HTTPS-kart/API/GPX-prov
+körs automatiskt först efter fungerande API/proxy och byte till nya index.html.

@@ -1,4 +1,5 @@
 """Snapshot current operator-corrected config; add only the SeaParser API include."""
+import argparse
 import hashlib
 import json
 from pathlib import Path
@@ -28,7 +29,7 @@ def prepare():
     original=APACHE.read_text();updated=add_api_include(original)
     for installed,saved in ((Path('/etc/apache2/seaparser-api.conf'),OLD/'apache-api.conf'),
                             (Path('/etc/systemd/system/seaparser-api.service'),OLD/'seaparser-api.service')):
-        if installed.is_symlink() or (installed.exists() and installed.read_bytes()!=saved.read_bytes()):
+        if installed.is_symlink() or (installed.exists() and (installed.stat().st_uid!=0 or installed.read_bytes()!=saved.read_bytes())):
             raise ValueError('Avvikande tidigare deploymentfil: '+str(installed))
     RETRY.mkdir()
     shutil.copyfile(APACHE,RETRY/'apache-before.conf')
@@ -52,5 +53,28 @@ def prepare():
     print('Retry-underlag:',RETRY)
 
 
+def verify_snapshot(base):
+    base=Path(base)
+    manifest=json.loads((base/'manifest.json').read_text())
+    if manifest.get('identity')!='seaparser-synthetic-map-c6b0b4f':
+        raise ValueError('Okänd deploymentidentitet')
+    for name in ('apache-api.conf','seaparser-api.service'):
+        path=base/name
+        if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=manifest['deployment_files'][name]:
+            raise ValueError('Deploymentunderlag avviker: '+name)
+    before=(base/'apache-before.conf').read_bytes()
+    if hashlib.sha256(before).hexdigest()!=manifest['apache_before_sha256']:
+        raise ValueError('Apache-backup avviker')
+    if (base/'apache-ready.conf').read_text()!=add_api_include(before.decode()):
+        raise ValueError('Apache-kandidat ändrar mer än tillåten Include-rad')
+    print('Deploymentidentitet, filhashar och bevarad Apache-konfiguration verifierade.')
+
+
 if __name__=='__main__':
-    prepare()
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--verify',type=Path)
+    args=parser.parse_args()
+    if args.verify:
+        verify_snapshot(args.verify)
+    else:
+        prepare()

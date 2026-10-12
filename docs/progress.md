@@ -962,3 +962,31 @@ konfigurationskontroller godkända. Hela HTTP/DOM-kart/API/GPX-provet passerar m
 avslutad loopback-demo. Publik slutverifiering kräver nästa root-aktivering och
 kvarstår uttryckligen. Korrigeringen pushas och exakt CI följs. Root-kommandot
 är /usr/bin/bash /home/web/seaparser/app/deployment/activate-demo.sh.
+
+## 2026-10-12: Slutligt retry-underlag med ägarskap och aktiveringsordning
+
+Användaren bekräftar exakt deploymenttest utan EACCES: 3 tester passerar och
+indexkontroll avvisar korrekt den gamla statiska sidan efter rollback.
+Förväntad frontend/testbytes och Node-rättigheter är oförändrade.
+Skriptets ordning är verifierad: API/proxy, health, nytt index och därefter
+hela HTTPS-kart/API/GPX-provet med node --test; inget publikt prov kringgås.
+
+Skrivskyddat verifierat utanför sandboxen: kvarvarande /etc/apache2/seaparser-api.conf
+och /etc/systemd/system/seaparser-api.service är vanliga rootägda filer (UID0/GID0,
+644) med tidigare verifierat deploymentinnehåll. Tjänsten är inactive och port8765
+ledig. Apache matchar korrigerad retry-backup och behåller AllowOverride None,
+Require all denied för hemmakatalog samt grant endast för public/.
+
+Preflight kräver nu också rootägarskap för befintliga installerade filer samt
+snapshotens fasta deploymentidentitet och SHA-256-kvitto. Kandidatens Apache
+måste vara exakt backup plus en Include-rad. Fel ägare, innehåll, symlänk eller
+kvitto stoppar före systemändringar. Identiska filer återanvänds utan omskrivning.
+Backupen ligger fortsatt i activation-retry-20261012-81522f7; inga nya snapshots
+skriver över korrigerade regler. Privata filer, TLS och databas lämnas orörda.
+
+Verifierat: 4 riktade deploymentreferenser och full make check, 205 Python
+(158 domän +47 övriga) samt 4 frontendtester godkända; bash-/lås-/domänkontroller
+passerar. Commitinnehåll granskas och push-CI följs. Tidigare 76 lokala loggrader
+bevaras ostagade. Nytt samlat root-försök: /usr/bin/bash
+/home/web/seaparser/app/deployment/activate-demo.sh. Offentlig slutverifiering
+kvarstår tills detta körts; agenten har inte rootbehörighet eller aktiverat tjänsten.
