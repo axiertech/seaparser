@@ -2,7 +2,7 @@
 # Explicit root rollback. Restores byte content; no chmod/chown/TLS/DB changes.
 set -euo pipefail
 /usr/bin/test "$(/usr/bin/id -u)" -eq 0
-activation_backup=/home/web/seaparser/backups/activation-20261012-c6b0b4f
+activation_backup=/home/web/seaparser/backups/activation-retry-20261012-81522f7
 /usr/bin/test -f "$activation_backup/apache-before.conf"
 /usr/bin/test -f "$activation_backup/public-before/index.html"
 /usr/bin/cp "$activation_backup/apache-before.conf" /etc/apache2/sites-available/seaparser.conf

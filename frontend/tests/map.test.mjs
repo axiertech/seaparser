@@ -36,11 +36,11 @@ test('kartklick → verklig API-process → Leaflet-rutter → GPX', async () =>
     if (process.env.SEAPARSER_DEMO_URL) {
       const response = await fetch(api.url + '/'); assert.equal(response.status, 200);
       html = await response.text();
-      assert.equal(html, readFileSync(new URL('../dist/index.html', import.meta.url), 'utf8'));
+      assert.equal(Buffer.compare(Buffer.from(html), readFileSync(new URL('../dist/index.html', import.meta.url))), 0, 'Publik index.html avviker från verifierad build');
       for (const name of ['map.css', 'main.mjs', 'map-component.mjs', 'controller.mjs', 'client.mjs', 'vendor/leaflet.js', 'vendor/leaflet.css']) {
         const asset = await fetch(api.url + '/' + name); assert.equal(asset.status, 200);
         if (name.endsWith('.mjs')) assert.match(asset.headers.get('content-type') || '', /javascript/);
-        assert.deepEqual(Buffer.from(await asset.arrayBuffer()), readFileSync(new URL('../dist/' + name, import.meta.url)));
+        assert.equal(Buffer.compare(Buffer.from(await asset.arrayBuffer()), readFileSync(new URL('../dist/' + name, import.meta.url))), 0, 'Publik resurs avviker: ' + name);
       }
     }
     const dom = new JSDOM(html, { url: api.url, pretendToBeVisual: true });

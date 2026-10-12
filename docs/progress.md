@@ -929,3 +929,36 @@ som sedan stoppats; ingen visuell browseraudit. Äldre 76 lokala loggrader bevar
 Kvarstår: administratören kör exakt root-kommandot; därefter verifieras aktiv
 systemtjänst och faktiskt publikt API-/kart-/GPX-flöde. Ingen root-/TLS-/DB-ändring
 har utförts och offentlig API-aktivering får inte rapporteras som klar ännu.
+
+## 2026-10-12: Deployment-retry och Node EACCES
+
+Aktuell branch development/geographic-api-map och äldre 76 ostagade loggrader
+kontrollerade/bevarade. Exakta yttre runuser-kommandot kräver root; agenten är
+UID1000 och kan inte köra det. Exakta inre env/node --test-kommandot från app/
+startar alla tester utan EACCES. Publikt kartprov underkänns korrekt eftersom
+rollback återställt gamla index.html; det rapporteras inte som godkänt.
+
+Utanför sandboxen verifierat: spawnSync /usr/bin/node --version fungerar med
+ärvd cwd och explicit app/, men explicit cwd=/root ger EACCES. Node v22.22.1:s
+inbyggda testkörare anger uttryckligen cwd=process.cwd() vid spawn. Agentkontext:
+uid1000, execPath=/usr/bin/node, cwd=app/, NODE_OPTIONS/NODE_PATH frånvarande.
+Inga kompletta miljöer/hemligheter dumpade. Root-försökets verkliga cwd loggas
+nästa gång; activate-demo.sh byter uttryckligen till app/ och kör kontextprobe
+samt hela oförkortade node --test med standardisolering. Inga Node-rättigheter
+ändrade, inga test-/isoleringsflaggor används för att kringgå felet.
+
+Aktuell Apache innehåller användarens korrigerade Directory-block: AllowOverride
+None, hemmakatalog nekad och endast public tillåten. Ny byteverifierad retry-
+backup: /home/web/seaparser/backups/activation-retry-20261012-81522f7/.
+Kandidaten skiljer endast en API-Include-rad. Retry/rollback använder denna
+snapshot och återinför aldrig gamla bredare regler. TLS/privata filer/DB orörda.
+Befintliga service/proxyfiler är byteidentiska med föregående deploymentunderlag;
+preflight tillåter saknad eller exakt identifierad vanlig fil, stoppar vid
+avvikelse/symlänk och skriver inte om identiska installerade filer.
+
+Verifierat: tre nya oberoende retry-/konfigurationsreferenser och full make check:
+204 Python (158 domän +46 övriga), 4 frontendtester, bash-syntax/domän-/lås-/
+konfigurationskontroller godkända. Hela HTTP/DOM-kart/API/GPX-provet passerar mot
+avslutad loopback-demo. Publik slutverifiering kräver nästa root-aktivering och
+kvarstår uttryckligen. Korrigeringen pushas och exakt CI följs. Root-kommandot
+är /usr/bin/bash /home/web/seaparser/app/deployment/activate-demo.sh.
