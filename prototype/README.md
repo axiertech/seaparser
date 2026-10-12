@@ -596,3 +596,53 @@ Kort topp eller omärkt lucka mellan uppslag/segmentändpunkter kan fortfarande 
 Ny ankomstkontroll täpper bara till den aktuella ändpunktsluckan; den ger ingen
 maritim säkerhetsgaranti eller verifiering av verklig prognoskvalitet. Inga resultat
 ersätter djup/sjökort, manövervalidering eller befälhavarens bedömning.
+
+## Explicit jämförelse av avgångstider
+
+`prototype.departures.compare_departures` jämför en explicit lista med samma
+kandidatrutter för varje avgång. Standardgränserna är 24 avgångar, 100 rutter och
+32 vägpunkter per rutt; gränserna kan konfigureras med positiva heltal. Även
+iteratorer konsumeras begränsat. Tomma listor, tidszonlösa tider och dubbla
+avgångsögonblick (även med olika tidszoner) avvisas. Inga nya tider/rutter söks.
+
+```python
+from prototype.departures import compare_departures
+from prototype.presentation import export_departure_comparison
+
+comparison = compare_departures(
+    SyntheticEnvironment(lambda p,t: record),
+    [depart, depart + timedelta(minutes=10)], Vector(100,0),
+    [RouteCandidate("direct")], clock=FixedClock(plan),
+    speed_knots=1/KNOT, weather_policy=WeatherPolicy(5,1),
+    forecast_policy=ForecastPolicy(600), max_comfort_extra_seconds=40,
+    selection_criterion="earliest_arrival")
+print(export_departure_comparison(comparison))
+```
+
+Exemplet återanvänder prognosdata/importer ovan. Klockan läses **en gång** före
+simuleringarna; alla rutter/delsträckor får samma frysta UTC-planeringstid.
+Prognosålder bedöms mot denna tid, även vid senare avgångar. Samma miljöobjekt,
+båtmodell och policyer används. Standardmodellen skapas en gång; egna modeller
+återanvänds. Anroparen måste tillhandahålla ett fryst prognosunderlag och får inte
+mutera miljö/modell eller hämta nya prognoser under det synkrona anropet. Wrappern
+kopierar inte godtyckliga miljöobjekt och garanterar inte externa datakällors
+stabilitet. Kandidater och hinder materialiseras en gång, även från iteratorer.
+
+Varje `DepartureResult.routes` innehåller snabbaste och bekvämaste rutt samt alla
+kandidaters restid, ankomsttid, komfortexponering, delsträckor, status och orsak.
+Misslyckade rutter behåller partiell bana/elapsed_seconds och orsak, men saknar
+godkänd restid, ETA och exponering. Hårda gränser, faktisk destinationskontroll,
+hinderkontroll och prognosgränsskydd återanvänds utan lättnader. Komfortens extra
+restid jämförs alltid med snabbaste rutten **för samma avgång**. Utan väderpolicy
+saknas verifierad komfort/väder; utan ålderspolicy saknas verifierad färskhet.
+
+`shortest_travel` och `earliest_arrival` är separata sammanfattningar, beräknade
+från varje avgångs snabbaste genomförbara rutt. En senare avgång kan ha kortare
+restid men senare ETA. `selected` är None som standard. Uttryckligt kriterium
+`shortest_travel_time` eller `earliest_arrival` krävs för avgångsval; okända
+kriterier avvisas. Exakta lika värden avgörs av angiven avgångs-/kandidatordning.
+Ingen sammanvägd ”bästa avgång” eller global komfortoptimering införs.
+`no_feasible_departure` med tomma val och individuella avbrottsorsaker redovisar
+att inget undersökt alternativ klarade kontrollerna. Exporten anger begränsad
+sökomfattning och bevarar varje rutts kontrollomfattning: kontroller mellan
+uppslag är fortfarande inte kontinuerligt verifierade.

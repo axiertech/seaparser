@@ -504,3 +504,45 @@ segmentändpunkter. Omärkta luckor/toppar kan missas. Exportens kontrollomfattn
 säger detta uttryckligt. Inga verkliga vädertjänster kopplade eller maritima
 säkerhetsgarantier införda. Nästa steg: käll-/adapterkontrakt och kontrollerad
 intervall-/interpolationsvalidering innan verkliga prognoser används.
+
+## Explicit avgångsjämförelse 2026-10-12
+
+Aktuell uppgift: jämför en begränsad explicit lista av avgångstider med samma
+kandidatrutter. compare_departures återanvänder hela ruttberäkningen, en gemensam
+båtmodell, prognosmiljö och hårda gränser. Planeringsklockan läses exakt en gång;
+alla avgångar/delsträckor får samma frysta UTC-tid för ålderskontroll. Miljö och
+modell måste vara oförändrade under anropet; inga prognoser hämtas. Kandidater och
+hinder materialiseras en gång så iteratorer fungerar för samtliga avgångar.
+
+Varje avgång redovisar snabbaste/bekvämaste rutt och alla kandidaters restid, ETA,
+syntetisk exponering, partiell bana och avbrottsorsak. Komfortens extra tidsgräns
+jämförs med snabbaste rutten för samma avgång. Separata sammanfattningar visar
+kortast restid och tidigast ankomst; selected är tomt utan uttryckligt kriterium
+shortest_travel_time eller earliest_arrival. Inget generellt bästa avgångsval.
+Inga genomförbara alternativ ger no_feasible_departure och individuella orsaker.
+Standardtak är24 avgångar/100 rutter/32 vägpunkter; tomma/duplicerade/naiva tider
+avvisas. Resultat/export säger uttryckligen att bara angivna tider/rutter undersöks.
+
+Verifierat: make check passerar med111 prototyp- och17 övriga Python-tester
+(128 totalt). Åtta nya tester täcker kortast restid kontra tidigast ETA,
+väderberoende ruttval och felbevis i export, komfortens avgångsegna referens,
+alla alternativ avvisade av hård gräns, en klockläsning och gemensamma policyer,
+begränsade/unika iteratorindata och deterministiska lika värden, återanvändning av
+hinderiterator samt saknad klocka/tidszon. Oberoende restidsreferens:100 m vid
+1 m/s tar100 s; en avgång200 s senare med0,5 m/s medström tar66,6667 s men
+ankommer senare. Senare farliga vågor över direktvägen gör omvägen snabbast.
+
+Syntax/TOML/beroendebas/domänimporter/Actions-SHA/frontendsyntax passerar;
+frontend har0 produkttester. Migrationsplan och PostgreSQL-testplan passerar
+offline utan konfigurationsläsning/anslutning. git diff --check passerar.
+En testfixture hade först fel konstruktorsignatur för rektangelhindret;
+den korrigerades och hela kontrollsviten kördes om med godkänt resultat.
+
+Begränsningar: fryst underlag är anroparens kontrakt; godtyckliga miljöobjekt
+kopieras inte och en extern muterande källa kan inte garanteras stabil. Policyer
+måste aktiveras för verifierad ålder/väder/komfort. Väder mellan uppslag är ännu
+inte kontinuerligt verifierat. Ingen automatisk tids-/ruttsökning, global
+optimalitet eller global komfortoptimering; syntetiskt komfortmått saknar fysisk
+validering. Tidigare76 orelaterade loggrader bevaras ostagade. Lokal commit av
+leveransen; ingen databasändring eller push. Nästa steg: stabilt prognosadapter-
+kontrakt och intervallvalidering före verkliga prognoser.

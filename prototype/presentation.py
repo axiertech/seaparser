@@ -45,3 +45,25 @@ def export_route_comparison(comparison):
                        'planning_time': comparison.planning_time,
                        'weather_verification_scope': comparison.weather_verification_scope, 'candidates': rows}, default=lambda value: value.isoformat(),
                       ensure_ascii=False, indent=2)
+
+
+def export_departure_comparison(comparison):
+    """Include complete per-departure evidence and explicit objective summaries."""
+    def summary(route):
+        if route is None:
+            return None
+        return {'candidate': route.candidate.name, 'departure_time': route.departure_time,
+                'travel_seconds': route.travel_seconds, 'arrival_time': route.arrival_time,
+                'comfort_exposure': route.comfort_exposure}
+
+    return json.dumps({
+        'status': comparison.status, 'scope': comparison.scope,
+        'planning_time': comparison.planning_time,
+        'selection_criterion': comparison.selection_criterion,
+        'selected': summary(comparison.selected),
+        'shortest_travel': summary(comparison.shortest_travel),
+        'earliest_arrival': summary(comparison.earliest_arrival),
+        'departures': [{'departure_time': row.departure_time,
+                        'routes': json.loads(export_route_comparison(row.routes))}
+                       for row in comparison.departures]},
+        default=lambda value: value.isoformat(), ensure_ascii=False, indent=2)
