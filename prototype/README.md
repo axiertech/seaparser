@@ -19,7 +19,8 @@ innehåller syntetiskt väder-/strömgränssnitt; `calculation.py` gör integrat
 `presentation.py` exporterar resultat. Båtmodell och miljö utvärderas både vid
 stegstart och predikterad mittpunkt med respektive simulerad position och
 UTC-tid. Markhastigheten är vattenhastighet plus strömhastighet.
-`BoatModel` och `Environment` är utbytbara protokoll utan externa beroenden.
+`BoatModel` (fast styrkurs), `BoatPerformance` (kompenserad färd) och `Environment`
+är utbytbara protokoll utan externa beroenden.
 
 Handräknade referenser vid 5 knop österut under 1 h:
 
@@ -49,10 +50,10 @@ antagande. `leeway=0` betyder uttryckligen vald nollavdrift.
 ## Begränsningar
 
 - Lokalt plant öst/nord-system i meter; ingen latitud/longitud eller geodetik.
-- Konstant tillgänglig båtfart; `simulate` håller stävriktningen medan
-  `sail_to_target` kompenserar ström för rak kurs till målet. Ingen polar,
-  motormodell eller fysikalisk vindmodell. Vind kan levereras
-  via miljögränssnittet men används inte av konstantmodellen.
+- `simulate` håller vald stävriktning; `sail_to_target` kompenserar för rak kurs
+  över grund. ConstantBoat behåller konstant fart och använder inte vind.
+  PolarBoat använder uppskattad syntetisk segelpolar enligt avsnittet nedan.
+  Ingen motor-/våg-/vindavdriftsmodell eller uppmätt verklig polar.
 - Analytiska syntetiska fält, ingen gridinterpolation, landmask eller verklig
   prognos. Dataleverantören måste själv markera luckor och täckningsgränser.
 - Tidssteget kortas vid mål, slut och kända prognosgränser; mittpunkten räknas
@@ -61,7 +62,8 @@ antagande. `leeway=0` betyder uttryckligen vald nollavdrift.
   Täckningsstatus i exporten gäller uppslagen. Ett steg kan påverkas av
   fallback i mittpunktsprediktionen.
 - Målfärden ger restid bara vid uppnått mål. Syntetisk rektangelkontroll finns; ingen djupkontroll,
-  segelpolar eller ruttoptimering. Noll markfart ger odefinierad COG (`null`).
+  global ruttoptimering. Syntetisk polar och explicita kandidatrutter finns.
+  Noll markfart ger odefinierad COG (`null`).
 - `docs/stromhantering.md` är ett specifikationsförslag; prototypen implementerar
   ovanstående avgränsade del. AGENTS.md, krav, arkitektur, beslutslogg och
   strömförslaget har lästs inför denna bearbetning.
@@ -278,7 +280,7 @@ och sen genomförbarhet, prognosslut på senare delsträcka, hela ruttens tids-/
 validering, deterministiska likheter och JSON-export. Analytiska konstantreferenser
 har tidsfel <=0,03 s; den enkla direkta referensen <=1e-6 s. Grovt/halverat steg
 provas för hinder och strömval. Sökningen gäller endast den definierade
-kandidatmängden. Verkliga sjökort/djup, prognosålder, polarer och komfort återstår;
+kandidatmängden. Verkliga sjökort/djup, prognosålder, uppmätta polarer och komfort återstår;
 detta är inte navigationsstöd för verklig användning.
 
 
@@ -288,3 +290,103 @@ Vinnarvalet är stabilt vid halverat steg; skillnaden i söder visar integration
 känslighet vid den rumsliga strömdiskontinuiteten, inte en generell tidsfelgaranti.
 100 jämförelser med två kandidater och steg 1 s tog 1,137 s totalt i denna körning.
 Det är en lokal observation, inget prestandalöfte för andra kandidatmängder.
+
+
+## Uppskattad syntetisk segelpolar och vindram
+
+SailPolar i polar.py har identifierare seaparser-synthetic-sail, version 1,
+source "Handvalda referensvärden 2026-10-12, uppskattad testdata" och estimated=True.
+Tabellen är oföränderliga tuples och finns i Git. Den representerar ingen namngiven
+eller uppmätt verklig båt. Ändrade värden ska få ny version. Resultatets assumptions
+och varje uppslags boat_assumptions inkluderar identifierare, version, källa och
+uppskattningsmarkering; vindvektor, vindram samt miljökälla/-version exporteras också.
+
+Fart genom vatten i knop, TWS i knop relativt vatten och absolut TWA i grader:
+
+| TWS / TWA | 45° | 60° | 90° | 120° | 150° | 180° |
+| --- | --- | --- | --- | --- | --- | --- |
+| 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 10 | 3 | 4 | 5 | 4.5 | 3.5 | 3 |
+| 20 | 4.5 | 6 | 7 | 6.5 | 5 | 4.5 |
+
+Bilineär interpolation mellan styrke-/vinkelnoder, symmetriskt mellan babord och
+styrbord. Ingen extrapolation eller klampning av verkliga värden utanför tabellen.
+Vinkel <45° är förbjuden; exakt 45° och 180° tillåtna. Vindstyrka utanför 0–20 knop
+är data_unavailable. Noll vattenrelativ vind ger infeasible för segelfärden eftersom
+ingen seglande riktning kan bestämmas. Flyttalsavrundning inom 1e-10 knop respektive
+1e-10° vid exakta gränser tolereras; detta är numerik, inte ändrade seglingsgränser.
+
+Alla vektorer är öst/nord-komponenter i m/s, i ett lokalt plan. 0° är sann nord
+(+nord), 90° öst, ökande medurs. Strömriktning är alltid **mot-riktning** för vattnets
+rörelse över mark. Meteorologisk vindriktning är **från-riktning**. Conditions.wind
+lagrar däremot luftens **mot-vektor**. wind_from(speed_m_s, from_degrees) ger
+(-speed*sin(from), -speed*cos(from)). En vind från nord har negativ nordkomponent;
+en ström mot nord har positiv nordkomponent. Skillnader över 359°/1° normaliseras
+cirkulärt; ingen vanlig linjär interpolation av riktningsgrader används.
+
+Conditions.wind_reference är ground som standard eller explicit water; andra
+ramar avvisas. Med markrelativ luftvektor Wg och markrelativ ström C används
+**Ww = Wg - C** som sann vind relativt vattnet för polaren. Om water redan anges
+ska C inte subtraheras igen. Från-riktningen är mot-vektorns bäring +180° och TWA
+är minsta absoluta vinkeln mellan styrkurs och denna vattenrelativa från-riktning.
+Exempel: luft (0,-4) m/s och ström (3,0) ger Ww=(-3,-4), styrka 5 m/s och
+från-riktning 36,8699°. Härledningen är vanlig relativhastighet, inte ett empiriskt
+samband för prestanda. Skenbar vind på båten skulle vara Ww minus båtens
+vattenhastighet; den används inte av denna polar. Ström kan därmed ändra både
+polarens TWS/TWA och markhastigheten. Conditions valid_from/valid_until beskriver
+sammanhängande gemensam täckning för vind/ström; separata prognostider/ålder saknas.
+
+Den meteorologiska från-konventionen har kontrollerats mot
+[ECMWFs officiella vinddefinition](https://confluence.ecmwf.int/spaces/CKB/pages/133262398/ERA5%2BHow%2Bto%2Bcalculate%2Bwind%2Bspeed%2Band%2Bwind%2Bdirection%2Bfrom%2Bu%2Band%2Bv%2Bcomponents%2Bof%2Bthe%2Bwind).
+Polartabellen och valet av vattenrelativ sann vind är projektets explicita
+syntetiska modell, ingen användning av ECMWF som båtprestandakälla.
+
+## Utbytbar prestanda och kurskompensation
+
+sail_to_target(..., boat=PolarBoat()) och compare_routes(..., boat=PolarBoat())
+använder BoatPerformance.compensate(direction, position, time, weather,
+min_progress_m_s). Ruttjämförelsen förmedlar bara samma modell till varje
+kandidat/delsträcka; den känner inte till polarer eller kurslösningsmetod.
+Utan boat väljs ConstantBoat med befintliga speed_knots-argument och tester.
+Med boat bestäms farten av modellen; speed_knots är ett kompatibilitetsargument.
+BoatModel.evaluate finns kvar för simulate med fast stävriktning, även PolarBoat.
+ConstantBoat med icke-noll leeway används fortsatt av simulate; dess kompenserade
+färd avvisar sådan inställning eftersom denna leverans antar noll avdrift.
+
+Konstantmodellens analytiska sqrt-formel gäller endast dess kursoberoende fart.
+PolarBoat löser istället F(theta)=(Vwater(theta)+C)·n=0 med tillåten vindvinkel
+samt positiv framdrift över min_progress_m_s. Den prövar hela båda tillåtna
+vinkelintervallen och väljer störst framdrift av alla tillåtna lokala lösningar.
+Förbjuden vindvinkel kontrolleras mot styrkurs/vattenvektor, inte kurs över grund;
+en stark ström kan bära båten mot vinden medan den seglar i en tillåten annan kurs.
+Ingen lösning ger infeasible med uttrycklig orsak och utan restid. Ingen automatisk
+kryssning, väntan, slag/gipp eller manöverkostnad införs.
+
+På varje polarstycke är s(theta)=s0+k*(theta-lo), i m/s och radianer. Med
+målbäring D och delta=theta-D blir F=-s*sin(delta)+C·n. Dess stationära punkter
+uppfyller delta-atan2(k,s)=pi/2+j*pi. Vänsterledet är monotont eftersom derivatan
+är 1+k²/(s²+k²) för icke-noll stycken. Därför hittas alla stationära punkter utan
+ett glest vinkelgrid. Stycket delas där och varje teckenbytande rot bisekteras;
+ändpunkter och stationära tangeringsrötter testas också. Högst 60 iterationer per
+bisektion, tvärhastighetsresidual <=1e-9 m/s. Identiskt nollfartsstycke behandlas
+via ändpunkterna. Argumentet gäller denna linjärt interpolerade, icke-negativa
+polar och får inte återanvändas oförändrat för annan prestandafunktion.
+
+Miljön och prestandan utvärderas vid faktisk simulerad position/tid vid både
+stegstart och mittpunkt. Hinder, prognosgränser, ruttbudgets och målpassagetolerans
+är kvar. Vind som saknas/är icke-finit ger data_unavailable för PolarBoat; ingen
+vindfallback. Konstantmodellen kan fortsatt användas utan vind.
+
+Referenser: 10 knop, TWA90 ger 5 knop och 1 NM på 720 s. TWA120 ger 4,5 knop;
+2,25 knop nordlig ström tar ut dess sydkomponent vid styrkurs120 och 0,3 knop
+östlig ström ger SOG=(0,3+4,5*sqrt(3)/2) knop. Samma resultat provas med både
+mark- och vattenrelativ vind, steg 120/60 s, restidstolerans 0,01 s och residual
+1e-9 m/s. En separat flat testpolar provar intern tangeringsrot, exakt tillåten
+45°-gräns och flera alternativa rötter. En analytisk rum/tid-vindreferens
+x'=.2K*x/100+.2K*t/100+5K provas med halverat steg och <=0,001 m fel.
+
+Begränsningar: uppskattad liten tabell, omedelbar trim/styrning, symmetri,
+noll avdrift, ingen sjö-/våg-/segelkonfigurationsmodell och inga verkliga polarer.
+Referensramen är inte roterade GRIB-komponenter, magnetisk kurs eller vind relativt
+båten. Okända dataluckor mellan uppslag och prognosålder återstår. Ingen generell
+felgaranti eller maritim sakkunnig validering; detta är endast testdata.

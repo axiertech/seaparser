@@ -5,7 +5,7 @@ from math import isfinite
 
 from .calculation import Voyage, sail_to_target
 from .environment import Environment
-from .model import Vector
+from .model import Vector, BoatPerformance
 
 
 @dataclass(frozen=True)
@@ -50,11 +50,13 @@ def compare_routes(environment: Environment, start: datetime, target: Vector,
                    candidates, *, position=Vector(0, 0), obstacles=(), speed_knots=5,
                    step_seconds=60, max_seconds=86400, tolerance_m=0.01,
                    min_progress_m_s=0.01, max_steps=100000,
-                   max_candidates=100, max_waypoints=32):
+                   max_candidates=100, max_waypoints=32, boat: BoatPerformance | None = None):
     """Independent full simulations with equal limits; first candidate wins exact ties."""
-    values = (speed_knots, step_seconds, max_seconds, tolerance_m, min_progress_m_s,
+    values = (step_seconds, max_seconds, tolerance_m, min_progress_m_s,
               position.east, position.north, target.east, target.north)
-    if (not all(isfinite(v) for v in values) or speed_knots <= 0 or step_seconds < 1e-6
+    if boat is None:
+        values += (speed_knots,)
+    if (not all(isfinite(v) for v in values) or (boat is None and speed_knots <= 0) or step_seconds < 1e-6
             or max_seconds <= 0 or tolerance_m <= 0 or min_progress_m_s < 0):
         raise ValueError("Ogiltiga färdgränser eller positioner")
     if any(not isinstance(v, int) or isinstance(v, bool) or v <= 0
@@ -96,7 +98,7 @@ def compare_routes(environment: Environment, start: datetime, target: Vector,
                 environment, current_time, destination, position=current_position,
                 obstacles=obstacles, speed_knots=speed_knots, step_seconds=step_seconds,
                 max_seconds=max(remaining_seconds, 1e-6), tolerance_m=tolerance_m,
-                min_progress_m_s=min_progress_m_s, max_steps=max(remaining_steps, 1))
+                min_progress_m_s=min_progress_m_s, max_steps=max(remaining_steps, 1), boat=boat)
             legs.append(leg)
             step_count += len(leg.steps)
             current_position = leg.end_position

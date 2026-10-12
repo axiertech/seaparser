@@ -1,9 +1,9 @@
 """Integration med explicit mittpunktsmetod; ingen databas eller I/O."""
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
-from math import isfinite, sqrt
+from math import isfinite
 
-from .model import BoatModel, ConstantBoat, KNOT, Vector
+from .model import BoatModel, BoatPerformance, ConstantBoat, Vector, CourseUnavailable, CROSS_TRACK_TOLERANCE
 from .environment import Environment
 from .obstacles import check_segment, ObstacleCollision
 
@@ -21,6 +21,9 @@ class Evaluation:
     current_status: str
     valid_from: datetime | None
     valid_until: datetime | None
+    boat_assumptions: tuple[str, ...] = ()
+    wind: Vector | None = None
+    wind_reference: str = "ground"
 
 
 @dataclass(frozen=True)
@@ -33,6 +36,10 @@ class Step:
 
 def evaluate(boat: BoatModel, environment: Environment, position, time, allow_missing_current=False):
     weather = environment.evaluate(position, time)
+    return evaluate_conditions(boat, weather, position, time, allow_missing_current)
+
+
+def evaluate_conditions(boat, weather, position, time, allow_missing_current=False):
     water, assumptions = boat.evaluate(position, time, weather)
     if not all(isfinite(v) for v in (water.east, water.north)):
         raise ValueError("Båtmodellen gav ogiltig hastighet")
@@ -53,7 +60,8 @@ def evaluate(boat: BoatModel, environment: Environment, position, time, allow_mi
         current = Vector(0, 0)
     return Evaluation(position, time, water, current, water + current,
                       assumptions, weather.source, weather.version, status,
-                      weather.valid_from, weather.valid_until)
+                      weather.valid_from, weather.valid_until,
+                      getattr(boat, "assumptions", ()), weather.wind, weather.wind_reference)
 
 
 def forecast_step_seconds(sample, start, seconds):
@@ -111,10 +119,6 @@ def simulate(boat: BoatModel, environment: Environment, start, duration, step_se
     return steps
 
 
-class CourseUnavailable(ValueError):
-    """Kurs eller minsta framdrift kan inte upprätthållas vid ett uppslag."""
-
-
 @dataclass(frozen=True)
 class Voyage:
     status: str
@@ -125,42 +129,43 @@ class Voyage:
     travel_seconds: float | None
     target: Vector
     tolerance_m: float
-    assumptions: tuple[str, ...] = (
-        "Syntetisk uppskattad båt: konstant fart genom vattnet, noll vindavdrift.",)
+    assumptions: tuple[str, ...] = ()
 
 
-def compensated_evaluation(speed_knots, direction, environment, position, time,
+def compensated_evaluation(boat: BoatPerformance, direction, environment, position, time,
                            min_progress_m_s):
-    # Återanvänd strikt datavalidering; ingen fallback i målfärden.
-    sample = evaluate(ConstantBoat(speed_knots=0, leeway=0), environment, position, time)
+    weather = environment.evaluate(position, time)
+    # Validate coverage/current without calling a polar at an arbitrary fixed heading.
+    sample = evaluate_conditions(ConstantBoat(speed_knots=0, leeway=0), weather, position, time)
+    water, assumptions = boat.compensate(direction, position, time, weather, min_progress_m_s)
+    if not all(isfinite(v) for v in (water.east, water.north)):
+        raise ValueError("Båtprestandan gav ogiltig vattenhastighet")
+    ground = water + sample.current
     lateral = Vector(-direction.north, direction.east)
-    cross = sample.current.dot(lateral)
-    speed = speed_knots * KNOT
-    if abs(cross) > speed:
-        raise CourseUnavailable("Sidoströmmen är för stark för önskad kurs över grund")
-    along = sqrt(max(0, speed * speed - cross * cross))
-    progress = along + sample.current.dot(direction)
-    if progress <= min_progress_m_s:
-        raise CourseUnavailable("Framdriften mot målet är otillräcklig")
-    water = direction.scaled(along) + lateral.scaled(-cross)
-    return replace(sample, water=water, ground=water + sample.current)
+    if abs(ground.dot(lateral)) > CROSS_TRACK_TOLERANCE or ground.dot(direction) <= min_progress_m_s:
+        raise CourseUnavailable("Båtprestandan gav ingen giltig kompenserad kurs")
+    return replace(sample, water=water, ground=ground, assumptions=assumptions,
+                   boat_assumptions=boat.assumptions)
 
 
 def sail_to_target(environment: Environment, start, target: Vector, *, speed_knots=5,
                    position=Vector(0, 0), step_seconds=60, max_seconds=86400,
                    tolerance_m=0.01, min_progress_m_s=0.01, max_steps=100000,
-                   obstacles=()):
+                   obstacles=(), boat: BoatPerformance | None = None):
     """Rak kompenserad målfärd; restid ges enbart vid uppnått mål."""
-    values = (speed_knots, step_seconds, max_seconds, tolerance_m, min_progress_m_s,
+    values = (step_seconds, max_seconds, tolerance_m, min_progress_m_s,
               position.east, position.north, target.east, target.north)
+    if boat is None:
+        values += (speed_knots,)
     if not all(isfinite(v) for v in values):
         raise ValueError("Indata måste vara finita")
-    if (speed_knots <= 0 or step_seconds < 1e-6 or max_seconds <= 0
+    if ((boat is None and speed_knots <= 0) or step_seconds < 1e-6 or max_seconds <= 0
             or tolerance_m <= 0 or min_progress_m_s < 0
             or not isinstance(max_steps, int) or max_steps <= 0):
         raise ValueError("Ogiltiga gränser för målfärd")
     if start.tzinfo is None or start.utcoffset() is None:
         raise ValueError("Starttid måste ha tidszon")
+    boat = boat if boat is not None else ConstantBoat(speed_knots=speed_knots, leeway=0)
     start = start.astimezone(timezone.utc)
     time, elapsed, steps = start, 0.0, []
     offset = target - position
@@ -169,7 +174,7 @@ def sail_to_target(environment: Environment, start, target: Vector, *, speed_kno
 
     def result(status, reason=""):
         return Voyage(status, reason, tuple(steps), position, elapsed,
-                      elapsed if status == "arrived" else None, target, tolerance_m)
+                      elapsed if status == "arrived" else None, target, tolerance_m, boat.assumptions)
 
     obstacles = tuple(obstacles)
     try:
@@ -182,7 +187,7 @@ def sail_to_target(environment: Environment, start, target: Vector, *, speed_kno
         if elapsed >= max_seconds or len(steps) >= max_steps:
             return result("limit_reached", "Simuleringens tids- eller steggräns nådd")
         try:
-            first = compensated_evaluation(speed_knots, direction, environment,
+            first = compensated_evaluation(boat, direction, environment,
                                            position, time, min_progress_m_s)
             remaining = (target - position).dot(direction)
             # Startfarten begränsar predikterad mittpunkt till före målet.
@@ -193,7 +198,7 @@ def sail_to_target(environment: Environment, start, target: Vector, *, speed_kno
                 return forecast_step(
                     first, position, time, seconds,
                     lambda p, t: compensated_evaluation(
-                        speed_knots, direction, environment, p, t, min_progress_m_s))
+                        boat, direction, environment, p, t, min_progress_m_s))
 
             dt, middle, end = trial(dt)
             if (end - target).dot(direction) > 0:

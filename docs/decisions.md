@@ -105,3 +105,20 @@
   86400 s och 100000 integrerade steg per kandidat. Ingen väntan eller svängkostnad.
 - Syntetiskt lokalt plan och uppskattad konstant båtmodell; verklig navigation,
   polarer, prognosålder och snabbast/bekvämast-jämförelse återstår.
+
+
+## Uppskattad syntetisk segelpolar 2026-10-12
+
+- Oföränderlig polar seaparser-synthetic-sail v1 med handvalda testvärden;
+  bilineär interpolation i vattenrelativ vindstyrka och absolut vindvinkel.
+  Förbjudet under 45°, ingen extrapolation utanför 0–20 knop. Ingen verklig båtdata.
+- Vind anges som luftens mot-vektor, explicit ground/water. Meteorologisk
+  från-riktning hålls skild från strömmens mot-riktning. Wwater=Wground-Cground.
+  Ingen skenbar vind används. Samma Conditions-intervall gäller vind och ström.
+- BoatPerformance äger kurskompensation och antaganden. Ruttjämförelsen förmedlar
+  modellen; konstantmodellens analytiska lösning bevaras endast för konstant fart.
+- Polarens linjära vinkelstycken delas vid alla stationära punkter, med bisektion
+  och test av tangerande/ändpunktsrötter. Störst positiv tillåten framdrift väljs;
+  förbjuden vinkel bedöms mot styrkurs, inte kurs över grund. Ingen automatisk kryss.
+- Metadata och vindram följer exporten. Hinder-/prognos-/budgetskydd bevaras.
+  Sjö, avdrift, segelkonfiguration, verkliga polarer och prognosålder återstår.

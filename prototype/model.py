@@ -1,6 +1,6 @@
 """Båtmodell och gemensamma storheter: meter, sekunder, öst/nord."""
 from dataclasses import dataclass
-from math import sin, cos, radians, hypot, atan2, degrees, isfinite
+from math import sin, cos, radians, hypot, atan2, degrees, isfinite, sqrt
 from datetime import datetime
 from typing import Protocol, TYPE_CHECKING
 
@@ -8,11 +8,25 @@ if TYPE_CHECKING:
     from .environment import Conditions
 
 KNOT = 1852 / 3600
+CROSS_TRACK_TOLERANCE = 1e-9  # m/s; numerical compensation residual
 
 
 class BoatModel(Protocol):
     def evaluate(self, position: "Vector", time: datetime,
                  weather: "Conditions") -> tuple["Vector", tuple[str, ...]]: ...
+
+
+class CourseUnavailable(ValueError):
+    """Ingen tillåten styrkurs med tillräcklig framdrift."""
+
+
+class BoatPerformance(BoatModel, Protocol):
+    @property
+    def assumptions(self) -> tuple[str, ...]: ...
+
+    def compensate(self, direction: "Vector", position: "Vector", time: datetime,
+                   weather: "Conditions", min_progress_m_s: float
+                   ) -> tuple["Vector", tuple[str, ...]]: ...
 
 
 @dataclass(frozen=True)
@@ -38,7 +52,10 @@ class Vector:
 
     @property
     def course(self):
-        return None if self.speed < 1e-12 else degrees(atan2(self.east, self.north)) % 360
+        if self.speed < 1e-12:
+            return None
+        bearing = degrees(atan2(self.east, self.north)) % 360
+        return 0.0 if bearing == 360 else bearing
 
 
 def velocity(speed, direction):
@@ -64,3 +81,22 @@ class ConstantBoat:
         assumption = "Vindavdriftsmodell saknas; vindavdrift antas vara 0°."
         return (velocity(self.speed_knots * KNOT, self.heading + (self.leeway or 0)),
                 (assumption,) if self.leeway is None else ())
+
+    @property
+    def assumptions(self):
+        return ("Syntetisk uppskattad konstantfartsmodell v1; ingen uppmätt båtprestanda.",)
+
+    def compensate(self, direction, position, time, weather, min_progress_m_s):
+        # Analytic formula is valid only for this heading-independent speed model.
+        if self.leeway not in (None, 0):
+            raise ValueError("Kompenserad konstantmodell stöder endast noll vindavdrift")
+        lateral = Vector(-direction.north, direction.east)
+        cross = weather.current.dot(lateral)
+        speed = self.speed_knots * KNOT
+        if abs(cross) > speed:
+            raise CourseUnavailable("Sidoströmmen är för stark för önskad kurs över grund")
+        along = sqrt(max(0, speed * speed - cross * cross))
+        if along + weather.current.dot(direction) <= min_progress_m_s:
+            raise CourseUnavailable("Framdriften mot målet är otillräcklig")
+        return (direction.scaled(along) + lateral.scaled(-cross),
+                self.assumptions + ("Kompenserad färd antar noll vindavdrift.",))

@@ -78,9 +78,9 @@ Ingen omväg väljs automatiskt ännu. Leveransen stannar här för granskning.
 1. Genomförd 2026-10-12: komplett jämförelse av fördefinierade kandidatrutter
    med tidsberoende tillstånd, omväg och inget genomförbart alternativ.
    Se ruttjämförelseleveransen nedan; global optimalitet utlovas inte.
-2. Generalisera målfärdens båtprestanda och inför spårbar syntetisk polar,
-   förbjudna vindvinklar och konsekventa manöverantaganden. Kurskompensation
-   måste återutvärdera kursberoende fart; konstantfartsformeln räcker inte.
+2. Genomförd 2026-10-12: utbytbar båtprestanda och spårbar uppskattad syntetisk
+   polar med förbjudna vinklar och kursberoende kompensation. Automatisk kryssning
+   och manövermodell ingår inte; se polarleveransen nedan.
 3. Testa rumsligt/tidsberoende vind och ström längs flerstegsrutter, giltighet,
    saknade data och halverade tidssteg mot oberoende referenser.
 4. Definiera syntetiskt komfortmått och hårda vind-/sjögränser, jämför snabbast
@@ -328,3 +328,60 @@ kandidatmängd, inte global optimalitet eller verklig navigerbarhet. Tolerans
 0,01 m per waypoint och mikrosekundsupplösning påverkar fortsatt färd.
 Nästa steg: spårbar syntetisk polar/vind och sedan hårda vädergränser/komfort,
 se beslutslogg och tidigare beroendeordning. Ingen bakgrundsaktivitet.
+
+
+## Spårbar syntetisk segelpolar – verifierad 2026-10-12
+
+Aktuell uppgift: uppskattad testpolar, explicit vindkonvention/referensram och
+utbytbar prestanda för färd/ruttjämförelse. Krav/arkitektur/beslutslogg lästa.
+Inga databasoperationer, installationer eller privata konfigurationsändringar.
+
+SailPolar seaparser-synthetic-sail v1 består av oföränderliga axlar/rader med
+handvalda referenser, källa och estimated=True. 0/10/20 knop vattenrelativ vind,
+45/60/90/120/150/180° absolut TWA; bilineär interpolation, ingen extrapolation.
+Vinklar under45° förbjudna. Polaren är uppskattad testdata, inte en uppmätt båt.
+Metadata och vindram/vektor följer resultatexporten. Tabell och detaljer i
+prototype/README.md. Meteorologisk från-konvention granskad mot officiell ECMWF.
+
+Vind/ström lagras som mot-vektorer i lokalt sann-nord/öst-plan i m/s. Vindens
+meteorologiska från-bäring skiljs explicit från strömmens mot-bäring. Conditions
+anger ground (standard) eller water. Wwater=Wground-Cground, ingen dubbel
+subtraktion för water. Polaren använder sann vattenrelativ vind, inte skenbar
+vind relativt båten. Gemensam giltighetstid för vind/ström; prognosålder saknas.
+
+BoatPerformance äger compensate och modellantaganden. Ruttjämförelsen förmedlar
+samma modell utan kännedom om polartabell eller lösningsmetod. Konstantmodellen
+behåller analytisk kompensation och alla tidigare tester. PolarBoat söker rötter
+på alla tillåtna linjära vinkelstycken, delar vid samtliga stationära punkter och
+prövar tangerings-/ändpunktsrötter. 60 bisektionsiterationer och residual<=1e-9 m/s;
+störst positiv framdrift väljs. Ingen konstantfartsformel används för polaren.
+No-go gäller styrkurs/vattenriktning, inte COG. Ingen tillåten lösning ger infeasible
+utan restid. Ingen automatisk kryss, väntan eller manöverkostnad. Saknad/ogiltig/
+för stark vind ger data_unavailable. Noll vattenrelativ vind ger infeasible.
+
+Verifierat: make check passerar med 73 prototyp- och 17 övriga Python-tester
+(90 totalt). Alla 71 tidigare tester och 19 nya polar-/prestandatester passerar.
+Nya referenser omfattar tabellceller, bilineär interpolation, ändpunkter/no-go,
+359°/1° för vind och styrning, från/mot-tecken, mark/vattenomräkning, symmetri,
+annan oberoende BoatPerformance, flera rötter, intern tangering, för stark sid-/
+motström och strömdriven COG mot vinden med tillåten segelkurs. Vindomslag vid45 s
+avbryter vid prognosgränsen utan kryssning. Hinder/prognosgräns-/ruttbudgets bevaras.
+
+Oberoende referenser: TWA90/TWS10 ->5 knop ->720 s per NM. TWA120/TWS10 ->4,5 knop,
+Cnorth=2,25 knop ger styrkurs120; Ceast=0,3 knop ger SOG=0,3+4,5*sqrt(3)/2 knop.
+Mark- och vattenvind ger samma resultat, steg120/60 s och restidsfel<=0,01 s.
+C=(3,0), Wground=(0,-4) m/s ger Wwater=(-3,-4), styrka5 och från36,8699°.
+Rum/tid-variation provas mot analytisk x'=.2K*x/100+.2K*t/100+5K; halverat steg
+minskar fel mer än tre gånger och grovt steg har fel<0,001 m.
+
+Syntax/TOML/beroendebas/domänimporter/Actions-SHA passerar; nya polar-/segelfiler
+omfattas av importskyddet. Frontendsyntax passerar, 0 produkttester. Migrations-
+och PostgreSQL-testplan passerar offline utan anslutning. git diff --check passerar.
+Tidigare 76 fristående loggrader bevaras ostagade; egen lokal commit, ingen push.
+
+Begränsningar/antaganden: syntetisk liten symmetrisk polar, noll vindavdrift,
+omedelbar styrning/trim, inga segelval, vågor, verkliga polarer eller prognosålder.
+Rotargumentet gäller endast denna styckvis linjära positiva prestanda, inte andra
+modeller. Numeriska toleranser vid axlar är1e-10 knop/grader; fullständiga dynamiska
+felgarantier och maritim sakkunnig validering saknas. Nästa steg: definiera hårda
+vind-/sjögränser och syntetiskt komfortmått under samma absoluta begränsningar.
