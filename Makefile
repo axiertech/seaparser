@@ -15,4 +15,4 @@ frontend-check:
 	npm --prefix frontend test
 
 migration-plan:
-	$(PYTHON) -B -m scripts.migrate --environment test
+	$(PYTHON) -B -m scripts.migrate --environment development

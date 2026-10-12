@@ -31,3 +31,7 @@ Bygg funktionella komponenter med dokumenterade inställningar. En visuell edito
 ## Uppgraderingar
 
 Låsfiler och fasta deploymentversioner, kontrollerade beroendeuppdateringar, automatiska tester och versionshanterade migrationer. Driftplanen ska omfatta hälsokontroller och återställning. En kodrollback återställer inte automatiskt databasen; migrationer måste planeras separat.
+
+Utveckling använder endast databas och roll seaparser. Enhetstester kräver ingen
+databas. Databastester begränsas till rollback och testegna objekt. Inför drift
+ska miljön separeras och en ny driftroll skapas; utvecklingsuppgifter återanvänds inte.

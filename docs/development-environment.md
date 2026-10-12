@@ -20,58 +20,25 @@ uppdatera samtidigt scripts/check.py som nu uttryckligen bevakar den tomma grafe
 
 ## Konfiguration och separation
 
-settings/development.toml och settings/test.toml innehåller offentliga standarder.
-Utveckling läser endast kända nycklar i /home/web/seaparser/config/app.env via
-infrastructure/settings.py, aldrig genom shell source. Format: KEY=value med
-valfri hel citering, inga export-rader, interpolationer eller inline-kommentarer.
-APP_ENV kontrolleras om det finns; tomma nödvändiga värden avvisas.
-
-Test läser aldrig denna fil, aldrig DB_* eller DATABASE_URL som fallback.
-Testlösenord måste lämnas explicit som TEST_DB_PASSWORD. Testdatabas och roll
-måste båda vara seaparser_test; utveckling kräver seaparser/seaparser.
-Felmeddelanden och objektvisning döljer lösenord. scripts/config_presence.py
-visar bara kända nycklar och om värden finns. Alla sex förväntade värden finns;
-anslutning, autentisering och verkliga databasvärden är inte verifierade.
-
-Applikationsskydd räcker inte för godtycklig framtida SQL-kod. Separat testroll,
-separata lösenord, inga rollmedlemskap och serverns pg_hba-begränsningar
-krävs som andra barriär. deploy/test-database.sql är ett granskningsunderlag för
-administratören. Återanvänd inte utvecklingsrollen i tester. Ingen rätt att skapa
-roller/databaser eller PostGIS behövs för vanlig utveckling/testkörning.
+Projektet har en enda utvecklingsmiljö med databas och roll seaparser.
+settings/development.toml innehåller offentliga standarder. Privat konfiguration
+läses från /home/web/seaparser/config/app.env som data, aldrig via shell source.
+Endast kända APP_ENV/DB_*-nycklar läses. Lösenord visas inte i objektvisning eller
+fel och ska aldrig versionshanteras. Separat testlösenord krävs inte.
+Explicit variables-inmatning ersätter privat fil helt och används med syntetiska
+värden i enhetstester. Endast miljön development accepteras.
 
 ## Migrationer och kontroller
 
-scripts/migrate.py använder psql, explicit miljö, verklig identitetskontroll,
-transaktion, lås och checksumhistorik. Utan --apply görs ingen anslutning.
-Anslutningsfel döljs; psql får inga lösenord i argumenten. Migrationer versionshanteras
-i migrations/. Baslinjen skapar bara schema. PostGIS krävs inte för denna migration.
-Migreringsroll behöver CONNECT samt CREATE på sin databas och ägarskap över
-skapade objekt. Framtida driftroll ska få mindre rättigheter än migreringsrollen.
+`make check` kör alla enhetstester utan databas, syntax/TOML, beroendebas,
+domängränser och frontendkontroller. Frontend har ännu inga produkttester.
+`make migration-plan` ansluter inte. Första migrationen är godkänd och tillämpad;
+framtida migrationer kräver separat godkännande. `--status` ansluter skrivskyddat.
+CI kör endast offlinekontroller; tidigare migrationsjobb är borttaget.
 
-Enligt godkänt mandat: `make prepare-python`, därefter `make check`.
-Nu kan befintlig Python köra `python3 -B -m scripts.check` utan installation.
-Kontrollerna omfattar syntax, TOML, beroendebas, tillåtna domänimporter och
-kravbaserade unittest-tester. Detta är en grundkontroll, inte full lint/typecheck.
-Frontend kör syntax och node:test men har ännu noll produkttester.
-
-GitHub Actions använder GitHub-hostade runners, inga serverhemligheter eller
-self-hosted runner. Separat tillfällig PostgreSQL testar migration, omkörning och
-ändrad checksumma. CI-lösenordet är endast syntetiskt och gäller engångscontainern.
-CI-rollen är containerns bootstraproll; serverrollen ska sakna superuser.
-Actions-taggar och postgres:17 är rörliga: granska officiella revisioner och lås
-SHA/digest före aktivering. CI är inte körd; tillgänglighet för Python-version,
-psql och runner är ännu inte verifierad. Ingen CI-installation skedde lokalt.
-
-## Godkänt mandat och kvarvarande gränser
-
-Mandatet är nu dokumenterat i AGENTS.md: projektändringar, offlinekontroller,
-lokala commits av egna granskade ändringar, .venv-installationer och npm ci är
-godkända. Officiella register, versionskontroll och låsfiler krävs. Systempaket,
-sudo, databasoperationer, privata filändringar och push ingår inte.
-
-Administratörens steg, minsta behörigheter, exakta framtida verifieringskommandon
-och CI-jobb beskrivs i [database-test-runbook.md](database-test-runbook.md).
-Separat godkännande återstår för administratörens databas/HBA/lösenordsåtgärder,
-agentens databasanslutning och testmigrationer samt push/CI-aktivering. Eventuell
-saknad systemklient måste hanteras av administratör. Ingen ny paketinstallation
-utöver nuvarande låsfiler förutsätts genom detta underlag.
+Skrivskyddad diagnostik med projektrollen är godkänd. Databasändringar,
+framtida migrationer, privata filändringar, sudo, systempaket och push ingår inte.
+Databastester får inte tömma befintliga tabeller. Använd rollback och testegna
+objekt utan ändringar av befintliga sekvenser eller externa sidoeffekter.
+Se [database-test-runbook.md](database-test-runbook.md) för diagnostik och testregler.
+Inför drift ska miljön separeras och en ny driftroll skapas med minsta rättigheter.

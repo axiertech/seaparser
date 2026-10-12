@@ -40,7 +40,15 @@ köra npm ci med repositoryts låsfil i frontend/. Använd officiella paketregis
 versionsstyr exakta beroenden med låsfiler. Installera inte globalt, ändra inte
 systempaket och använd inte sudo. Om systemstöd saknas: redovisa hindret.
 
-Databasskapande, databasanslutningar, migrationer mot databas, ändringar av
+Skrivskyddad databasdiagnostik med projektrollen och privat konfiguration är
+godkänd. Använd endast databas och roll seaparser, aldrig administratörsuppgifter.
+Projektet har en utvecklingsmiljö; separat testdatabas/testroll eller testlösenord
+ska inte krävas eller skapas. Enhetstester körs utan databas. Databastester får
+aldrig tömma befintliga tabeller: använd rollback och testegna objekt, utan
+ändringar av befintliga rader, sekvenser eller externa sidoeffekter.
+Inför drift ska miljön separeras och en ny driftroll skapas med minsta rättigheter.
+
+Databasskapande, migrationer mot databas, ändringar av
 serverns anslutningsregler och privata konfigurationsfiler kräver separat
 uttryckligt godkännande. Push, publicering och nya betalda resurser ingår inte.
 Uppdatera arbetsloggen med aktuell uppgift, verifierat resultat och nästa steg.

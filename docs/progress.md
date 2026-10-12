@@ -4,7 +4,11 @@
 
 Lokala, reversibla leveranser inom axiertech/seaparser. Befintliga lokala
 ändringar bevaras. Projektinstallationer och lokala commits är godkända enligt
-AGENTS.md. Databasoperationer, publicering och push kräver separat godkännande.
+AGENTS.md. Skrivskyddad databasdiagnostik är godkänd; databasändringar,
+publicering och push kräver separat godkännande.
+
+Aktuellt beslut 2026-10-12: en utvecklingsmiljö, databas och roll seaparser.
+Tidigare avsnitt om separat testmiljö är historik och gäller inte längre.
 Dokumentet uppdateras efter varje genomförd leverans. Ingen bakgrundsaktivitet
 förutsätts efter att arbetet har stannat för granskning.
 
@@ -174,3 +178,32 @@ tidigare lokala ändringar bevaras och dokumentets tidigare tillägg lämnas ost
 Ingen push eller publicering. Nästa steg: separat granskning/godkännande av
 framtida produktmigrationer. Samtidighets- och checksumfel har offlinekontroller;
 felvägarna har inte provocerats mot utvecklingsdatabasen i denna leverans.
+
+
+## Korrigeringsleverans – en utvecklingsdatabas 2026-10-12
+
+Aktuell uppgift: föra in beslutet om endast development och seaparser i en egen
+commit utan prototyparbetet. Konfiguration, CI, instruktioner och AGENTS.md granskade.
+Separat testkonfiguration, databas-/roll-/HBA-underlag och CI-migrationsjobb tas bort.
+Offlinekontroller och enhetstester ansluter inte till någon databas. Skrivskyddad
+diagnostik använder endast projektrollen och privat konfiguration utan shell source.
+
+Explicit syntetisk testinmatning ersätter privat fil helt. Fel miljö eller databas/
+roll avvisas. Gamla TEST_DB_*-nycklar avvisas både i explicit inmatning och fil;
+regressionstest för filfallet tillagt. Lösenord döljs i repr och fel. .gitignore är
+oförändrad; git check-ignore bekräftar skydd för .env, app.env, config/, .pem och .key.
+Ingen privat fil lästes för dessa kontroller och inga databasoperationer kördes.
+
+Databastester får inte tömma tabeller eller ändra befintliga rader, sekvenser eller
+externa sidoeffekter; rollback och testegna objekt krävs. Ingen skrivande testsvit
+har införts. Första migrationens tidigare godkännande/resultat återges korrekt;
+framtida migrationer, privata filändringar och push kräver separat godkännande.
+
+Verifierat: make check i arbetskatalogen passerar med 38 prototyp- och 9 övriga
+Python-tester (47 totalt), frontendens syntax passerar och frontend har 0 tester.
+make migration-plan och git diff --check passerar. En separat kopia av exakt
+commitkandidaten passerar samma kontroller med 32 prototyp- och 9 övriga tester
+(41 totalt), utan ostagade prototypändringar. CI har inte körts på GitHub; actionrevisioner
+ska granskas/låsas före aktivering. Inga nya beroenden eller resurser införs.
+Tidigare fristående miljö-/anslutningsloggar och fyra prototype/-filer lämnas ostagade.
+Nästa steg: separat granskning av dessa kvarvarande ändringar. Ingen push.

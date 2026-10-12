@@ -34,7 +34,7 @@
 ## Öppna beslut före implementation
 
 - Första verkliga testregion och representativa resor.
-- Databasnamn, roll, värd och port, kontrollerade utan lösenordsutskrift.
+- Databasnamn och roll är verifierade som seaparser 2026-10-12; anslutningsvärden hålls privata.
 - Visuell layouteditor och dess licens, kostnad, export och komponentintegration.
 - Första båtprofiler och rättigheter till polarer.
 - Prognos- och geografiska datakällor samt kvalitet och licenser.
@@ -69,7 +69,7 @@
   syntetiska rektanglar. Djup, sjökort och verklig navigerbarhet återstår.
 - Leveransstatus, acceptanskriterier och nästa uppgifter hålls i progress.md.
 
-## Kontrollerat utvecklingsmandat 2026-10-12
+## Kontrollerat utvecklingsmandat 2026-10-12 (historik)
 
 - Projektändringar, tester/offlinekontroller, egna granskade lokala commits,
   .venv och låsfilstyrd npm ci godkända av användaren. AGENTS.md uppdaterad.
@@ -79,3 +79,14 @@
   Utvecklingsdatabasens PUBLIC-rättigheter ändras inte i administratörsunderlaget.
 - SQL, HBA och verifieringsordning finns i database-test-runbook.md; inget kördes
   mot PostgreSQL. PostGIS behövs inte för den aktuella schemabaslinjen.
+
+## En utvecklingsmiljö 2026-10-12 – ersätter tidigare testmiljöförslag
+
+- Endast development, databas och roll seaparser. Ingen separat testdatabas,
+  testroll eller testlösenord ska krävas eller skapas.
+- Enhetstester är databasfria. Databastester använder rollback/testegna objekt
+  och får inte tömma eller ändra befintliga data eller sekvenser.
+- Skrivskyddad diagnostik är godkänd med projektrollen och privat konfiguration;
+  hemligheter får inte visas eller hamna i Git. Första migrationen godkändes och
+  tillämpades senare samma dag; framtida migrationer och push kräver godkännande.
+- Inför drift separeras miljön och en ny driftroll skapas med minsta rättigheter.

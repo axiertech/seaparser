@@ -1,4 +1,4 @@
-"""Explicit miljöval. Test laddar aldrig serverns privata konfiguration."""
+"""En utvecklingsmiljö; explicit inmatning möjliggör databasfria tester."""
 from dataclasses import dataclass, field
 from pathlib import Path
 import re
@@ -19,6 +19,8 @@ def read_env(path):
         key, separator, value = line.partition("=")
         if not separator or not re.fullmatch(r"[A-Z][A-Z0-9_]*", key):
             raise ValueError("Ogiltigt konfigurationsformat; inga värden visas")
+        if key.startswith("TEST_DB_"):
+            raise ValueError("Endast utvecklingskonfiguration stöds")
         if key in values:
             raise ValueError("Duplicerad konfigurationsvariabel")
         value = value.strip()
@@ -42,22 +44,20 @@ class DatabaseSettings:
 
 
 def load_database(environment, *, variables=None, private_path=PRIVATE):
-    if environment not in ("development", "test"):
+    if environment != "development":
         raise ValueError("Miljö måste väljas explicit")
     base = tomllib.loads((ROOT / "settings" / f"{environment}.toml").read_text())
     # variables är en explicit inmatning, aldrig hela processmiljön som fallback.
-    values = read_env(private_path) if environment == "development" else {}
-    values.update(variables or {})
+    values = read_env(private_path) if variables is None else dict(variables)
     if values.get("APP_ENV", environment) != environment:
         raise ValueError("APP_ENV stämmer inte med vald miljö")
     db = base["database"]
-    prefix = "TEST_DB_" if environment == "test" else "DB_"
-    if environment == "test" and any(k.startswith("DB_") for k in values):
-        raise ValueError("Utvecklingsvariabler förbjudna i test")
+    if any(k.startswith("TEST_DB_") for k in values):
+        raise ValueError("Endast utvecklingskonfiguration stöds")
     def get(key):
-        return values.get(prefix + key.upper(), db.get(key, ""))
+        return values.get("DB_" + key.upper(), db.get(key, ""))
     name, user = get("name"), get("user")
-    expected = "seaparser_test" if environment == "test" else "seaparser"
+    expected = "seaparser"
     if name != expected or user != expected:
         raise ValueError("Databas och roll måste motsvara vald miljö")
     host, password = get("host"), get("password")
