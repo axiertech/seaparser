@@ -878,3 +878,13 @@ under avslutade tester; inga tjänster lämnas igång. Ingen databasändring,
 ny extern publicering, kostnad eller main-merge. Äldre 76 lokala arbetsloggrader
 bevaras separat. Nästa steg: verifiera push-CI för exakt commit; offentlig demo
 kräver samlat administratörs-/publiceringsgodkännande enligt deployment/README.md.
+
+### CI-korrigering för geografisk demo
+
+Första pushen 0eb899b avvisades före jobbstart (run 38293317529, inga jobb/checks).
+Workflow hade ett ociterat installationskommando med kolon följt av mellanslag
+(--only-binary=:all: -r), vilket är ogiltigt som YAML-plain scalar. Kommandot
+är ändrat till YAML-block. Lokal workflowkontroll upptäcker nu samma feltyp.
+Riktad verifiering med scripts.check passerar 201 Python-tester och samtliga
+backend-/lås-/domänkontroller. Kartkoden är oförändrad från godkänd lokal
+helhetskontroll. Uppföljningscommit pushas utan force-push; exakt CI följs igen.

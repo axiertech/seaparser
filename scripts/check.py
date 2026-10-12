@@ -61,6 +61,9 @@ for name, item in lock["packages"].items():
 # Every external action must reference an immutable complete Git commit.
 for workflow in (root / ".github/workflows").glob("*.yml"):
     for line in workflow.read_text().splitlines():
+        command = re.match(r"\s*-\s*run:\s*(.+)", line)
+        if command and not command[1].startswith(("'", '"', '|', '>')) and re.search(r":(?:\s|$)", command[1]):
+            raise SystemExit("Workflow-kommandon med kolon/mellanslag kräver YAML-block eller citering")
         match = re.match(r"\s*-?\s*uses:\s*(\S+)", line)
         if match and not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_./-]+@[0-9a-f]{40}", match[1]):
             raise SystemExit("GitHub Actions kräver granskad fullständig commit-SHA")
