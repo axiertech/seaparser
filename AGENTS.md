@@ -50,6 +50,20 @@ Inför drift ska miljön separeras och en ny driftroll skapas med minsta rättig
 
 Databasskapande, migrationer mot databas, ändringar av
 serverns anslutningsregler och privata konfigurationsfiler kräver separat
-uttryckligt godkännande. Push, publicering och nya betalda resurser ingår inte.
+uttryckligt godkännande. Publicering och nya betalda resurser ingår inte.
+Push omfattas endast av arbetsbranchmandatet nedan.
 Uppdatera arbetsloggen med aktuell uppgift, verifierat resultat och nästa steg.
 Mandatet gäller arbete i aktiva sessioner, inte fristående bakgrundsaktivitet.
+
+## Godkänt arbetsbranchmandat 2026-10-12
+
+Agenten får självständigt pusha granskade lokala commits till
+`axiertech/seaparser` på en arbetsbranch under `development/`.
+Kör alla relevanta tester och kontroller före push. Granska commitinnehållet
+så att inga hemligheter eller orelaterade ändringar ingår; bevara andra lokala
+ändringar ostagade. Kontrollera GitHub CI efter push och rapportera branch,
+commit-id och verifierat resultat.
+
+Force-push, radering av branches och merge till main kräver användarens
+uttryckliga godkännande. Mandatet ändrar inte databasbehörigheter eller
+övriga begränsningar och gäller arbete i aktiva sessioner.

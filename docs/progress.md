@@ -546,3 +546,20 @@ optimalitet eller global komfortoptimering; syntetiskt komfortmått saknar fysis
 validering. Tidigare76 orelaterade loggrader bevaras ostagade. Lokal commit av
 leveransen; ingen databasändring eller push. Nästa steg: stabilt prognosadapter-
 kontrakt och intervallvalidering före verkliga prognoser.
+
+## Arbetsbranch och pushmandat 2026-10-12
+
+Användaren godkänner självständig push av granskade lokala commits till
+axiertech/seaparser på development/-branch. AGENTS.md uppdaterad med krav på
+relevanta kontroller före push, hemlighets-/innehållsgranskning och GitHub CI efter
+push. Force-push, branchradering och merge till main kräver separat godkännande.
+
+Förberedelse verifierad: make check passerar med128 Python-tester (111 prototyp,
+17 övriga); syntax/konfiguration/domängränser/Actions-SHA och frontendkontroller
+passerar. Frontend har0 produkttester. Migrationsplan/PostgreSQL-testplan passerar
+offline utan anslutning. Hemlighetsmönster kontrollerade i leveransens sju filer
+utan utskrift av värden; manuell diffgranskning och git diff --check passerar.
+Endast avgångsleveransen och mandat/logg ingår. Tidigare76 lokala loggrader
+bevaras ostagade. Arbetsbranch: development/departure-comparison.
+Nästa steg: normal push av arbetsbranchen och kontroll av CI på exakt commit-SHA;
+ingen force-push, main-merge, branchradering eller databasändring.
