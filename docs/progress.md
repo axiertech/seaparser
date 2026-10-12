@@ -753,3 +753,33 @@ eller undanmanöverfunktioner. Nästa del efter granskad commit/push och godkän
 uppdatera krav/backlog och separata OpenWaters-kandidatvillkor enligt denna scope.
 Inga nya konton/token/tjänster, server-/databasändringar eller main-merge.
 Tidigare76 orelaterade lokala loggrader bevaras ostagade.
+
+## Verifierad väder-CI och reviderad trafik-/tidvattenbacklog 2026-10-12
+
+Huvudleverans5d3d7104ddc6a010013c18e64e216769e4ac62f6 är pushad på
+development/segment-weather. GitHub CI38283470673 completed/success. Lokalt
+170 Python-tester godkända (146 prototyp +24 övriga); tidigare tester bevarade.
+
+Användarens senaste AIS-beslut ersätter tidigare mötesanalys/övervakningsförslag:
+SeaParser är en planeringsapplikation, med AIS som lågprioriterad extra för
+observerad trafikbelastning och tillförlitliga historiska mönster. Krav/backlog
+uppdaterade med passagetid, dagsljus, sikt, väder, datatid/täckning/osäkerhet.
+Ingen aktuell bild beskrivs som känd framtida trafik. Gamla/saknade/svagt täckta
+data ger unknown, inte fri passage. Ingen GPS/CPA/kollisionsvarning eller
+undanmanöver. TrafficSnapshot/observationskontrakt och senare syntetisk testplan
+är dokumenterade, inte implementerade. Inga AIS-tester påstås körda.
+
+Tidvattenkrav behåller vertikalt referensdatum; stationsström behåller rå fart/
+riktning/djup/bin och får inte extrapoleras regionalt utan verifierad modell.
+OpenWaters officiella API/käll-/licensdokument granskade separat för AIS,
+tidvatten och ström med länkar i openwaters-review.md. Regional kvalitet för
+ännu ej vald testregion är inte verifierad; kommersiella rättigheter kräver
+produktspecifika besked. AIS-tierkapacitet har olöst8-vs32-dokumentationsskillnad.
+Inga konton/token/tjänster, leverantörskontakter eller dataintegrationer skapade.
+
+Dokumentationsdiff och lokala länkar verifierade; endast denna scope och egen
+loggpost stagas. Kod oförändrad sedan väderleveransens170 godkända tester/CI.
+Nästa verifiering: normal push och GitHub CI på slutlig dokumentations-SHA.
+Orelaterade76 lokala loggrader bevaras ostagade. Inga databasanrop/ändringar,
+serverkonfigurationsändringar, betalda resurser eller main-merge.
+Huvudprioriteten förblir väderrouting, ström, komfort och avgångstider.

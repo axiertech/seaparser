@@ -217,3 +217,18 @@ men rapporteras då inte som konstaterad överträdelse. Tak4096 celler per prod
 avbryter uttryckligen. Scope gäller markrelativ vindstyrka och Hs i det lokala
 numeriska segmentet, inte källkvalitet eller alla komfort-/manövervariabler.
 Applikationens algoritmversion ändras till v3 och metod/celltak följer manifestet.
+
+## 2026-10-12: AIS är lågprioriterad planeringsinformation
+
+Användarens senaste beslut ersätter tidigare förslag om mötesanalys och löpande
+trafikövervakning. Första omfattningen innehåller graderad information om
+observerad trafikbelastning och, vid tillförlitligt underlag, historiska mönster
+kopplade till planerad passagetid/dagsljus/sikt/väder. Aktuell AIS är inte känd
+framtida trafik; gamla/saknade eller svagt täckta data betyder unknown.
+Ingen GPS-följning, kollisionsvarning eller undanmanöverrådgivning.
+Väderrouting/ström/komfort/avgångstider prioriteras. Kontrakt och senare testplan
+finns i traffic-planning.md; ingen AIS-kod implementeras nu. AIS-SOG är redan
+över grund och får inte få extra ström. OpenWaters är utvärderad kandidat utan
+konto/token eller inköp; AIS/tidvatten/ström har separata täcknings-/licensbesked.
+Stationsström kräver verifierad rumslig modell före områdesanvändning och behåller
+riktning/djup; tidvatten behåller vertikalt referensdatum. Se openwaters-review.md.

@@ -35,3 +35,41 @@ Acceptanskriterier:
 - Beräkningstid, geografisk upplösning, tidssteg och toleranser dokumenteras.
 
 Numeriska toleranser och prestandamål fastställs före respektive test. Verifiera först en enkel referenslösning innan en snabbare sökalgoritm införs.
+
+## Prioritering och senare trafik-/tidvattenunderlag 2026-10-12
+
+SeaParser är en planeringsapplikation. Väderrouting, ström, komfort och jämförelse
+av avgångstider prioriteras före AIS. Trafikbelastningsinformation är en
+lågprioriterad extrafunktion, inte en navigations- eller övervakningsprodukt.
+
+För en planerad rutt ska senare trafikstöd redovisa observerat antal unika fartyg
+inom ett definierat observationsfönster och ruttområde. Trafikmönster får användas
+endast med tillförlitligt historiskt underlag. Information ska sättas i samband
+med planerad passagetid, dagsljus/mörker, sikt och väder, med datatid, täckning och
+osäkerhet synliga. Graderingen kan vara låg/måttlig/hög/okänd observerad eller
+historiskt förväntad belastning; metod och trösklar måste fastställas före
+implementation. Aktuell AIS-bild får inte beskrivas som känd framtida trafik.
+Gamla, saknade eller låg-täckande data ger okänd trafikbild, inte låg belastning
+eller fri passage. Även noll observerade AIS-fartyg är ingen garanti om andra båtar.
+
+Fryst ruttplanering ska vara oberoende av AIS-hämtning. Ett eventuellt fryst
+trafikunderlag används för planeringsinformation, utan att ändra prognoser eller
+hårda vädergränser under jämförelsen. Första omfattningen innehåller ingen GPS-
+följning, löpande trafikövervakning, mötes-/CPA-analys, kollisionsvarning eller
+undanmanöverrådgivning. Tidigare förslag om sådana funktioner är ersatta av
+belastningsinformationen. AIS-underlag/adapterkontrakt finns som design i
+[traffic-planning.md](traffic-planning.md); ingen AIS-kod är implementerad.
+
+Tidvatten ska behandlas som separat vattenståndsunderlag med station, källa,
+modell/version, prognostid/giltighet, enhet och vertikalt referensdatum. Datum får
+inte tappas eller ersättas med antaget MSL/sjökortsdatum. Tidvattennivå ensam
+bevisar inte navigerbarhet eller fri höjd/djup. Stationsström ska behålla mätt/
+predikterad riktning, fas/signering, djup/bin och djupreferens. Den får inte
+extrapoleras till ett helt område utan en verifierad rumslig modell. Okänd
+riktning/djup eller inkompatibla datum ger otillräckligt underlag.
+
+OpenWaters utvärderas som kandidat, med regional täckning, datalicens,
+kommersiell användning och driftsbegränsningar separat för AIS, tidvatten och
+ström. [openwaters-review.md](openwaters-review.md) redovisar vad som är verifierat
+i officiell dokumentation och vad som återstår. Ingen leverantör är vald och
+inga nya konton, token, betalda tjänster eller integrationer ingår nu.

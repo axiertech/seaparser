@@ -55,3 +55,10 @@ båtfingeravtryck. scripts/plan_synthetic.py komponerar syntetisk adapter och
 usecase samt sköter CLI-presentation. Ingen transport eller databas ingår.
 Algoritm-/schemaversion och alla parametrar följer resultatet; observerad
 exekveringstid hålls separat från den deterministiska resultatidentiteten.
+
+Senare lågprioriterad trafikbelastningsinformation använder ett separat fryst
+TrafficSnapshot och visar observerad/historisk täckning tillsammans med planens
+passagetider. Ruttmotorn läser inte AIS-strömmar. Ingen GPS-/trafikövervakning,
+CPA-/kollisionsanalys eller undanmanöver ingår. Tidvatten och stationsström får
+separata adapterkontrakt med vertikalt datum respektive riktning/djup; ingen
+stationsprognos får bli ett områdesfält utan verifierad modell.
