@@ -615,3 +615,15 @@ inte garanteras frysta; adapterflöden använder ForecastDataset. Inga betalda
 tjänster, databasändringar eller main-merge. Tidigare76 orelaterade loggrader
 bevaras ostagade. Nästa steg: granskad commit, normal push enligt arbetsbranch-
 mandatet och verifiering av GitHub CI för exakt SHA.
+
+## Sammanhängande backlogarbete 2026-10-12
+
+AGENTS.md uppdaterad med användarens mandat att fortsätta mellan auktoriserade
+deluppgifter efter granskning/tester/commit/push och godkänd CI. Ny sammanställd
+backlog i docs/backlog.md prioriterar segmentens datastöd och ett reproducerbart
+syntetiskt planeringsscenario. Verkliga datakällor, polarer och editorval kräver
+fortsatt produktbeslut; inga kostnader eller server-/databasbehörigheter utökas.
+Verifierat: make check,144 Python-tester och övriga offline-/frontendkontroller
+passerar. Föregående prognosunderlags CI är success på0fd50948. Tidigare76 lokala
+loggrader bevaras ostagade. Arbetsbranch development/forecast-validation.
+Nästa del efter denna commits CI: kontinuerligt datastöd över integrerade segment.

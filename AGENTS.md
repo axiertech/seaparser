@@ -67,3 +67,20 @@ commit-id och verifierat resultat.
 Force-push, radering av branches och merge till main kräver användarens
 uttryckliga godkännande. Mandatet ändrar inte databasbehörigheter eller
 övriga begränsningar och gäller arbete i aktiva sessioner.
+
+## Sammanhängande backlogarbete 2026-10-12
+
+Fortsätt självständigt genom projektets dokumenterade backlog i aktiva sessioner.
+För varje del: implementera, granska diffen, kör relevanta tester och kontroller,
+uppdatera status, skapa commit och pusha till en development/-branch enligt
+arbetsbranchmandatet. Kontrollera GitHub CI för exakt commit och rätta fel innan
+nästa del. Fortsätt med nästa rimliga uppgift när kontrollerna passerar; stanna
+inte för godkännande mellan redan auktoriserade deluppgifter.
+
+Redovisa samlat efter en större sammanhängande leverans eller när ett verkligt
+hinder kräver användarens beslut. Fråga vid nya kostnader, utökade behörigheter,
+destruktiva databasändringar eller produktbeslut som väsentligt ändrar omfattning.
+Befintligt installations-/databasmandat gäller oförändrat; merge till main,
+force-push och branchradering kräver fortfarande uttryckligt godkännande.
+Bevara orelaterade lokala ändringar och undvik generell staging. Ingen
+fristående bakgrundsaktivitet följer av detta arbetssätt.
