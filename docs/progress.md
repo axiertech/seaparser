@@ -207,3 +207,39 @@ commitkandidaten passerar samma kontroller med 32 prototyp- och 9 övriga tester
 ska granskas/låsas före aktivering. Inga nya beroenden eller resurser införs.
 Tidigare fristående miljö-/anslutningsloggar och fyra prototype/-filer lämnas ostagade.
 Nästa steg: separat granskning av dessa kvarvarande ändringar. Ingen push.
+
+
+## Miljöskydd – TLS, testplan och Actions 2026-10-12
+
+Aktuell uppgift: stärka befintlig utvecklingsmiljö utan serverändringar eller
+integrationstestkörning. DB_SSLMODE har standard require; endast require,
+verify-ca och verify-full accepteras. Explicit CA-sökväg krävs för verifierande
+lägen. Unix-sockets avvisas; ren gemensam libpq-miljö kan inte ärva svagare PG*.
+GSS-kryptering stängs av för att verkligen kräva TLS. verify-full med betrodd CA
+och korrekt servernamn dokumenteras i database-test-runbook.md. Privata filer,
+server-TLS och databasen har inte ändrats eller anslutits i denna leverans.
+TLS-handshake/certifikat mot servern är inte verifierade.
+
+Förberedda integrationstester återanvänder migrationsgeneratorn med endast
+testegna migrationer, slumpnamngivet transaktionsbundet schema och separat
+advisory-låsnyckel. Förkontroll av identitet och aktiva DDL-eventtriggers; sådana
+triggers stoppar testet. Alla skrivningar rullas tillbaka, även vid avsiktligt fel.
+Låshållaren stängs även vid fel/timeout och separat läskontroll bekräftar städning.
+Ingen COMMIT, DROP, befintlig historik, sekvens eller produktrad berörs. Plan och
+begränsningar redovisade före körning; endast offlineplan körd, inte --run.
+
+Actions låsta till fullständiga SHA inom tidigare huvudversioner. Officiella
+release-/commitlänkar, releaseanteckningar, commitdiffar och action.yml granskade;
+omfattning och begränsningar finns i actions-review.md. Detta är ingen fullständig
+säkerhetsrevision av bundlade beroenden. CI på GitHub är inte körd.
+Offlinekontrollen avvisar uses-referenser utan fullständig SHA.
+
+Verifierat: isolerad kopia av miljöcommitkandidaten ger 32 befintliga prototyptester
+plus 17 övriga tester (49 totalt), syntax/TOML/domängränser/beroendebas och
+Actions-SHA-kontroll godkända. Fem nya TLS-tester provar även båda CLI-kopplingarna;
+tre nya tester verifierar integrationstestplanens opt-in och objekts-/låsisolering.
+Frontendens syntax passerar; 0 produkttester. make migration-plan och testplan
+passerar offline. git diff --check och hemligheters ignore-regler passerar.
+Antagande: servern stöder TLS redan; om inte måste anslutning nekas tills separat
+serveråtgärd godkänns. Nästa steg: granska isoleringsplanen och godkänn separat
+framtida integrationstestkörning. Prototypfixen får egen commit. Ingen push.

@@ -6,7 +6,8 @@ import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
 PRIVATE = Path("/home/web/seaparser/config/app.env")
-KEYS = ("APP_ENV", "DB_HOST", "DB_PORT", "DB_NAME", "DB_USER", "DB_PASSWORD")
+KEYS = ("APP_ENV", "DB_HOST", "DB_PORT", "DB_NAME", "DB_USER", "DB_PASSWORD",
+        "DB_SSLMODE", "DB_SSLROOTCERT")
 
 
 def read_env(path):
@@ -41,6 +42,8 @@ class DatabaseSettings:
     name: str
     user: str
     password: str = field(repr=False)
+    sslmode: str = "require"
+    sslrootcert: str = ""
 
 
 def load_database(environment, *, variables=None, private_path=PRIVATE):
@@ -67,4 +70,15 @@ def load_database(environment, *, variables=None, private_path=PRIVATE):
         raise ValueError("Ogiltig databasport") from None
     if not host or not password or not 1 <= port <= 65535:
         raise ValueError("Nödvändig databaskonfiguration saknas eller är ogiltig")
-    return DatabaseSettings(environment, host, port, name, user, password)
+    sslmode, sslrootcert = get("sslmode"), get("sslrootcert")
+    if sslmode not in ("require", "verify-ca", "verify-full"):
+        raise ValueError("TLS kräver require, verify-ca eller verify-full")
+    # libpq ignorerar sslmode för Unix-sockets; tillåt endast TCP-värdar.
+    if host.startswith(("/", "@")) or "," in host:
+        raise ValueError("Databasanslutningen kräver en TCP-värd för TLS")
+    if sslrootcert and not Path(sslrootcert).is_absolute():
+        raise ValueError("CA-filen måste anges med absolut sökväg")
+    if sslmode in ("verify-ca", "verify-full") and not sslrootcert:
+        raise ValueError("Certifikatverifiering kräver en explicit betrodd CA-fil")
+    return DatabaseSettings(environment, host, port, name, user, password,
+                            sslmode, sslrootcert)

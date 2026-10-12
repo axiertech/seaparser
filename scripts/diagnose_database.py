@@ -2,6 +2,7 @@
 import socket
 import subprocess
 from infrastructure.settings import ROOT, load_database
+from infrastructure.postgres import psql_environment
 
 
 def main():
@@ -9,10 +10,7 @@ def main():
         db = load_database("development")
         with socket.create_connection((db.host, db.port), timeout=5):
             pass
-        env = {"PATH": "/usr/bin:/bin", "PGHOST": db.host,
-               "PGPORT": str(db.port), "PGDATABASE": db.name, "PGUSER": db.user,
-               "PGPASSWORD": db.password, "PGCONNECT_TIMEOUT": "5",
-               "PGOPTIONS": "-c default_transaction_read_only=on -c statement_timeout=10000"}
+        env = psql_environment(db, read_only=True)
         result = subprocess.run(
             ["psql", "-X", "-w", "--set=ON_ERROR_STOP=1", "--file=-"],
             input=(ROOT / "deploy/diagnose-database.sql").read_text(),

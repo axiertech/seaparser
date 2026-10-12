@@ -42,3 +42,7 @@ Databastester får inte tömma befintliga tabeller. Använd rollback och testegn
 objekt utan ändringar av befintliga sekvenser eller externa sidoeffekter.
 Se [database-test-runbook.md](database-test-runbook.md) för diagnostik och testregler.
 Inför drift ska miljön separeras och en ny driftroll skapas med minsta rättigheter.
+
+TLS-policy och isolerade integrationstesters plan finns i
+[database-test-runbook.md](database-test-runbook.md). Actions-revisioner och
+granskningsomfattning finns i [actions-review.md](actions-review.md).

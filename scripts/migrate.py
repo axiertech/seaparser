@@ -4,6 +4,7 @@ import hashlib
 import re
 import subprocess
 from infrastructure.settings import ROOT, load_database
+from infrastructure.postgres import psql_environment
 
 LOCK = 73210412
 FIRST = "0001_baseline"
@@ -85,11 +86,7 @@ def main():
             print("Plan verifierad; ingen konfiguration läst eller anslutning gjord")
             return
         db = load_database(args.environment)
-        env = {"PATH": "/usr/bin:/bin", "PGHOST": db.host,
-               "PGPORT": str(db.port), "PGDATABASE": db.name, "PGUSER": db.user,
-               "PGPASSWORD": db.password, "PGCONNECT_TIMEOUT": "5"}
-        if args.status:
-            env["PGOPTIONS"] = "-c default_transaction_read_only=on"
+        env = psql_environment(db, read_only=args.status)
         result = subprocess.run(
             ["psql", "-X", "-w", "-qAt", "--set=ON_ERROR_STOP=1",
              "--single-transaction", "--file=-"], input=sql, text=True,

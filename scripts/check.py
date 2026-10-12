@@ -1,6 +1,7 @@
 """Beroendefria syntax- och arkitekturkontroller; inget nätverk eller DB."""
 import ast
 import json
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -33,6 +34,12 @@ package = json.loads((root / "frontend/package.json").read_text())
 lock = json.loads((root / "frontend/package-lock.json").read_text())
 if package.get("dependencies") or package.get("devDependencies") or set(lock["packages"]) != {""}:
     raise SystemExit("Nya frontendberoenden kräver uppdaterad kontroll")
+# Every external action must reference an immutable complete Git commit.
+for workflow in (root / ".github/workflows").glob("*.yml"):
+    for line in workflow.read_text().splitlines():
+        match = re.match(r"\s*-?\s*uses:\s*(\S+)", line)
+        if match and not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_./-]+@[0-9a-f]{40}", match[1]):
+            raise SystemExit("GitHub Actions kräver granskad fullständig commit-SHA")
 for suite in ("prototype/tests", "tests"):
     subprocess.run([sys.executable, "-B", "-m", "unittest", "discover", "-s", suite, "-v"], cwd=root, check=True)
 print("Syntax, konfiguration, beroendebas, domängränser och tester godkända")
