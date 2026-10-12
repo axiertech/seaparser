@@ -56,6 +56,31 @@ def evaluate(boat: BoatModel, environment: Environment, position, time, allow_mi
                       weather.valid_from, weather.valid_until)
 
 
+def forecast_step_seconds(sample, start, seconds):
+    """Täck hela [start, slut); slut vid valid_until tillåts utan extrapolering."""
+    if sample.current_status == "valid" and sample.valid_from is not None and sample.valid_from > start:
+        raise ValueError("Strömdata saknas för hela tidssteget: före prognosens giltighetstid")
+    for boundary in (sample.valid_from, sample.valid_until):
+        if boundary is not None and boundary > start:
+            seconds = min(seconds, (boundary - start).total_seconds())
+    return seconds
+
+
+def forecast_step(first, position, time, seconds, midpoint):
+    seconds = forecast_step_seconds(first, time, seconds)
+    # Nya gränser vid mittpunkten kräver omräkning av både tid och position.
+    for _ in range(100):
+        if seconds < 1e-6:
+            raise ValueError("Strömdata saknas: prognosgränsen är närmare än tidsupplösningen")
+        middle = midpoint(position + first.ground.scaled(seconds / 2),
+                          time + timedelta(seconds=seconds / 2))
+        bounded = forecast_step_seconds(middle, time, seconds)
+        if bounded == seconds:
+            return seconds, middle, position + middle.ground.scaled(seconds)
+        seconds = bounded
+    raise ValueError("Strömdata saknas: prognosgränserna kunde inte lösas för tidssteget")
+
+
 def simulate(boat: BoatModel, environment: Environment, start, duration, step_seconds=60, position=Vector(0, 0),
              *, allow_missing_current=False, obstacles=()):
     if start.tzinfo is None or start.utcoffset() is None:
@@ -75,9 +100,9 @@ def simulate(boat: BoatModel, environment: Environment, start, duration, step_se
     while remaining > 0:
         dt = min(step_seconds, remaining)
         first = evaluate(boat, environment, position, time, allow_missing_current)
-        middle = evaluate(boat, environment, position + first.ground.scaled(dt / 2),
-                          time + timedelta(seconds=dt / 2), allow_missing_current)
-        end = position + middle.ground.scaled(dt)
+        dt, middle, end = forecast_step(
+            first, position, time, dt,
+            lambda p, t: evaluate(boat, environment, p, t, allow_missing_current))
         check_segment(position, end, obstacles)
         position = end
         time += timedelta(seconds=dt)
@@ -165,19 +190,18 @@ def sail_to_target(environment: Environment, start, target: Vector, *, speed_kno
                      remaining / first.ground.dot(direction))
 
             def trial(seconds):
-                middle = compensated_evaluation(
-                    speed_knots, direction, environment,
-                    position + first.ground.scaled(seconds / 2),
-                    time + timedelta(seconds=seconds / 2), min_progress_m_s)
-                return middle, position + middle.ground.scaled(seconds)
+                return forecast_step(
+                    first, position, time, seconds,
+                    lambda p, t: compensated_evaluation(
+                        speed_knots, direction, environment, p, t, min_progress_m_s))
 
-            middle, end = trial(dt)
+            dt, middle, end = trial(dt)
             if (end - target).dot(direction) > 0:
                 # Lokalisera målpassagen genom omräknade mittpunktssteg.
                 low, high = 0.0, dt
                 for _ in range(60):
                     dt = (low + high) / 2
-                    middle, end = trial(dt)
+                    dt, middle, end = trial(dt)
                     error = (end - target).dot(direction)
                     if abs(error) <= tolerance_m / 10:
                         break

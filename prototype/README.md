@@ -55,9 +55,11 @@ antagande. `leeway=0` betyder uttryckligen vald nollavdrift.
   via miljögränssnittet men används inte av konstantmodellen.
 - Analytiska syntetiska fält, ingen gridinterpolation, landmask eller verklig
   prognos. Dataleverantören måste själv markera luckor och täckningsgränser.
-- Fast tidssteg, sista steget kortas. Ingen adaptiv felkontroll eller uppdelning
-  vid datagränser; luckor mellan uppslag kan missas. Täckningsstatus gäller
-  endast uppslagen. Ett steg kan påverkas av fallback i mittpunktsprediktionen.
+- Tidssteget kortas vid mål, slut och kända prognosgränser; mittpunkten räknas
+  om efter förkortning. Ingen adaptiv felkontroll. Okända dataluckor mellan
+  uppslag kräver ytterligare hantering och kan fortfarande missas.
+  Täckningsstatus i exporten gäller uppslagen. Ett steg kan påverkas av
+  fallback i mittpunktsprediktionen.
 - Målfärden ger restid bara vid uppnått mål. Syntetisk rektangelkontroll finns; ingen djupkontroll,
   segelpolar eller ruttoptimering. Noll markfart ger odefinierad COG (`null`).
 - `docs/stromhantering.md` är ett specifikationsförslag; prototypen implementerar
@@ -94,6 +96,20 @@ Syntetiska data kan ange `valid_from` (inklusive) och `valid_until`
 JSON-exporten. Utelämnade gränser betyder ett analytiskt syntetiskt fält utan
 tidsgräns, inte en verifierad verklig prognos. Giltighetsintervall är inte
 samma sak som prognosålder; bedömning av prognosålder återstår.
+
+Båda integrationsfunktionerna kontrollerar att de giltiga start- och
+mittpunktsuppslagens intervall täcker hela det accepterade tidssteget
+`[stegstart, stegslut)`. Antagandet är att angivna tidsintervall beskriver
+sammanhängande tidsmässig täckning för respektive uppslag. Ett steg får sluta
+exakt vid `valid_until`: ingen rörelse efter gränsen accepteras på dessa data.
+Fortsatt färd gör ett nytt uppslag vid gränsen. Utan giltiga data avbryter
+`sail_to_target` med `data_unavailable` och behåller redan slutförda steg;
+`simulate` ger `ValueError`. Aktivt vald nollströmsfallback i `simulate`
+bevaras och redovisas vid berörda uppslag. Kända framtida `valid_from`-gränser
+delar även fallbacksteg så att giltig ström kan användas från gränsen.
+Gränser som först hittas vid mittpunkten föranleder omräkning; ett giltigt
+mittpunktsintervall som inte täcker stegstarten avvisas konservativt.
+Tidsintervall bevisar inte rumslig täckning eller frånvaro av okända luckor.
 
 Detta är en begränsad beräkningsleverans. De bredare acceptanskriterierna
 för ruttoptimering, seglingsvinklar och komfort är inte implementerade.
@@ -174,6 +190,17 @@ saknar generell felgaranti; för verkliga data krävs vidare validering.
 
 Verifierat för denna utökning: samtliga 24 tester godkändes med
 `python3 -B -m unittest discover -s prototype/tests -v`.
+
+Verifierat efter granskning av prognosgränsfixen 2026-10-12: samtliga 42 tester
+godkändes med samma kommando. Regressionerna omfattar
+gräns vid 45 s mellan mittpunkt och stegslut vid 60 s, mål före och exakt vid
+gränsen, fortsatt färd med och utan nästa prognos samt explicit exporterad
+nollströmsfallback. Även en gräns som först anges vid mittpunkten provas. Fyra ytterligare
+regressionstester kontrollerar omräknad tid/position vid mittpunkten mot
+x(t)=t+t²/200 (55,125 m vid 45 s), ändrad ström vid prognosbyte och en fem
+sekunders lucka. Grovt/halverat steg kontrolleras. Dessa fyra tester gav sex
+felutfall (inklusive subtester) mot den tidigare committade beräkningen och
+passerar med fixen. Okända rumsliga/tidsmässiga luckor och prognosålder återstår.
 
 ## Syntetiska hinder
 

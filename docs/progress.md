@@ -243,3 +243,37 @@ passerar offline. git diff --check och hemligheters ignore-regler passerar.
 Antagande: servern stöder TLS redan; om inte måste anslutning nekas tills separat
 serveråtgärd godkänns. Nästa steg: granska isoleringsplanen och godkänn separat
 framtida integrationstestkörning. Prototypfixen får egen commit. Ingen push.
+
+
+## Prognosgränsfix – granskad och verifierad 2026-10-12
+
+De fyra kvarvarande prototype/-filerna granskade och avgränsade till samma fix.
+Tidigare kunde ett 60 s-steg med giltigt start-/mittpunktsuppslag röra sig förbi
+prognosens slut vid 45 s. Båda integratorerna kortar nu vid kända gränser och
+räknar om mittpunktens tid och position. Ett accepterat steg kan sluta exakt vid
+valid_until; fortsatt färd kräver nytt giltigt uppslag eller uttryckligt vald
+nollströmsfallback i simulate. Målfärden ger data_unavailable utan restid och
+behåller endast slutförda steg när nästa prognos saknas. Hinderkontrollen används
+även för förkortade segment. Inga databas-/HTTP-/UI-beroenden i beräkningen.
+
+De sex tidigare ostagade regressionstesterna och fyra fördjupade tester verifierar
+mål före/vid gränsen, gräns upptäckt först vid mittpunkt, omräknad tid/position,
+ändrad ström efter prognosbyte, fortsatt giltig prognos, fem sekunders datalucka
+samt redovisad fallback före/efter prognosintervall. Oberoende referens:
+x'=1+t/100 ger x(45)=55,125 m; 1 m/s i 45 s och därefter 3 m/s i 15 s ger 90 m.
+Grovt och halverat steg provas. Fyra fördjupade tester mot tidigare committad
+beräkning gav sex felutfall inklusive subtester och noll körfel; samtliga passerar
+med fixen. Referenstolerans 1e-8 m för analytiska förflyttningar.
+
+Verifierat: make check passerar med 42 prototyp- och 17 övriga Python-tester
+(59 totalt), syntax/TOML/beroenden/domängränser och Actions-SHA-kontroll.
+Frontendens syntax passerar, 0 produkttester. Migrations-/integrationstestplan
+är offline; ingen databasanslutning eller TLS-handshake har körts. git diff --check
+passerar. Fix och miljöskydd får separata lokala commits; tidigare fristående
+miljö-/anslutningsloggar i detta dokument lämnas ostagade. Ingen push.
+
+Antagande: uppslagens giltighetsintervall beskriver sammanhängande tidsmässig
+täckning. Okända luckor mellan uppslag, rumslig täckning och prognosålder är
+fortfarande inte bevisade; tidsgränskontrollen är ingen verklig navigationsvalidering.
+Nästa steg: separat granskning av kvarvarande loggar och godkännande av den
+förberedda, isolerade PostgreSQL-testplanen innan någon integrationskörning.

@@ -124,6 +124,78 @@ class SimulationTests(unittest.TestCase):
             self.run_field(field, boat=ConstantBoat(speed_knots=1 / KNOT, leeway=0),
                            duration=10, step=10)
 
+    def test_step_shortened_at_forecast_boundary(self):
+        boundary = START + timedelta(seconds=45)
+        boat = ConstantBoat(speed_knots=1 / KNOT, leeway=0)
+        for midpoint_only in (False, True):
+            field = lambda p, t: Conditions(
+                Vector(0, 0), valid_until=boundary if t > START or not midpoint_only else None)
+            for duration in (40, 45):
+                steps = self.run_field(field, boat=boat, duration=duration)
+                self.assertAlmostEqual(steps[-1].end_position.east, duration, delta=1e-8)
+                self.assertEqual(steps[-1].end_time, START + timedelta(seconds=duration))
+            with self.assertRaisesRegex(ValueError, 'prognosens slut'):
+                self.run_field(field, boat=boat, duration=60)
+
+    def test_boundary_fallback_is_explicit_and_exported(self):
+        boundary = START + timedelta(seconds=45)
+        field = lambda p, t: Conditions(Vector(1, 0), valid_until=boundary)
+        steps = self.run_field(field, duration=60, allow_missing=True,
+                               boat=ConstantBoat(speed_knots=1 / KNOT, leeway=0))
+        self.assertEqual(len(steps), 2)
+        self.assertEqual(steps[0].end_time, boundary)
+        self.assertEqual(steps[0].midpoint.current_status, 'valid')
+        self.assertEqual(steps[1].start.current_status, 'assumed_zero')
+        self.assertEqual(steps[1].midpoint.current_status, 'assumed_zero')
+        self.assertIn('prognosens slut', steps[1].midpoint.assumptions[0])
+        self.assertAlmostEqual(steps[-1].end_position.east, 105, delta=1e-8)
+        self.assertEqual(json.loads(export(steps))['current_coverage'], 'delvis')
+
+    def test_fallback_until_forecast_starts(self):
+        boundary = START + timedelta(seconds=45)
+        field = lambda p, t: Conditions(Vector(1, 0), valid_from=boundary)
+        steps = self.run_field(field, duration=60, allow_missing=True,
+                               boat=ConstantBoat(speed_knots=1 / KNOT, leeway=0))
+        self.assertEqual(steps[0].end_time, boundary)
+        self.assertEqual(steps[0].midpoint.current_status, 'assumed_zero')
+        self.assertEqual(steps[1].midpoint.current_status, 'valid')
+        self.assertAlmostEqual(steps[-1].end_position.east, 75, delta=1e-8)
+
+    def test_shortened_midpoint_recomputes_time_and_position(self):
+        boundary = START + timedelta(seconds=45)
+        calls = []
+        def field(p, t):
+            calls.append((p.east, (t - START).total_seconds()))
+            return Conditions(Vector((t - START).total_seconds() / 100, 0),
+                              valid_until=boundary if t > START else None)
+        steps = self.run_field(field, duration=45, step=60,
+                               boat=ConstantBoat(speed_knots=1 / KNOT, leeway=0))
+        # x'=1+t/100 => x(45)=45+45²/200. Midpoint x prediction = 22.5 m.
+        self.assertAlmostEqual(steps[-1].end_position.east, 55.125, delta=1e-8)
+        self.assertIn((22.5, 22.5), calls)
+        # A full 60 s request also must recompute the initially sampled 30 s midpoint.
+        calls.clear()
+        steps = self.run_field(field, duration=60, step=60, allow_missing=True,
+                               boat=ConstantBoat(speed_knots=1 / KNOT, leeway=0))
+        self.assertEqual(steps[0].end_time, boundary)
+        self.assertAlmostEqual(steps[0].end_position.east, 55.125, delta=1e-8)
+        self.assertIn((30.0, 30.0), calls)
+        self.assertIn((22.5, 22.5), calls)
+
+    def test_changed_forecast_at_boundary_is_used(self):
+        boundary = START + timedelta(seconds=45)
+        def field(p, t):
+            return Conditions(Vector(0 if t < boundary else 2, 0),
+                              valid_from=START if t < boundary else boundary,
+                              valid_until=boundary if t < boundary else START + timedelta(seconds=120))
+        for step in (60, 30):
+            with self.subTest(step=step):
+                steps = self.run_field(field, duration=60, step=step,
+                                       boat=ConstantBoat(speed_knots=1 / KNOT, leeway=0))
+                # 1 m/s for 45 s, then 3 m/s for 15 s.
+                self.assertAlmostEqual(steps[-1].end_position.east, 90, delta=1e-8)
+                self.assertIn(boundary, [s.end_time for s in steps])
+
     def test_stronger_counter_current_and_drifting_boat(self):
         steps = self.run_field(lambda p, t: Conditions(Vector(-6 * KNOT, 0)))
         self.assertAlmostEqual(steps[-1].end_position.east, -1852, delta=1e-8)

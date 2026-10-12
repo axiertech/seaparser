@@ -101,6 +101,70 @@ class VoyageTests(unittest.TestCase):
         self.assertEqual(export_voyage(self.voyage(Vector(0, 2))),
                          export_voyage(self.voyage(Vector(0, 2))))
 
+    def test_forecast_boundary_between_midpoint_and_end(self):
+        boundary = START + timedelta(seconds=45)
+        # Även en gräns som först blir känd vid mittpunkten måste respekteras.
+        for midpoint_only in (False, True):
+            field = lambda p, t: Conditions(
+                Vector(0, 0), valid_until=boundary if t > START or not midpoint_only else None)
+            result = self.voyage(field, target=Vector(60, 0), speed_knots=1 / KNOT)
+            self.assertEqual(result.status, 'data_unavailable')
+            self.assertIsNone(result.travel_seconds)
+            self.assertEqual(result.elapsed_seconds, 45)
+            self.assertEqual(result.end_position, Vector(45, 0))
+            self.assertEqual(result.steps[-1].end_time, boundary)
+            self.assertIn('prognosens slut', result.reason)
+
+    def test_target_before_or_at_forecast_boundary(self):
+        field = lambda p, t: Conditions(Vector(0, 0), valid_until=START + timedelta(seconds=45))
+        for distance in (40, 45):
+            result = self.voyage(field, target=Vector(distance, 0), speed_knots=1 / KNOT)
+            self.assertEqual(result.status, 'arrived')
+            self.assertEqual(result.travel_seconds, distance)
+
+    def test_continuation_with_next_valid_forecast(self):
+        boundary = START + timedelta(seconds=45)
+        field = lambda p, t: Conditions(
+            Vector(0, 0), valid_from=START if t < boundary else boundary,
+            valid_until=boundary if t < boundary else START + timedelta(seconds=120))
+        result = self.voyage(field, target=Vector(60, 0), speed_knots=1 / KNOT)
+        self.assertEqual(result.status, 'arrived')
+        self.assertEqual(result.travel_seconds, 60)
+        self.assertEqual([s.end_time for s in result.steps],
+                         [boundary, START + timedelta(seconds=60)])
+
+    def test_shortened_midpoint_matches_time_dependent_reference(self):
+        boundary = START + timedelta(seconds=45)
+        field = lambda p, t: Conditions(
+            Vector((t - START).total_seconds() / 100, 0),
+            valid_until=boundary if t > START else None)
+        for step in (60, 30):
+            with self.subTest(step=step):
+                result = self.voyage(field, target=Vector(100, 0),
+                                     speed_knots=1 / KNOT, step_seconds=step)
+                self.assertEqual(result.status, 'data_unavailable')
+                self.assertEqual(result.elapsed_seconds, 45)
+                self.assertAlmostEqual(result.end_position.east, 55.125, delta=1e-8)
+                self.assertIsNone(result.travel_seconds)
+
+    def test_changed_forecast_and_gap_after_boundary(self):
+        boundary = START + timedelta(seconds=45)
+        for gap in (0, 5):
+            def field(p, t):
+                return Conditions(Vector(0 if t < boundary else 2, 0),
+                                  valid_from=START if t < boundary else boundary + timedelta(seconds=gap),
+                                  valid_until=boundary if t < boundary else START + timedelta(seconds=120))
+            result = self.voyage(field, target=Vector(90, 0), speed_knots=1 / KNOT)
+            if gap:
+                self.assertEqual(result.status, 'data_unavailable')
+                self.assertEqual(result.end_position, Vector(45, 0))
+                self.assertEqual(result.elapsed_seconds, 45)
+                self.assertIsNone(result.travel_seconds)
+            else:
+                # New forecast raises ground speed from 1 to 3 m/s at 45 s.
+                self.assertEqual(result.status, 'arrived')
+                self.assertEqual(result.travel_seconds, 60)
+
     def test_validation(self):
         for args in ({'speed_knots': 0}, {'step_seconds': 0}, {'max_seconds': -1},
                      {'tolerance_m': 0}, {'min_progress_m_s': -1}, {'max_steps': 0},
