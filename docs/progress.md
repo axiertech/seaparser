@@ -83,9 +83,9 @@ Ingen omväg väljs automatiskt ännu. Leveransen stannar här för granskning.
    och manövermodell ingår inte; se polarleveransen nedan.
 3. Testa rumsligt/tidsberoende vind och ström längs flerstegsrutter, giltighet,
    saknade data och halverade tidssteg mot oberoende referenser.
-4. Definiera syntetiskt komfortmått och hårda vind-/sjögränser, jämför snabbast
-   och bekvämast under exakt samma gränser. Testa att komfort aldrig kan väga
-   bort förbjudna områden, vindvinklar, otillräckliga data eller hårda gränser.
+4. Genomförd 2026-10-12: hårda markrelativa vind-/Hm0-gränser och syntetisk
+   tidsexponering med snabbast/bekvämast-val inom begränsad extra restid.
+   Uppslagsbaserade kontroller är ingen kontinuerlig eller maritim säkerhetsgaranti.
 
 Verkliga polarer/prognoser, geodetik, djup, sjökort, prognosålder, UI/editor,
 API, databas och drift återstår. Prototypen är inte verifierad för verklig navigation.
@@ -385,3 +385,62 @@ Rotargumentet gäller endast denna styckvis linjära positiva prestanda, inte an
 modeller. Numeriska toleranser vid axlar är1e-10 knop/grader; fullständiga dynamiska
 felgarantier och maritim sakkunnig validering saknas. Nästa steg: definiera hårda
 vind-/sjögränser och syntetiskt komfortmått under samma absoluta begränsningar.
+
+
+## Gemensamma vädergränser och syntetiskt komfortval 2026-10-12
+
+Aktuell uppgift: konfigurerbara hårda vind-/våggränser, explicita vågdata och enkelt
+komfortmått med begränsad extra restid. Krav, arkitektur och beslutslogg granskade.
+Ingen databasanslutning, server-/privat konfigurationsändring eller installation.
+
+WeatherPolicy kräver max markrelativ vind i m/s och max signifikant våghöjd Hm0
+i m. Vattenrelativ vind omräknas Wground=Wwater+Cground för vädergränsen;
+polarens TWS är fortsatt Wwater. Samma policy/krav gäller alla kandidater och båda
+urvalen. Överskridande ger weather_limit före poängval; saknade/ogiltiga data eller
+okänd/utgången giltighet ger data_unavailable. Aktiverad policy kräver giltig ström
+utan simulate-fallback. Även nollsträcka måste passera väderkontroll.
+
+WaveData anger Hm0 m, markfast Tm02 s och medelvågornas från-bäring medurs från sann
+nord, eget [valid_from,valid_until)-intervall, källa/version och explicita ram-/
+periodetiketter. Andra periodtyper/ramar avvisas. Konvention/enheter granskade mot
+Copernicus Marines officiella dokumentation; inga verkliga väderdata hämtades.
+Båda giltighetsintervallen måste vara explicit kända när policy aktiveras. Vågornas
+kända prognosgränser kortar steg och räknar om mittpunkten; byte kräver nytt uppslag.
+
+Komfortmodell synthetic-wave-exposure-v1: r=(Hs/1m)^2*(5s/Tm02)^2*(1+sin(beta)^2),
+med beta relativt båtens riktning genom vatten. E=integral r dt över accepterade
+steg/delsträckor, i syntetiska exponeringssekunder. Modellen är ej validerad för
+verkliga båtrörelser. Ingen encounter-/resonans-/roll-/stampnings-/sjösjukemodell.
+Lägre E föredras. Misslyckade rutter saknar fullständig poäng och kan aldrig väljas.
+Bekvämaste väljs endast bland samma arrived-kandidater som snabbaste, inom
+fastest_time + max_comfort_extra_seconds (standard300 s, finit och >=0). Vid lika
+E väljs kortare tid och därefter först angiven kandidat. Alla ruttbudgets kvar.
+
+Verifierat: make check passerar med 91 prototyp- och 17 övriga Python-tester
+(108 totalt). Alla 90 tidigare och 18 nya väder-/komforttester passerar. Nya fall
+omfattar olika snabbaste/bekvämaste kandidater, tidsmarginal, absoluta gränser trots
+snabb/lågpoängsrutt, gränslikhet, mark/vattenvind, dataluckor vid start/mittpunkt,
+oberoende våggiltighet, prognosbyte, tidsintegral, halverat steg och exportmetadata.
+Aktiverad väderpolicy avvisar även explicit strömfallback; legacy utan policy
+märks not_requested, ingen komfortpoäng/val eller verifierad väderbedömning.
+
+Referensfallet med 1 m/s: direkt100 s/E200; omväg140 s/E35,4923 respektive35,5396
+vid steg2/1 s, mot analytiska E35,5556. Extra marginal40 s tillåter omvägen;
+39 eller0 s behåller direktvalet. Fel<=0,07 exponering-s och skillnad<0,05 vid
+halvering; vinnarval stabilt. Tidsfält Hs=.5+.002t ger E=72+2/3 på100 s;
+steg10/5 s ger grovt fel<0,01 och mer än trefaldig felminskning. Vågbyte vid45 s
+från Hs1 till.5 ger E117,5. Exempelgränser är testdata, inte båtvaliderade råd.
+
+Syntax/TOML/beroenden/domänimporter/Actions-SHA och frontendsyntax passerar.
+Frontend har0 produkttester. Migrations- och PostgreSQL-testplan passerar offline
+utan konfigurationsläsning/anslutning; git diff --check passerar. Resultat/export
+redovisar policy, tidsmarginal, båda valen, vågkälla/giltighet och syntetisk modell.
+Tidigare76 fristående loggrader bevaras ostagade. Lokal commit, ingen push.
+
+Begränsningar: hårda gränser testas vid start/mittpunkt och provisoriska uppslag,
+inte bevisat mellan alla uppslag eller vid samtliga segmentändpunkter. Omärkta
+luckor/farliga toppar kan missas; provisoriska uppslag kan avbryta konservativt.
+Hela segmentens hinderkontroll och polarens no-go är kvar. Tidsstegshalvering är
+ingen säkerhetsgaranti. Prognosålder, verklig datainterpolation och maritim
+sakkunnig validering återstår. Nästa steg: fördjupa intervall-/datakvalitetskontroller
+och validera antaganden innan verkliga prognoser eller användargränser används.

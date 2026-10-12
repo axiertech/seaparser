@@ -122,3 +122,22 @@
   förbjuden vinkel bedöms mot styrkurs, inte kurs över grund. Ingen automatisk kryss.
 - Metadata och vindram följer exporten. Hinder-/prognos-/budgetskydd bevaras.
   Sjö, avdrift, segelkonfiguration, verkliga polarer och prognosålder återstår.
+
+
+## Gemensamma hårda vädergränser och syntetisk komfort 2026-10-12
+
+- WeatherPolicy kräver explicit max markrelativ vind (m/s) och Hm0 (m).
+  Samma policy/datakrav för snabbast och bekvämast. Strikt överskridande avvisas
+  före poängval; ingen tidsvinst eller komfortvikt kan upphäva absoluta gränser.
+- WaveData: Hm0 i m, Tm02 i s och markrelativ från-bäring medurs från sann nord,
+  eget explicit giltighetsintervall/källa/version. Okända/ogiltiga data avvisas.
+  Vindgräns använder markvind, polaren fortsatt vattenvind, med explicit omräkning.
+- Exponering E=integral (Hs/1m)^2*(5s/Tm02)^2*(1+sin(beta)^2) dt,
+  beta relativt vattenriktning. synthetic-wave-exposure-v1 är syntetiskt och
+  ej validerat för verkliga båtrörelser, inte ett säkerhets- eller sjösjukemått.
+- Komfortval endast bland fullständigt genomförbara kandidater inom snabbaste
+  restid + max_comfort_extra_seconds (standard300 s). Min E, därefter min tid.
+- Kontroller gäller uppslag, inte bevisad kontinuerlig vädergräns. Omärkta luckor/
+  toppar mellan uppslag kan missas. Hela segmentens hinderkontroll kvar.
+- Legacy utan policy märks not_requested och får inget komfortval; det är en
+  matematisk beräkning utan väderbedömning. Inga verkliga båtgränser har validerats.

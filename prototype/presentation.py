@@ -36,5 +36,9 @@ def export_route_comparison(comparison):
     return json.dumps({'status': comparison.status, 'scope': comparison.scope,
                        'fastest_candidate': (comparison.fastest.candidate.name
                                              if comparison.fastest else None),
-                       'candidates': rows}, default=lambda value: value.isoformat(),
+                       'comfortable_candidate': (comparison.comfortable.candidate.name
+                                                 if comparison.comfortable else None),
+                       'weather_policy': asdict(comparison.weather_policy) if comparison.weather_policy else None,
+                       'max_comfort_extra_seconds': comparison.max_comfort_extra_seconds,
+                       'comfort_model': comparison.comfort_model, 'candidates': rows}, default=lambda value: value.isoformat(),
                       ensure_ascii=False, indent=2)

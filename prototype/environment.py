@@ -8,6 +8,29 @@ from .model import Vector, velocity
 
 
 @dataclass(frozen=True)
+class WaveData:
+    """Synthetic Hm0 metres, Tm02 seconds, mean FROM bearing in true ground axes."""
+    height_m: float | None
+    period_seconds: float | None
+    from_degrees: float | None
+    valid_from: datetime | None = None
+    valid_until: datetime | None = None
+    source: str = "synthetic-waves"
+    version: str = "1"
+    period_kind: str = "tm02"
+    direction_reference: str = "ground-from-true-north"
+
+    def __post_init__(self):
+        if self.period_kind != "tm02" or self.direction_reference != "ground-from-true-north":
+            raise ValueError("Vågdata kräver Tm02 och markrelativ från-riktning")
+        for boundary in (self.valid_from, self.valid_until):
+            if boundary is not None and (boundary.tzinfo is None or boundary.utcoffset() is None):
+                raise ValueError("Vågornas giltighetstid måste ha tidszon")
+        if self.valid_from is not None and self.valid_until is not None and self.valid_from >= self.valid_until:
+            raise ValueError("Vågornas giltighetsintervall måste vara positivt")
+
+
+@dataclass(frozen=True)
 class Conditions:
     current: Vector | None
     reason: str = ""
@@ -17,6 +40,7 @@ class Conditions:
     valid_from: datetime | None = None
     valid_until: datetime | None = None
     wind_reference: str = "ground"
+    waves: WaveData | None = None
 
     def __post_init__(self):
         if self.wind_reference not in ("ground", "water"):

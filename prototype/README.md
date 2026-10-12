@@ -280,7 +280,7 @@ och sen genomförbarhet, prognosslut på senare delsträcka, hela ruttens tids-/
 validering, deterministiska likheter och JSON-export. Analytiska konstantreferenser
 har tidsfel <=0,03 s; den enkla direkta referensen <=1e-6 s. Grovt/halverat steg
 provas för hinder och strömval. Sökningen gäller endast den definierade
-kandidatmängden. Verkliga sjökort/djup, prognosålder, uppmätta polarer och komfort återstår;
+kandidatmängden. Verkliga sjökort/djup, prognosålder, uppmätta polarer och validerad komfort återstår;
 detta är inte navigationsstöd för verklig användning.
 
 
@@ -390,3 +390,111 @@ noll avdrift, ingen sjö-/våg-/segelkonfigurationsmodell och inga verkliga pola
 Referensramen är inte roterade GRIB-komponenter, magnetisk kurs eller vind relativt
 båten. Okända dataluckor mellan uppslag och prognosålder återstår. Ingen generell
 felgaranti eller maritim sakkunnig validering; detta är endast testdata.
+
+
+## Hårda vädergränser och syntetisk komfortexponering
+
+WeatherPolicy(max_wind_m_s, max_wave_height_m) aktiverar samma absoluta gränser
+för alla kandidater och båda målen. Gränser anges explicit; inga båtvaliderade
+standardgränser erbjuds. Likhet med gränsen tillåts; strikt större värde avvisas
+som weather_limit. Kandidaten har då ingen fullständig restid eller komfortpoäng
+och kan inte väljas. Först filtreras genomförbarhet, sedan görs båda valen.
+Komfort eller restid kan inte väga bort väder, hinder, no-go, data- eller budgetfel.
+
+Vädergränsens vind är alltid **markrelativ** styrka i m/s, till skillnad från
+polarens vattenrelativa TWS. Conditions.wind_reference=water omräknas till mark
+med Wground=Wwater+Cground innan gränstestet. Vind från markdata kontrolleras
+direkt. Svag vattenrelativ vind innebär inte att en hård markrelativ gräns passerar.
+
+WaveData beskriver syntetisk signifikant våghöjd Hm0 i meter (height_m), markfast
+medelperiod Tm02 i sekunder (period_seconds, period_kind=tm02) och medelvågornas
+**från-riktning** (from_degrees), medurs från sann nord, i samma lokala markram
+som vind/ström. Höjdgränsen gäller Hm0, inte högsta enskilda våg.
+direction_reference=ground-from-true-north; andra periodtyper/ramar
+avvisas. 0° betyder från nord, 90° från öst. Propagationen är åt motsatt håll.
+Riktning normaliseras cirkulärt i komfortberäkningen. Perioden är inte spektral
+peakperiod eller mötesperiod ombord; ingen Doppler-/encounteromräkning görs.
+
+Enheter och vågkonvention har granskats mot
+[Copernicus Marine om vågparametrar](https://help.marine.copernicus.eu/en/articles/6175153-how-to-describe-wave-height-period-and-direction-parameters) och
+[deras riktningskonventioner](https://help.marine.copernicus.eu/en/articles/5046685-direction-conventions-of-currents-wave-and-wind-in-copernicus-marine-products).
+Prototypens vågvärden är syntetiska, inte hämtade prognoser från dessa tjänster.
+
+Vind/ström använder Conditions giltighetsintervall; vågor har ett **eget**
+WaveData-intervall och egen source/version. Vid aktiverad policy måste båda
+intervallen vara explicit kända, tidszonsmedvetna och täcka uppslagstiden
+[start,end). Våghöjd måste vara finit och >=0, period finit och >0 och riktning
+finit. Även noll våghöjd kräver period/riktning för den gemensamma testdatamodellen.
+Saknade/ogiltiga data eller okänd/utgången giltighet ger data_unavailable utan
+fallback. Aktiverad policy kräver också giltig ström och avvisar simulate-fallback
+även om allow_missing_current=True. Kända våg-/vindgränser kortar steg med omräknad mittpunkt; fortsatt
+färd kräver nytt giltigt uppslag. Slut exakt vid gränsen får accepteras.
+
+Komfortmodell **synthetic-wave-exposure-v1**, ej validerad för verkliga båtrörelser:
+
+```
+r(t) = (Hs/1 m)^2 * (5 s/Tm02)^2 * (1 + sin(beta)^2)
+E = integral r(t) dt
+beta = minsta vinkelskillnad mellan vågornas från-bäring och riktning genom vatten
+```
+
+r är dimensionslös och E anges i syntetiska exponeringssekunder. Lägre E föredras.
+Högre höjd och kortare period ökar bidraget; tvärsjö vägs dubbelt mot rak fram-/
+bakifrån sjö. Modellen skiljer inte framifrån från bakifrån sjö. Vattenriktning
+används som proxy för båtens riktning, inte COG. Saknad sådan riktning vid rörelse
+avvisas. Ingen modell av roll, stampning, acceleration, sjösjuka, skrov, fartberoende
+resonans eller strömmens påverkan på vågor. Formeln är ett dokumenterat testmått,
+ingen prediktion av faktisk komfort eller säkerhet och ingen medelpoäng som döljer
+tidsexponering. E beräknas med mittpunktsregeln över varje accepterat steg och
+summerar hela kandidatens delsträckor. Förkastade steg bidrar inte.
+
+Bekvämaste kandidat minimerar E bland samma kompletta arrived-kandidater som
+snabbaste, och bara om travel_seconds <= fastest.travel_seconds +
+max_comfort_extra_seconds. Parametern är sekunder, standard 300, finit och >=0;
+0 tillåter bara lika snabb färd. Vid exakt lika E väljs kortare restid, därefter
+först angiven kandidat. Tids-/stegbudget för hela rutten gäller fortsatt.
+
+```python
+from prototype.environment import WaveData, Conditions, SyntheticEnvironment, wind_from
+from prototype.weather import WeatherPolicy
+from prototype.routes import RouteCandidate, compare_routes
+from prototype.model import Vector, KNOT
+from datetime import datetime, timedelta, timezone
+
+start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+end = start + timedelta(seconds=1000)
+def field(p, t):
+    return Conditions(Vector(0, 0), wind=wind_from(4, 0),
+                      valid_from=start, valid_until=end,
+                      waves=WaveData(1/(1+max(0,p.north)/10), 5, 0, start, end))
+result = compare_routes(
+    SyntheticEnvironment(field), start, Vector(100, 0),
+    [RouteCandidate("direct"), RouteCandidate("detour", (Vector(0,20), Vector(100,20)))],
+    speed_knots=1/KNOT, weather_policy=WeatherPolicy(5, 1),
+    max_comfort_extra_seconds=40, step_seconds=1)
+```
+
+Referens: snabbast direkt=100 s, bekvämast omväg=140 s. Direkt E=200, omväg
+E=35,4923/35,5396 vid steg2/1 s mot analytiska 35,5556. Testtolerans 0,07
+exponeringssekunder; halvering ändrar E mindre än 0,05 och bevarar båda valen.
+Ett tidsfält Hs=.5+.002t ger integral över100 s lika med72+2/3; steg10/5 s
+har grovt fel<0,01 och halvering minskar fel mer än tre gånger. Vågbyte vid45 s
+från Hs1 till.5 ger E=117,5 utan att gammal prognos extrapoleras.
+Exemplets vind-/våggränser är endast testparametrar, inte rekommenderade båtgränser.
+
+JSON innehåller båda vinnarnamnen, policy, tidsmarginal, komfortmodell och varje
+kandidats poäng/väderstatus. Varje Voyage inkluderar samma policy/modell och
+exponering av sina accepterade steg (kan vara partiell vid avbrott). En misslyckad
+RouteResult har comfort_exposure=None. WaveData och rate följer varje uppslag.
+
+Bakåtkompatibelt matematiskt läge weather_policy=None använder tidigare ström-/
+polar-/hinderkontroller men gör **ingen väderbedömning**: weather_status=not_requested,
+komfortpoäng och comfortable=None. Det innebär inte verifierat godtagbart väder.
+En aktiverad policy behandlar aldrig saknade data som säkra, även vid nollsträcka.
+
+Begränsning: hårda vädergränser testas vid stegstart och predikterad mittpunkt,
+inklusive omräknade/provisoriska uppslag. De bevisas inte mellan uppslag eller vid
+alla segmentändpunkter. En omärkt datalucka eller kort farlig topp kan missas.
+Provisoriska uppslag kan också ge konservativa avbrott. Hinder kontrolleras fortsatt
+över hela integrerade segment. Kända prognosgränser täcks, men prognosålder, verklig
+interpolation och maritim validering återstår; ett mindre steg är ingen säkerhetsgaranti.

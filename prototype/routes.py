@@ -6,6 +6,7 @@ from math import isfinite
 from .calculation import Voyage, sail_to_target
 from .environment import Environment
 from .model import Vector, BoatPerformance
+from .weather import WeatherPolicy, COMFORT_MODEL
 
 
 @dataclass(frozen=True)
@@ -36,6 +37,8 @@ class RouteResult:
     travel_seconds: float | None
     target: Vector
     tolerance_m: float
+    comfort_exposure: float | None = None
+    weather_status: str = "not_requested"
 
 
 @dataclass(frozen=True)
@@ -44,14 +47,21 @@ class RouteComparison:
     candidates: tuple[RouteResult, ...]
     fastest: RouteResult | None
     scope: str = "Endast de angivna kompletta kandidatrutterna; ingen global optimalitet."
+    comfortable: RouteResult | None = None
+    weather_policy: WeatherPolicy | None = None
+    max_comfort_extra_seconds: float = 300
+    comfort_model: str | None = None
 
 
 def compare_routes(environment: Environment, start: datetime, target: Vector,
                    candidates, *, position=Vector(0, 0), obstacles=(), speed_knots=5,
                    step_seconds=60, max_seconds=86400, tolerance_m=0.01,
                    min_progress_m_s=0.01, max_steps=100000,
-                   max_candidates=100, max_waypoints=32, boat: BoatPerformance | None = None):
+                   max_candidates=100, max_waypoints=32, boat: BoatPerformance | None = None,
+                   weather_policy: WeatherPolicy | None = None, max_comfort_extra_seconds=300):
     """Independent full simulations with equal limits; first candidate wins exact ties."""
+    if not isfinite(max_comfort_extra_seconds) or max_comfort_extra_seconds < 0:
+        raise ValueError("Tillåten extra komfortrestid måste vara finit och icke-negativ")
     values = (step_seconds, max_seconds, tolerance_m, min_progress_m_s,
               position.east, position.north, target.east, target.north)
     if boat is None:
@@ -98,7 +108,8 @@ def compare_routes(environment: Environment, start: datetime, target: Vector,
                 environment, current_time, destination, position=current_position,
                 obstacles=obstacles, speed_knots=speed_knots, step_seconds=step_seconds,
                 max_seconds=max(remaining_seconds, 1e-6), tolerance_m=tolerance_m,
-                min_progress_m_s=min_progress_m_s, max_steps=max(remaining_steps, 1), boat=boat)
+                min_progress_m_s=min_progress_m_s, max_steps=max(remaining_steps, 1), boat=boat,
+                weather_policy=weather_policy)
             legs.append(leg)
             step_count += len(leg.steps)
             current_position = leg.end_position
@@ -108,11 +119,22 @@ def compare_routes(environment: Environment, start: datetime, target: Vector,
                 status, reason = leg.status, leg.reason
                 break
         elapsed = (current_time - start).total_seconds()
+        comfort = sum(leg.comfort_exposure for leg in legs) if weather_policy is not None and status == 'arrived' else None
+        if comfort is not None and not isfinite(comfort):
+            status, reason, comfort = 'data_unavailable', 'Komfortexponering kan inte beräknas', None
         results.append(RouteResult(
             candidate, status, reason, tuple(legs), start,
             current_time if status == 'arrived' else None, current_position,
-            elapsed, elapsed if status == 'arrived' else None, target, tolerance_m))
+            elapsed, elapsed if status == 'arrived' else None, target, tolerance_m,
+            comfort,
+            ('passed_at_samples' if status == 'arrived' else 'incomplete') if weather_policy is not None else 'not_requested'))
     feasible = [result for result in results if result.status == 'arrived']
     fastest = min(feasible, key=lambda result: result.travel_seconds) if feasible else None
+    comfortable = None
+    if fastest is not None and weather_policy is not None:
+        eligible = [r for r in feasible if r.travel_seconds <= fastest.travel_seconds + max_comfort_extra_seconds]
+        comfortable = min(eligible, key=lambda r: (r.comfort_exposure, r.travel_seconds))
     return RouteComparison('selected' if fastest is not None else 'no_feasible_route',
-                           tuple(results), fastest)
+                           tuple(results), fastest, comfortable=comfortable,
+                           weather_policy=weather_policy, max_comfort_extra_seconds=max_comfort_extra_seconds,
+                           comfort_model=COMFORT_MODEL if weather_policy is not None else None)
