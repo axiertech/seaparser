@@ -72,7 +72,8 @@ antagande. `leeway=0` betyder uttryckligen vald nollavdrift.
 
 Båtprofilen är syntetisk och uppskattad, inte en verifierad verklig båt.
 Demot väljer uttryckligen noll vindavdrift. Alla strömfält är syntetiska;
-ingen prognosålder eller navigerbarhet bedöms. Källa och version följer varje
+demot gör ingen prognosålders- eller navigerbarhetsbedömning. Explicit
+ålderspolicy och separat ankomstkontroll beskrivs nedan. Källa och version följer varje
 uppslag; tidsstämplarna beskriver utvärderingstid, inte verkliga prognosers
 giltighetsintervall. Inga resultat innebär att en färd är säker.
 
@@ -97,7 +98,7 @@ Syntetiska data kan ange `valid_from` (inklusive) och `valid_until`
 även om fältet returnerar en strömvektor. Gränserna följer varje uppslag i
 JSON-exporten. Utelämnade gränser betyder ett analytiskt syntetiskt fält utan
 tidsgräns, inte en verifierad verklig prognos. Giltighetsintervall är inte
-samma sak som prognosålder; bedömning av prognosålder återstår.
+samma sak som prognosålder; den bedöms separat med ForecastPolicy enligt nedan.
 
 Båda integrationsfunktionerna kontrollerar att de giltiga start- och
 mittpunktsuppslagens intervall täcker hela det accepterade tidssteget
@@ -202,7 +203,7 @@ regressionstester kontrollerar omräknad tid/position vid mittpunkten mot
 x(t)=t+t²/200 (55,125 m vid 45 s), ändrad ström vid prognosbyte och en fem
 sekunders lucka. Grovt/halverat steg kontrolleras. Dessa fyra tester gav sex
 felutfall (inklusive subtester) mot den tidigare committade beräkningen och
-passerar med fixen. Okända rumsliga/tidsmässiga luckor och prognosålder återstår.
+passerar med fixen. Okända rumsliga/tidsmässiga luckor återstår; separat prognosålderspolicy finns nedan.
 
 ## Syntetiska hinder
 
@@ -280,7 +281,7 @@ och sen genomförbarhet, prognosslut på senare delsträcka, hela ruttens tids-/
 validering, deterministiska likheter och JSON-export. Analytiska konstantreferenser
 har tidsfel <=0,03 s; den enkla direkta referensen <=1e-6 s. Grovt/halverat steg
 provas för hinder och strömval. Sökningen gäller endast den definierade
-kandidatmängden. Verkliga sjökort/djup, prognosålder, uppmätta polarer och validerad komfort återstår;
+kandidatmängden. Verkliga sjökort/djup, verklig källmetadata, uppmätta polarer och validerad komfort återstår;
 detta är inte navigationsstöd för verklig användning.
 
 
@@ -334,7 +335,9 @@ från-riktning 36,8699°. Härledningen är vanlig relativhastighet, inte ett em
 samband för prestanda. Skenbar vind på båten skulle vara Ww minus båtens
 vattenhastighet; den används inte av denna polar. Ström kan därmed ändra både
 polarens TWS/TWA och markhastigheten. Conditions valid_from/valid_until beskriver
-sammanhängande gemensam täckning för vind/ström; separata prognostider/ålder saknas.
+sammanhängande gemensam täckning för vind/ström. Deras issued_at och vågornas
+egna issued_at bedöms med separat ålderspolicy; olika vind-/strömkällor kräver
+ytterligare separation vid verklig dataintegration.
 
 Den meteorologiska från-konventionen har kontrollerats mot
 [ECMWFs officiella vinddefinition](https://confluence.ecmwf.int/spaces/CKB/pages/133262398/ERA5%2BHow%2Bto%2Bcalculate%2Bwind%2Bspeed%2Band%2Bwind%2Bdirection%2Bfrom%2Bu%2Band%2Bv%2Bcomponents%2Bof%2Bthe%2Bwind).
@@ -388,7 +391,7 @@ x'=.2K*x/100+.2K*t/100+5K provas med halverat steg och <=0,001 m fel.
 Begränsningar: uppskattad liten tabell, omedelbar trim/styrning, symmetri,
 noll avdrift, ingen sjö-/våg-/segelkonfigurationsmodell och inga verkliga polarer.
 Referensramen är inte roterade GRIB-komponenter, magnetisk kurs eller vind relativt
-båten. Okända dataluckor mellan uppslag och prognosålder återstår. Ingen generell
+båten. Okända dataluckor mellan uppslag och verklig källvalidering återstår. Ingen generell
 felgaranti eller maritim sakkunnig validering; detta är endast testdata.
 
 
@@ -428,7 +431,8 @@ finit. Även noll våghöjd kräver period/riktning för den gemensamma testdata
 Saknade/ogiltiga data eller okänd/utgången giltighet ger data_unavailable utan
 fallback. Aktiverad policy kräver också giltig ström och avvisar simulate-fallback
 även om allow_missing_current=True. Kända våg-/vindgränser kortar steg med omräknad mittpunkt; fortsatt
-färd kräver nytt giltigt uppslag. Slut exakt vid gränsen får accepteras.
+färd kräver nytt giltigt uppslag. Ett rörelsesteg får sluta exakt vid gränsen,
+men ankomstväder kräver separat giltigt uppslag vid denna tid; se nedan.
 
 Komfortmodell **synthetic-wave-exposure-v1**, ej validerad för verkliga båtrörelser:
 
@@ -493,8 +497,102 @@ komfortpoäng och comfortable=None. Det innebär inte verifierat godtagbart väd
 En aktiverad policy behandlar aldrig saknade data som säkra, även vid nollsträcka.
 
 Begränsning: hårda vädergränser testas vid stegstart och predikterad mittpunkt,
-inklusive omräknade/provisoriska uppslag. De bevisas inte mellan uppslag eller vid
-alla segmentändpunkter. En omärkt datalucka eller kort farlig topp kan missas.
+inklusive omräknade/provisoriska uppslag, samt separat vid faktisk ankomst.
+De bevisas inte mellan uppslag eller vid alla övriga segmentändpunkter. En omärkt datalucka eller kort farlig topp kan missas.
 Provisoriska uppslag kan också ge konservativa avbrott. Hinder kontrolleras fortsatt
-över hela integrerade segment. Kända prognosgränser täcks, men prognosålder, verklig
-interpolation och maritim validering återstår; ett mindre steg är ingen säkerhetsgaranti.
+över hela integrerade segment. Kända prognosgränser och konfigurerad ålder
+kontrolleras, men verklig källmetadata/interpolation och maritim validering återstår; ett mindre steg är ingen säkerhetsgaranti.
+
+
+## Prognosålder vid planering och separat ankomstkontroll
+
+Conditions.issued_at gäller den sammanhängande vind-/strömprognosen och
+WaveData.issued_at dess oberoende vågprognos. Utfärdandetid är källans faktiska
+utfärdandetid, inte valid_from, simulerad ankomst eller nedladdningstid. Alla tider
+ska vara tidszonsmedvetna datetime; klockans planeringstid normaliseras till UTC.
+Saknad utfärdandetid får inte ersättas med nu/start/giltighetstiden.
+
+ForecastPolicy(max_age_seconds) är separat från WeatherPolicy och giltighet.
+Gränsen är finit och >=0, i sekunder; lika ålder tillåts. För varje källa som
+används beräknas age=planning_time-issued_at. Negativ ålder (utfärdad efter
+planeringen), saknad tid eller överskriden maxålder ger data_unavailable och
+utesluter kandidaten. Vind-/ström- och vågprognoser bedöms var för sig mot samma
+konfigurerade maxålder. Framtida giltighet gör inte gammal prognos färsk.
+Giltighet fortsätter däremot kontrolleras vid respektive simulerade uppslagstid.
+
+Clock.now injiceras explicit; FixedClock ger reproducerbar planeringstid. Med
+aktiverad ForecastPolicy krävs en Clock, annars konfigurationsfel ValueError.
+Ingen datetime.now eller implicit avgångstid används som klocka. Ruttjämförelsen
+läser den yttre klockan exakt en gång efter indatavalidering, innan simulering,
+och förmedlar en fryst UTC-tid till alla kandidater/delsträckor/ankomstkontroller.
+Standalone sail_to_target/simulate fångar sin klocka en gång per anrop. Utfärdandetid
+kontrolleras vid varje nytt uppslag, så bytt prognoskälla/version inte ärver någon
+annan prognos godkända ålder. Prognoser utfärdade efter planeringen kan inte
+förutsättas tillgängliga, även om deras simulerade användningstid ligger senare.
+
+```python
+from prototype.forecast import ForecastPolicy, FixedClock
+
+plan = datetime(2026, 1, 1, tzinfo=timezone.utc)
+depart = plan + timedelta(hours=2)
+issued = plan - timedelta(seconds=100)
+end = depart + timedelta(hours=1)
+record = Conditions(Vector(0,0), wind=wind_from(4,0),
+                    valid_from=depart, valid_until=end, issued_at=issued,
+                    waves=WaveData(1,5,0,depart,end,issued_at=issued))
+result = compare_routes(SyntheticEnvironment(lambda p,t: record), depart,
+                        Vector(100,0), [RouteCandidate("direct")], speed_knots=1/KNOT,
+                        weather_policy=WeatherPolicy(5,1),
+                        forecast_policy=ForecastPolicy(600), clock=FixedClock(plan))
+```
+
+Detta återanvänder importerna i väderexemplet ovan. Vid planeringen är prognosen
+100 s gammal, även om färden börjar två timmar senare. Maxåldern bedöms inte vid
+framtida ETA. Den är ingen begränsning av prognoshorisonten; giltighetsfönstret
+måste separat täcka hela de verifierade uppslagen inklusive ankomst.
+
+Efter rörelse till måltoleransen gör sail_to_target ett **nytt** miljöuppslag vid
+sin numeriskt faktiska end_position och end_time. Ingen snapping till nominellt
+mål görs. Samma aktiverade väder-/ålderspolicy används, även för nollsträckor och
+mellanvägpunkter. Inga nya rörelsesegment eller komfortbidrag tillkommer av detta
+punktuppslag. Det kontrollerar väder/data, inte möjlighet till ny seglingskurs efter
+målet. simulate är tidsbegränsad rörelse utan destinationsresultat och redovisar
+sina accepterade stegs uppslag; den intygar inte verifierat väder vid en destination.
+
+Giltighet är [valid_from,valid_until), **även vid destinationen**. Ett färdsegment
+kan sluta exakt vid valid_until utan att extrapolera efter den; för verifierat
+ankomstväder behövs då nästa prognos med valid_from<=arrival_time<valid_until.
+Gammal sista prognos återanvänds inte automatiskt. Om nytt uppslag saknas/är gammalt/
+ogiltigt, eller vind/våggräns överskrids vid destinationen, blir resultatet
+data_unavailable respektive weather_limit och kan inte väljas som snabbast eller
+bekvämast. Banan och elapsed_seconds bevaras; destination_reached kan vara True
+samtidigt som travel_seconds/ankomsttid för en godkänd rutt saknas.
+
+arrival_checked_time visar faktiskt kontrollerad tid. arrival_weather_status
+är passed_at_arrival bara efter godkänd väderkontroll, annars felstatus eller
+not_requested. Voyage.arrival_observation sparas endast vid godkända ankomst-
+kontroller och visar källa/version, rådata, giltighet och utfärdandetider.
+forecast_status rapporterar separat ålderskontroll; planning_time, ForecastPolicy,
+issued_at och forecast_checked följer exporten. weather_verification_scope
+anger uttryckligen att ingen kontinuerlig verifiering mellan uppslag gjorts.
+
+Bakåtkompatibla matematiska anrop utan ForecastPolicy märks forecast_status=
+not_requested; saknad issued_at innebär då **inte** verifierad färskhet. Utan
+WeatherPolicy är destinationsväder också not_requested. Före verklig integration
+måste båda policyerna och explicit klocka användas, med tillförlitlig källmetadata.
+Denna leverans kopplar ingen verklig vädertjänst. Conditions antar gemensam vind-/
+strömkälla och issued_at; olika leverantörer/cykler måste separeras av framtida adapter.
+
+Tolv nya regressionstester provar gammal prognos med framtida giltighet, färsk
+prognos och exakt maxålder, oberoende vågålder, saknad/framtida/naiv tid, tidszoner,
+en klockläsning för flera kandidater/delsträckor, faktisk ankomstposition/tid,
+överskridande/datalucka/åldersfel endast vid destination, nästa prognos vid exakt
+gräns, nollsträcka, faststyrd rörelses ålderspolicy och export. Ett tidigare test
+som godkände ankomstväder exakt vid utgången vågprognos har skärpts: rörelsen når
+fortfarande dit, men utan nästa giltiga observation är kandidaten nu ej genomförbar.
+
+Gränser: punktkontroller och kända prognosgränser är inte kontinuerliga väderbevis.
+Kort topp eller omärkt lucka mellan uppslag/segmentändpunkter kan fortfarande missas.
+Ny ankomstkontroll täpper bara till den aktuella ändpunktsluckan; den ger ingen
+maritim säkerhetsgaranti eller verifiering av verklig prognoskvalitet. Inga resultat
+ersätter djup/sjökort, manövervalidering eller befälhavarens bedömning.

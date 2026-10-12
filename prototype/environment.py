@@ -19,12 +19,13 @@ class WaveData:
     version: str = "1"
     period_kind: str = "tm02"
     direction_reference: str = "ground-from-true-north"
+    issued_at: datetime | None = None
 
     def __post_init__(self):
         if self.period_kind != "tm02" or self.direction_reference != "ground-from-true-north":
             raise ValueError("Vågdata kräver Tm02 och markrelativ från-riktning")
-        for boundary in (self.valid_from, self.valid_until):
-            if boundary is not None and (boundary.tzinfo is None or boundary.utcoffset() is None):
+        for boundary in (self.valid_from, self.valid_until, self.issued_at):
+            if boundary is not None and (not isinstance(boundary, datetime) or boundary.tzinfo is None or boundary.utcoffset() is None):
                 raise ValueError("Vågornas giltighetstid måste ha tidszon")
         if self.valid_from is not None and self.valid_until is not None and self.valid_from >= self.valid_until:
             raise ValueError("Vågornas giltighetsintervall måste vara positivt")
@@ -41,12 +42,13 @@ class Conditions:
     valid_until: datetime | None = None
     wind_reference: str = "ground"
     waves: WaveData | None = None
+    issued_at: datetime | None = None
 
     def __post_init__(self):
         if self.wind_reference not in ("ground", "water"):
             raise ValueError("Vindens referensram måste vara ground eller water")
-        for boundary in (self.valid_from, self.valid_until):
-            if boundary is not None and (boundary.tzinfo is None or boundary.utcoffset() is None):
+        for boundary in (self.valid_from, self.valid_until, self.issued_at):
+            if boundary is not None and (not isinstance(boundary, datetime) or boundary.tzinfo is None or boundary.utcoffset() is None):
                 raise ValueError("Prognosens giltighetstid måste ha tidszon")
         if (self.valid_from is not None and self.valid_until is not None
                 and self.valid_from >= self.valid_until):

@@ -141,3 +141,21 @@
   toppar mellan uppslag kan missas. Hela segmentens hinderkontroll kvar.
 - Legacy utan policy märks not_requested och får inget komfortval; det är en
   matematisk beräkning utan väderbedömning. Inga verkliga båtgränser har validerats.
+
+
+## Prognosålder och destinationsuppslag 2026-10-12
+
+- Conditions/WaveData har egna issued_at, separat från [valid_from,valid_until).
+  ForecastPolicy maxålder beräknas vid explicit planeringsklocka, aldrig framtida ETA.
+  Framtida utfärdande, saknad tid och för gammal källa avvisas. Ingen timestampfallback.
+- Yttre Clock läses en gång per ruttjämförelse; UTC-snapshot förmedlas oförändrat
+  till alla kandidater/delsträckor. Framtida giltighet kan inte upphäva åldersgräns.
+- Faktisk numerisk slutposition/tid får separat miljöuppslag med samma policyer.
+  Vid ankomst exakt vid valid_until krävs nästa giltiga prognos. Fysisk måluppfyllelse
+  hålls skild från verifierat ankomstväder och godkänd fullständig restid.
+- Misslyckad destinationskontroll utesluter rutten från båda valen men behåller bana.
+  Resultat/export redovisar planeringstid, policy, issued_at, ankomststatus/observation
+  och begränsad kontrollomfattning. Inga kontinuerliga väderbevis mellan uppslag.
+- Legacy utan ålderspolicy/väderpolicy märks not_requested och är ingen verifierad
+  bedömning för verkliga prognoser. Båda krävs med tillförlitlig källmetadata inför
+  framtida integration; inga externa prognoskällor kopplas i denna leverans.

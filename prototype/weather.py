@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from math import isfinite, radians, sin
 
 
+WEATHER_VERIFICATION_SCOPE = "Uppslag och separat ankomstkontroll vid aktiverad policy; ingen kontinuerlig verifiering mellan uppslag."
+
 COMFORT_MODEL = "synthetic-wave-exposure-v1; ej validerat för verkliga båtrörelser"
 
 

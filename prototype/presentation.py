@@ -40,5 +40,8 @@ def export_route_comparison(comparison):
                                                  if comparison.comfortable else None),
                        'weather_policy': asdict(comparison.weather_policy) if comparison.weather_policy else None,
                        'max_comfort_extra_seconds': comparison.max_comfort_extra_seconds,
-                       'comfort_model': comparison.comfort_model, 'candidates': rows}, default=lambda value: value.isoformat(),
+                       'comfort_model': comparison.comfort_model,
+                       'forecast_policy': asdict(comparison.forecast_policy) if comparison.forecast_policy else None,
+                       'planning_time': comparison.planning_time,
+                       'weather_verification_scope': comparison.weather_verification_scope, 'candidates': rows}, default=lambda value: value.isoformat(),
                       ensure_ascii=False, indent=2)

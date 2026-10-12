@@ -444,3 +444,63 @@ Hela segmentens hinderkontroll och polarens no-go är kvar. Tidsstegshalvering �
 ingen säkerhetsgaranti. Prognosålder, verklig datainterpolation och maritim
 sakkunnig validering återstår. Nästa steg: fördjupa intervall-/datakvalitetskontroller
 och validera antaganden innan verkliga prognoser eller användargränser används.
+
+
+## Prognosålder och faktisk destinationskontroll 2026-10-12
+
+Aktuell uppgift: datakvalitet före framtida integration med verkliga prognoser.
+Krav, arkitektur och beslutslogg granskade. Ingen databasanslutning/ändring,
+installation eller privat/serverkonfigurationsändring.
+
+Conditions och WaveData har issued_at separat från giltighetsintervallet.
+ForecastPolicy(max_age_seconds) jämför varje källas utfärdandetid mot en explicit
+planeringstid, inte simulerad avgång/ankomst. Maxålder är finit och >=0, likhet
+med gränsen tillåts. Saknad/ogiltig/framtida utfärdandetid eller för gammal källa
+ger data_unavailable. Framtida giltighet upphäver aldrig åldersgränsen. Ingen
+fallback till start/nu/giltighet/nedladdningstid för saknad utfärdandetid.
+
+Clock injiceras; FixedClock ger reproducerbar UTC-tid. Yttre klockan läses en gång
+per jämförelse och snapshot förmedlas till alla kandidater och delsträckor.
+Standalone färd/rörelse fångar en tid per anrop. Aktiverad ålderspolicy utan klocka
+är ett explicit konfigurationsfel. Utfärdandetid valideras vid varje uppslag,
+inklusive prognosbyte och ankomst, mot samma planeringstid.
+
+Färdberäkningen gör ett separat miljöuppslag vid numeriskt faktisk slutposition
+och ankomsttid, även inom måltoleransen och för nollsträckor. Ingen snapping till
+nominellt mål. Samma begärda väder-/ålderspolicyer gäller. [valid_from,valid_until)
+gäller även destinationen: rörelse får sluta vid valid_until men ankomstväder
+kräver nästa giltiga prognos vid exakt gräns. Annars utesluts kandidaten från
+både snabbast och bekvämast. Bana/elapsed_seconds och destination_reached bevaras,
+men godkänd restid/ankomst/komfortpoäng saknas. Faktisk ankomstkontrollstid,
+väderstatus, godkänd observation och prognosåldersstatus exporteras separat.
+
+Verifierat: make check passerar med103 prototyp- och17 övriga Python-tester
+(120 totalt). Tolv nya regressionstester täcker gamla prognoser med framtida
+giltighet, färska prognoser, exakt maxålder och oberoende vågålder, saknad/framtida/
+naiv tid, UTC-normalisering, en klockläsning över kandidater/delsträckor, faktisk
+ankomstposition/tid, destinationsöverskridande/datalucka/åldersfel, ny prognos vid
+exakt gräns, nollsträcka, tidsbegränsad rörelse och export. Ett tidigare testfall
+om ankomst exakt vid utgången vågprognos har avsiktligt skärpts; inget skydd tas bort.
+
+Oberoende referens: planeringstid2026-01-01 00:00 UTC, utfärdad600 s tidigare,
+avgång två timmar senare och100 s färd. Åldern är600 s vid planeringen, inte
+7900 s vid ankomst. Utfärdad601 s tidigare avvisas trots samma framtida giltighet.
+Destinationsfel vid100 m/100 s behåller fysisk ankomst men ger ingen vald rutt.
+En senare140 s-kandidat kan passera samma destination när ett kort farligt
+väderfönster upphört; den tidiga100 s-kandidaten väljs aldrig av något av målen.
+
+Syntax/TOML/beroendebas/domänimporter/Actions-SHA och frontendsyntax passerar.
+Frontend har0 produkttester. Migrations- och PostgreSQL-testplan passerar offline
+utan privat konfigurationsläsning/anslutning. git diff --check passerar.
+Tidigare76 fristående loggrader bevaras ostagade; egen lokal commit, ingen push.
+
+Begränsningar: ålder är metadata-/policykontroll, inte verklig prognosnoggrannhet.
+Gemensam issued_at för vind/ström antar en sammanhängande källa; olika produkter
+måste separeras i framtida adapter. Legacy utan policy märks not_requested, inte
+verifierat färskt/godtagbart väder. Båda policyer och tillförlitlig källmetadata
+krävs inför verklig integration. Punktuppslag och ny destinationskontroll ger
+fortfarande ingen kontinuerlig verifiering mellan uppslag eller över alla andra
+segmentändpunkter. Omärkta luckor/toppar kan missas. Exportens kontrollomfattning
+säger detta uttryckligt. Inga verkliga vädertjänster kopplade eller maritima
+säkerhetsgarantier införda. Nästa steg: käll-/adapterkontrakt och kontrollerad
+intervall-/interpolationsvalidering innan verkliga prognoser används.

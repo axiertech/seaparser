@@ -134,8 +134,12 @@ class WeatherTests(unittest.TestCase):
         self.assertEqual(route.elapsed_seconds, 45)
         self.assertEqual(route.end_position, Vector(45, 0))
         self.assertEqual(route.legs[0].steps[-1].end_time, boundary)
-        # Arrival at boundary is allowed without extrapolation beyond it.
-        self.assertEqual(compare(condition, candidates=[DIRECT], target=Vector(45, 0)).status, 'selected')
+        # Movement may end at the boundary, but destination weather now needs
+        # a NEW valid observation at that instant; the expired record cannot verify it.
+        at_boundary = compare(condition, candidates=[DIRECT], target=Vector(45, 0))
+        self.assertEqual(at_boundary.status, 'no_feasible_route')
+        self.assertTrue(at_boundary.candidates[0].destination_reached)
+        self.assertEqual(at_boundary.candidates[0].arrival_weather_status, 'data_unavailable')
 
     def test_time_varying_exposure_against_integral_reference(self):
         field = lambda p, t: data(height=.5 + .002 * (t - START).total_seconds())

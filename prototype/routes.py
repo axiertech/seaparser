@@ -6,7 +6,8 @@ from math import isfinite
 from .calculation import Voyage, sail_to_target
 from .environment import Environment
 from .model import Vector, BoatPerformance
-from .weather import WeatherPolicy, COMFORT_MODEL
+from .weather import WeatherPolicy, COMFORT_MODEL, WEATHER_VERIFICATION_SCOPE
+from .forecast import ForecastPolicy, Clock, FixedClock, capture_planning_time
 
 
 @dataclass(frozen=True)
@@ -39,6 +40,10 @@ class RouteResult:
     tolerance_m: float
     comfort_exposure: float | None = None
     weather_status: str = "not_requested"
+    destination_reached: bool = False
+    arrival_checked_time: datetime | None = None
+    arrival_weather_status: str = "not_requested"
+    forecast_status: str = "not_requested"
 
 
 @dataclass(frozen=True)
@@ -51,6 +56,9 @@ class RouteComparison:
     weather_policy: WeatherPolicy | None = None
     max_comfort_extra_seconds: float = 300
     comfort_model: str | None = None
+    forecast_policy: ForecastPolicy | None = None
+    planning_time: datetime | None = None
+    weather_verification_scope: str = WEATHER_VERIFICATION_SCOPE
 
 
 def compare_routes(environment: Environment, start: datetime, target: Vector,
@@ -58,7 +66,8 @@ def compare_routes(environment: Environment, start: datetime, target: Vector,
                    step_seconds=60, max_seconds=86400, tolerance_m=0.01,
                    min_progress_m_s=0.01, max_steps=100000,
                    max_candidates=100, max_waypoints=32, boat: BoatPerformance | None = None,
-                   weather_policy: WeatherPolicy | None = None, max_comfort_extra_seconds=300):
+                   weather_policy: WeatherPolicy | None = None, max_comfort_extra_seconds=300,
+                   forecast_policy: ForecastPolicy | None = None, clock: Clock | None = None):
     """Independent full simulations with equal limits; first candidate wins exact ties."""
     if not isfinite(max_comfort_extra_seconds) or max_comfort_extra_seconds < 0:
         raise ValueError("Tillåten extra komfortrestid måste vara finit och icke-negativ")
@@ -88,6 +97,8 @@ def compare_routes(environment: Environment, start: datetime, target: Vector,
         routes.append(candidate)
     if not routes:
         raise ValueError("Minst en explicit kandidatrutt krävs")
+    planning_time = capture_planning_time(clock, forecast_policy)
+    plan_clock = FixedClock(planning_time) if planning_time is not None else None
     start = start.astimezone(timezone.utc)
     obstacles = tuple(obstacles)
     results = []
@@ -109,7 +120,7 @@ def compare_routes(environment: Environment, start: datetime, target: Vector,
                 obstacles=obstacles, speed_knots=speed_knots, step_seconds=step_seconds,
                 max_seconds=max(remaining_seconds, 1e-6), tolerance_m=tolerance_m,
                 min_progress_m_s=min_progress_m_s, max_steps=max(remaining_steps, 1), boat=boat,
-                weather_policy=weather_policy)
+                weather_policy=weather_policy, forecast_policy=forecast_policy, clock=plan_clock)
             legs.append(leg)
             step_count += len(leg.steps)
             current_position = leg.end_position
@@ -127,7 +138,12 @@ def compare_routes(environment: Environment, start: datetime, target: Vector,
             current_time if status == 'arrived' else None, current_position,
             elapsed, elapsed if status == 'arrived' else None, target, tolerance_m,
             comfort,
-            ('passed_at_samples' if status == 'arrived' else 'incomplete') if weather_policy is not None else 'not_requested'))
+            ('passed_at_samples' if status == 'arrived' else 'incomplete') if weather_policy is not None else 'not_requested',
+            (target - current_position).speed <= tolerance_m,
+            legs[-1].arrival_checked_time if len(legs) == len(candidate.waypoints) + 1 else None,
+            legs[-1].arrival_weather_status if len(legs) == len(candidate.waypoints) + 1 else 'not_requested',
+            ('passed_at_samples_and_arrival' if status == 'arrived' else 'incomplete')
+            if forecast_policy is not None else 'not_requested'))
     feasible = [result for result in results if result.status == 'arrived']
     fastest = min(feasible, key=lambda result: result.travel_seconds) if feasible else None
     comfortable = None
@@ -137,4 +153,5 @@ def compare_routes(environment: Environment, start: datetime, target: Vector,
     return RouteComparison('selected' if fastest is not None else 'no_feasible_route',
                            tuple(results), fastest, comfortable=comfortable,
                            weather_policy=weather_policy, max_comfort_extra_seconds=max_comfort_extra_seconds,
-                           comfort_model=COMFORT_MODEL if weather_policy is not None else None)
+                           comfort_model=COMFORT_MODEL if weather_policy is not None else None,
+                           forecast_policy=forecast_policy, planning_time=planning_time)
