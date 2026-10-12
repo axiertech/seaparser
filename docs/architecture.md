@@ -45,7 +45,9 @@ prognos sker endast genom ett nytt explicit underlag/anrop. Transport ingår int
 i den syntetiska adaptern. Lokalt geografiskt origo, enheter, referensramar,
 interpolationsregel och gap/masker valideras före planering. För frysta rutnät
 kontrolleras dessutom interpolationsstöd längs hela accepterade integrerade
-segment. Hårda vädervärden verifieras fortfarande endast vid uppslag och ankomst.
+segment. Markrelativ vindstyrka och Hs certifieras med konservativa cellhöljen
+över segmentets rum/tid-box; osäkra bevis avvisas. Ankomst kontrolleras separat.
+Övriga väder-/komfortdata och verklig källkvalitet är inte kontinuerligt verifierade.
 
 application/planning.py samordnar ett fryst PlanRequest till domänens
 avgångsjämförelse och ett reproducerbart JSON-resultat med indata-/dataset-/

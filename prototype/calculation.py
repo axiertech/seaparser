@@ -7,6 +7,7 @@ from .model import BoatModel, BoatPerformance, ConstantBoat, Vector, CourseUnava
 from .environment import Environment, WaveData, Conditions
 from .forecast import ForecastPolicy, Clock, capture_planning_time
 from .forecast_metadata import ProductMetadata
+from .segment_weather import WeatherSegmentCheck, SegmentWeatherExceeded, SegmentWeatherUnverified, SCOPE as SEGMENT_WEATHER_SCOPE
 from .weather import WeatherPolicy, WeatherLimitExceeded, synthetic_comfort_rate, COMFORT_MODEL, WEATHER_VERIFICATION_SCOPE
 from .obstacles import check_segment, ObstacleCollision
 
@@ -46,6 +47,7 @@ class Step:
     midpoint: Evaluation
     end_position: Vector
     end_time: datetime
+    weather_segment_check: WeatherSegmentCheck | None = None
 
 
 def evaluate(boat: BoatModel, environment: Environment, position, time, allow_missing_current=False, weather_policy=None, forecast_policy=None, planning_time=None):
@@ -120,6 +122,14 @@ def forecast_step(first, position, time, seconds, midpoint):
 
 
 def check_forecast_segment(environment, start, start_time, end, end_time, weather_policy):
+    certifier = getattr(environment, 'certify_weather_segment', None)
+    if weather_policy is not None and certifier is not None:
+        check = certifier(start, start_time, end, end_time, weather_policy)
+        if check.status == 'exceeded':
+            raise SegmentWeatherExceeded(check)
+        if check.status != 'verified':
+            raise SegmentWeatherUnverified(check)
+        return check
     checker = getattr(environment, 'validate_segment', None)
     if checker is not None:
         checker(start, start_time, end, end_time,
@@ -151,10 +161,10 @@ def simulate(boat: BoatModel, environment: Environment, start, duration, step_se
             first, position, time, dt,
             lambda p, t: evaluate(boat, environment, p, t, allow_missing_current, weather_policy, forecast_policy, planning_time))
         check_segment(position, end, obstacles)
-        check_forecast_segment(environment, position, time, end, time+timedelta(seconds=dt), weather_policy)
+        segment_check = check_forecast_segment(environment, position, time, end, time+timedelta(seconds=dt), weather_policy)
         position = end
         time += timedelta(seconds=dt)
-        steps.append(Step(first, middle, position, time))
+        steps.append(Step(first, middle, position, time, segment_check))
         remaining -= dt
     return steps
 
@@ -183,6 +193,8 @@ class Voyage:
     arrival_observation: Conditions | None = None
     weather_verification_scope: str = WEATHER_VERIFICATION_SCOPE
     forecast_support_scope: str = "Kontrollerat vid uppslag; inget kontinuerligt datastöd verifierat."
+    weather_segment_status: str = "not_requested"
+    weather_segment_failure: WeatherSegmentCheck | None = None
 
 
 def compensated_evaluation(boat: BoatPerformance, direction, environment, position, time,
@@ -237,11 +249,13 @@ def sail_to_target(environment: Environment, start, target: Vector, *, speed_kno
     direction = offset.scaled(1 / distance) if distance else Vector(0, 0)
 
     arrival_checked_time, arrival_weather_status, arrival_observation = None, "not_requested", None
+    segment_failure = None
+    segment_capable = weather_policy is not None and getattr(environment, 'certify_weather_segment', None) is not None
 
     def result(status, reason=""):
         return Voyage(status, reason, tuple(steps), position, elapsed,
                       elapsed if status == "arrived" else None, target, tolerance_m, boat.assumptions, exposure,
-                      ("passed_at_samples" if status == "arrived" else "incomplete")
+                      (("passed_segments_and_arrival" if segment_capable else "passed_at_samples") if status == "arrived" else "incomplete")
                       if weather_policy is not None else "not_requested",
                       comfort_model=COMFORT_MODEL if weather_policy is not None else None,
                       weather_policy=weather_policy, forecast_policy=forecast_policy, planning_time=planning_time,
@@ -250,8 +264,13 @@ def sail_to_target(environment: Environment, start, target: Vector, *, speed_kno
                       destination_reached=(target - position).speed <= tolerance_m,
                       arrival_checked_time=arrival_checked_time, arrival_weather_status=arrival_weather_status,
                       arrival_observation=arrival_observation,
+                      weather_verification_scope=SEGMENT_WEATHER_SCOPE if segment_capable else WEATHER_VERIFICATION_SCOPE,
+                      weather_segment_status=(segment_failure.status if segment_failure else
+                                              ('verified' if steps else 'not_applicable') if status == 'arrived' else 'incomplete')
+                      if segment_capable else ('not_available' if weather_policy is not None else 'not_requested'),
+                      weather_segment_failure=segment_failure,
                       forecast_support_scope=(
-                          "Hela accepterade integrerade segment: datastöd för vind/ström/vågor; vädervärden endast vid uppslag."
+                          "Hela accepterade integrerade segment: datastöd för vind/ström/vågor; hårda vädergränser certifieras separat."
                           if weather_policy is not None else
                           "Hela accepterade integrerade segment: strömmens datastöd; övriga produkter endast vid uppslag.")
                       if getattr(environment, 'validate_segment', None) is not None else
@@ -298,10 +317,16 @@ def sail_to_target(environment: Environment, start, target: Vector, *, speed_kno
             if dt < 1e-6:
                 return result("limit_reached", "Tidsupplösningen räcker inte för målpassagen")
             check_segment(position, end, obstacles)
-            check_forecast_segment(environment, position, time, end,
+            segment_check = check_forecast_segment(environment, position, time, end,
                                    start+timedelta(seconds=elapsed+dt), weather_policy)
         except ObstacleCollision as exc:
             return result("blocked", str(exc))
+        except SegmentWeatherExceeded as exc:
+            segment_failure = exc.check
+            return result("weather_limit", str(exc))
+        except SegmentWeatherUnverified as exc:
+            segment_failure = exc.check
+            return result('data_unavailable' if exc.check.failure_kind == 'data_unavailable' else 'weather_unverified', str(exc))
         except WeatherLimitExceeded as exc:
             return result("weather_limit", str(exc))
         except CourseUnavailable as exc:
@@ -315,7 +340,7 @@ def sail_to_target(environment: Environment, start, target: Vector, *, speed_kno
             exposure += increment
         elapsed += dt
         time = start + timedelta(seconds=elapsed)
-        steps.append(Step(first, middle, end, time))
+        steps.append(Step(first, middle, end, time, segment_check))
         position = end
     # Completing movement does not verify destination weather. Query ACTUAL
     # end position/time, including zero-distance legs and exact validity boundaries.

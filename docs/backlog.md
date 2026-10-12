@@ -9,7 +9,7 @@ progress.md är arbetslogg, inte en aktuell komplett backlog.
 | Frysta prognoser och separata produktmetadata | Klar, CI godkänd på 0fd50948 | Syntetiska fixtures och komponentinterpolation, inga verkliga källor |
 | Kontinuerligt datastöd över integrerade segment | Klar, CI godkänd på 8453a14 | Avvisa passerade masker, saknade interpolationsstöd och rum/tid utanför täckning; små luckor ska inte kunna hoppas över |
 | Reproducerbart syntetiskt planeringsscenario | Klar, CI godkänd på ef9f261 | Offlinekommando med fryst dataset, båtmodell, parametrar och spårbar resultatidentitet; körbar referens för framtida integration |
-| Kontinuerliga hårda vädergränser | Nästa sammanhängande del | Datastöd är inte bevis på kontinuerligt godtagbara vädervärden; metod och toleranser behöver verifieras |
+| Kontinuerliga hårda vädergränser | Implementerat, CI väntar | Konservativa cellhöljen för markvind/Hs; osäkert bevis får inte godkännas |
 | Geodetisk adapter och verkliga prognoser | Beslut behövs före integration | Region, källkvalitet, format, licens och eventuell kostnad behöver väljas |
 | Fler spårbara båtprofiler och manövrer | Beslut behövs före verkliga profiler | Polarrättigheter, representativa båtar och manövermodell; automatisk kryss ingår inte i nuvarande prototyp |
 | Mobil presentation och visuell editor | Utvärdering återstår | Egna komponenter, responsivitet, versionshantering, export, licens och kostnad före bindande val |

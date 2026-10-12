@@ -138,7 +138,7 @@ class GridProduct:
         return tuple(result)
 
 
-    def validate_segment(self, start, start_time, end, end_time, *, max_intervals=MAX_SEGMENT_INTERVALS):
+    def segment_points(self, start, start_time, end, end_time, *, max_intervals=MAX_SEGMENT_INTERVALS):
         """Prove support along one affine space/time segment, not weather values.
 
         Split at all crossed grid planes; check endpoints and each open cell.
@@ -174,10 +174,23 @@ class GridProduct:
                         raise DataUnavailable('Segmentets cellkontrollgräns nådd')
         ordered = sorted(fractions)
         checks = ordered[1:-1] + [(a+b)/2 for a, b in zip(ordered, ordered[1:])]
+        points = [(start, start_time), (end, end_time)]
         for fraction in checks:
-            self.interpolate(start+delta.scaled(fraction),
-                             start_time+timedelta(seconds=duration*fraction),
-                             allow_validity_end=True)
+            position = start+delta.scaled(fraction)
+            time = start_time+timedelta(seconds=duration*fraction)
+            self.interpolate(position, time, allow_validity_end=True)
+            points.append((position, time))
+        return tuple(points)
+
+    def validate_segment(self, start, start_time, end, end_time, *, max_intervals=MAX_SEGMENT_INTERVALS):
+        self.segment_points(start, start_time, end, end_time, max_intervals=max_intervals)
+
+    def cell_nodes(self, position, time):
+        k, _ = axis_cell(self.times, time)
+        j, _ = axis_cell(self.north_m, position.north)
+        i, _ = axis_cell(self.east_m, position.east)
+        return (k, j, i), tuple(self.values[k+dt][j+dn][i+de]
+                               for dt in (0, 1) for dn in (0, 1) for de in (0, 1))
 
 
 @dataclass(frozen=True)
@@ -210,6 +223,10 @@ class ForecastDataset:
                 by_name[name].validate_segment(start, start_time, end, end_time)
             except DataUnavailable as error:
                 raise DataUnavailable(f'{name}: segmentets datastöd saknas: {error}') from error
+
+    def certify_weather_segment(self, start, start_time, end, end_time, policy):
+        from .segment_weather import certify_weather_segment
+        return certify_weather_segment(self, start, start_time, end, end_time, policy)
 
     @property
     def product_metadata(self):

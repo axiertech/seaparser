@@ -711,3 +711,45 @@ vädergränser över frysta rutnät. Kontrollerat interpolationsstöd är ännu 
 kontinuerligt verifierade vind-/vågvärden eller verklig prognoskvalitet.
 Verklig region/källa/licens, båtprofiler och editorval kräver separat produkt-
 beslut innan bindande integration. Ingen fristående bakgrundsaktivitet startas.
+
+## Konservativa hårda vädergränser över hela segment 2026-10-12
+
+På development/segment-weather implementeras frysta rutnätets kontinuerliga
+vind-/Hs-gränser med segment-aabb-component-box-exact-squared-v1. Alla stödcellers
+slutna rum/tid-boxar som berör segmentets omslutande box ingår, via ordnade
+koordinatjämförelser och inte sampling. Komponent-clamp ger |W|²<=U²+V² och
+Hs<=maxHs; exakt rationell kvadratjämförelse för lagrade binära vindkomponenter
+undviker avrundningsgodkännande. Gränslikhet i bevisat hölje är tillåten, inte
+epsilon-överskridande. Markvind hålls skild från polarens vattenvind.
+
+Tre utfall/proveniens: verified, exceeded med giltigt segmentvittne och
+unverified (otillräckligt stöd eller bevis). Högt off-path hörn är inte ett
+konstaterat överskridande. Failed proof ger weather_unverified, verkligt vittne
+weather_limit och dataluckor behåller data_unavailable. Inget av dessa kan väljas
+som snabbast/bekvämast; kontrollerna sker före rörelse/exponering. Step sparar
+bevis och Voyage avvisningsbevis/vittne/status; nollsträcka not_applicable.
+Celltak4096 per produkt avbryter med unverified. Ankomstgräns, datamasker,
+hinderkontroll och prognosålder bevaras. Algoritmmanifest v3 inkluderar metod/tak.
+
+Verifierat: make check med146 prototyp- och24 övriga Python-tester (170 totalt),
+alla godkända. Elva nya tester täcker smala rum-/tidstoppar mellan ordinarie
+uppslag, exakta (3,4)/5- och Hs1-gränser, strikt lägre gräns, höga off-path-hörn,
+cellgränser, masker/gap, certifieringsbudget, båda beräkningsflöden och avvisade
+avgångsval/export samt accepterade bevis/nollsträcka. Oberoende vindreferens:
+u=8s(1-s),v=2(1-s); max ligger vid s=(2+sqrt(2))/8. Start/mitt/slut kan missa
+överskridandet av2,25 m/s, men höljet ger aldrig godkännande. Sampling kan bevisa
+överskridande, inte kontinuitet. Tidigare159 tester bevarade.
+
+Syntax/konfiguration/domänimporter/Actions-SHA/frontendkontroller passerar;
+frontend har0 produkttester. Migrations-/PostgreSQL-plan endast offline, utan
+konfigurationsläsning/anslutning. git diff --check passerar. Box/cellhörn utanför
+banan kan ge falsk avvisning; ingen exakt extremvärdessökning införs. Scope gäller
+lokalt affint numeriskt segment, markvind/Hs och deklarerad interpolation, inte
+verklig källkvalitet, alla manövrer eller kontinuerlig komfort/riktningsentydighet.
+
+Användarens steering: AIS blir lågprioriterad planeringsinformation om observerad
+trafikbelastning. Tidigare mötesanalys/löpande övervakning utgår; inga GPS-/kollisions-
+eller undanmanöverfunktioner. Nästa del efter granskad commit/push och godkänd CI:
+uppdatera krav/backlog och separata OpenWaters-kandidatvillkor enligt denna scope.
+Inga nya konton/token/tjänster, server-/databasändringar eller main-merge.
+Tidigare76 orelaterade lokala loggrader bevaras ostagade.

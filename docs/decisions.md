@@ -202,3 +202,18 @@ algoritmversion. Inget väggklocksvärde blandas i resultatidentiteten.
 Determinism gäller verifierad Pythonmiljö; hash är inget autenticitet-/kvalitets-
 bevis. CLI kan välja konstantmodell, syntetiskt hinder och uttryckligt avgångs-
 kriterium. Inga nya beroenden, externa prognoser eller produkttjänster införs.
+
+## 2026-10-12: Konservativ certifiering av hela segmentets hårda vädergränser
+
+För frysta normaliserade rutnät granskas alla celler som berör segmentets slutna
+rum/tid-box. Komponentinterpolationens cellhölje ger vind²<=max|u|²+max|v|² och
+Hs<=maxHs. Exakt rationell kvadratjämförelse används för lagrade vindkomponenter.
+Bevis kan godkänna gränslikhet; ingen epsilon tillåter överskridande. Sampling
+kan ge överträdelsevittne men aldrig kontinuitetsbevis. Tre utfall: verified,
+exceeded (giltig faktisk segmentpunkt) och unverified (otillräckligt underlag/
+bevis). De två senare är aldrig valbara; befintliga data-/hinder-/ankomstkontroller
+kvarstår. Hela stödcellens hörn kan ligga utanför banan och ge falsk avvisning,
+men rapporteras då inte som konstaterad överträdelse. Tak4096 celler per produkt
+avbryter uttryckligen. Scope gäller markrelativ vindstyrka och Hs i det lokala
+numeriska segmentet, inte källkvalitet eller alla komfort-/manövervariabler.
+Applikationens algoritmversion ändras till v3 och metod/celltak följer manifestet.

@@ -13,8 +13,9 @@ from prototype.presentation import export_departure_comparison
 from prototype.routes import RouteCandidate
 from prototype.sailing import PolarBoat
 from prototype.weather import WeatherPolicy
+from prototype.segment_weather import METHOD as WEATHER_SEGMENT_METHOD, MAX_WEATHER_CELLS
 
-ALGORITHM_VERSION = 'explicit-candidates-midpoint-grid-support-v2'
+ALGORITHM_VERSION = 'explicit-candidates-midpoint-grid-weather-v3'
 REPORT_SCHEMA_VERSION = 1
 
 
@@ -99,7 +100,9 @@ def run_plan(request: PlanRequest) -> str:
     boat = {'model': type(request.boat).__name__, 'configuration': inputs['boat'],
             'assumptions': request.boat.assumptions}
     dataset = inputs['dataset']
-    algorithm_settings = {'forecast_segment_interval_limit': MAX_SEGMENT_INTERVALS}
+    algorithm_settings = {'forecast_segment_interval_limit': MAX_SEGMENT_INTERVALS,
+                          'weather_segment_method': WEATHER_SEGMENT_METHOD,
+                          'weather_certificate_cell_limit': MAX_WEATHER_CELLS}
     identity = {'algorithm_settings': algorithm_settings, 'schema_version': REPORT_SCHEMA_VERSION, 'algorithm_version': ALGORITHM_VERSION,
                 'request': inputs, 'boat_model': boat['model']}
     parameters = {key: value for key, value in inputs.items() if key not in ('dataset', 'boat')}
@@ -111,5 +114,5 @@ def run_plan(request: PlanRequest) -> str:
                      'dataset_id': request.dataset.dataset_id, 'dataset_version': request.dataset.version,
                      'forecast_products': [asdict(m) for m in request.dataset.product_metadata],
                      'boat_data_estimated': True,
-                     'limitations': 'Uppskattad båtmodell och lokalt plan; datastöd över integrerade segment, vädergränser vid uppslag/ankomst; ingen navigationsprodukt.'},
+                     'limitations': 'Uppskattad båtmodell och lokalt plan; datastöd över integrerade segment, konservativ certifiering av hårda vind-/våggränser och separat ankomstkontroll; ingen navigationsprodukt.'},
         'comparison': json.loads(export_departure_comparison(comparison))})

@@ -822,3 +822,70 @@ Resultatet redovisar alla kandidater/avbrott, snabbast/bekvämast per avgång sa
 kortast restid och tidigast ankomst separat. Ingen avgång väljs utan uttryckligt
 kriterium. Scope och olika kontrollomfattningar följer exporten. Scenariot gör
 inga HTTP-/SQL-anrop och inte heller installation, drift eller verklig navigation.
+
+## Kontinuerliga hårda vind-/våggränser i fryst rutnät
+
+Med ForecastDataset och WeatherPolicy används nu metoden
+`segment-aabb-component-box-exact-squared-v1` före varje accepterat färdsteg.
+För varje vind-/vågprodukt bildas segmentets slutna axelparallella box i öst,
+nord och tid. Alla stödcellers slutna boxar som berör denna box inkluderas,
+även vid cellgränser. Urvalet görs med ordnade koordinatjämförelser, **inte**
+genom sampling. Det omfattar hela det affina integrerade segmentet och kan
+även ta med celler/hörn utanför banan. Därför är metoden konservativ.
+
+Beviset gäller den valda komponentinterpolationen, inklusive dess clamp:
+varje nästlad lerp håller en komponent mellan sina stödvärden. I varje inkluderad
+cell sätts U=max(abs(u_hörn)), V=max(abs(v_hörn)) och H=max(Hs_hörn). Då gäller
+för hela cellen (och följaktligen segmentet):
+
+- vindstyrka² <= U²+V²;
+- signifikant våghöjd <= H.
+
+Vindkravet verifieras som U²+V²<=vindgräns² med Fraction och **exakt aritmetik
+för lagrade binära tal**, så avrundning av sqrt/hypot inte kan godkänna en för låg
+gräns. Hs jämförs direkt med den lagrade gränsen. Gränslikhet i det certifierade
+höljet godkänns; ingen
+vädermarginal/epsilon upphäver ett strikt överskridande. Vind är markrelativ;
+ström adderas inte till dessa normaliserade vindkomponenter. Polarens vind relativt
+vatten och kursberoende kompensation fungerar som tidigare.
+
+Utfallet är trevärdigt:
+
+- verified: alla konservativa cellgränser är inom båda hårda gränserna och
+  certifieringsstödet är känt;
+- exceeded: en giltig faktisk punkt på det integrerade segmentet visar ett
+  överskridande. Witness sparar produkt, position, tid, komponenter/Hs och gräns;
+- unverified: otillräckligt underlag eller otillräckligt konservativt bevis.
+  Ett högt hörn utanför banan betyder **inte** konstaterad överträdelse.
+
+Ordinarie uppslag samt segmentets korsningar/delintervallspunkter kan ge ett
+vittne till överträdelse; de används aldrig för att bevisa att gränserna hålls.
+Ett vindmaximum inne i segmentet får därmed aldrig godkännas bara för att start,
+mittpunkt och slut är under gränsen. Oavgjort bevis avvisas som weather_unverified;
+dataluckor behåller data_unavailable och konstaterat överskridande weather_limit.
+Ingen vanlig godkänd ETA eller komfort kan göra någon av dem valbar. Kontrollen
+sker före rörelse/exponeringsuppdatering, för både snabbast och bekvämast.
+
+Tak4096 certifieringsceller per produkt/segment ger uttryckligt unverified, inte
+sampling eller överhoppade celler. Även off-path masker/luckor i den konservativa
+boxen kan omöjliggöra certifiering trots att banans ordinarie datastöd är känt.
+En framtida snävare metod måste verifieras separat; denna metod söker inga exakta
+polynomextrema. Boxen och cellhöljena kan avvisa många i själva verket säkra
+segment, särskilt i grova rutnät, vid roterande vind eller diagonala banor.
+
+Step.weather_segment_check sparar godkända bevis; Voyage.weather_segment_failure
+sparar avvisade bevis/vittnen och weather_segment_status redovisar verified,
+exceeded/unverified eller incomplete. Nollsträcka är not_applicable och kräver
+fortfarande faktisk ankomstkontroll. Legacy utan segmentkontrakt är not_available
+med endast punktkontroller; det beskrivs inte som kontinuerligt verifierat.
+Algoritmversionen i applikationsmanifestet är nu v3 och innehåller metod/celltak.
+
+Rörelse får fortfarande sluta vid valid_until, men utgången ändpunkt används inte
+som giltigt överträdelsevittne. Den separata ankomstkontrollen kräver fortsatt
+valid_from<=arrival_time<valid_until. Datastöd/masker, segmentens hinderkontroll,
+prognosålder och ankomstluckor behålls. Beviset gäller endast hårda vindstyrke-/
+Hs-gränser för det lokala affina numeriska segmentet i deklarerad ram. Det bevisar
+inte verklig källkvalitet, båttrajektoria, kontinuerlig polar-/manövergenomförbarhet,
+vågornas riktningsentydighet eller exakt komfortexponering. Tm02/riktning och
+komfortintegration kontrolleras fortfarande vid uppslag. Inga verkliga
+prognoser, AIS, navigationsgarantier eller nya tjänster har kopplats.

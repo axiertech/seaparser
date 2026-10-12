@@ -9,6 +9,7 @@ from .model import Vector, BoatPerformance
 from .weather import WeatherPolicy, COMFORT_MODEL, WEATHER_VERIFICATION_SCOPE
 from .forecast import ForecastPolicy, Clock, FixedClock, capture_planning_time
 from .forecast_metadata import ProductMetadata
+from .segment_weather import SCOPE as SEGMENT_WEATHER_SCOPE
 
 
 @dataclass(frozen=True)
@@ -45,6 +46,7 @@ class RouteResult:
     arrival_checked_time: datetime | None = None
     arrival_weather_status: str = "not_requested"
     forecast_status: str = "not_requested"
+    weather_segment_status: str = "not_requested"
 
 
 @dataclass(frozen=True)
@@ -106,6 +108,7 @@ def compare_routes(environment: Environment, start: datetime, target: Vector,
     start = start.astimezone(timezone.utc)
     obstacles = tuple(obstacles)
     results = []
+    segment_capable = weather_policy is not None and getattr(environment, 'certify_weather_segment', None) is not None
     for candidate in routes:
         current_position, current_time = position, start
         legs, step_count = [], 0
@@ -142,12 +145,16 @@ def compare_routes(environment: Environment, start: datetime, target: Vector,
             current_time if status == 'arrived' else None, current_position,
             elapsed, elapsed if status == 'arrived' else None, target, tolerance_m,
             comfort,
-            ('passed_at_samples' if status == 'arrived' else 'incomplete') if weather_policy is not None else 'not_requested',
+            (('passed_segments_and_arrival' if segment_capable else 'passed_at_samples') if status == 'arrived' else 'incomplete') if weather_policy is not None else 'not_requested',
             (target - current_position).speed <= tolerance_m,
             legs[-1].arrival_checked_time if len(legs) == len(candidate.waypoints) + 1 else None,
             legs[-1].arrival_weather_status if len(legs) == len(candidate.waypoints) + 1 else 'not_requested',
             ('passed_at_samples_and_arrival' if status == 'arrived' else 'incomplete')
-            if forecast_policy is not None else 'not_requested'))
+            if forecast_policy is not None else 'not_requested',
+            (('verified' if any(leg.steps for leg in legs) else 'not_applicable')
+             if status == 'arrived' and all(leg.weather_segment_status in ('verified', 'not_applicable') for leg in legs)
+             else legs[-1].weather_segment_status if legs else 'incomplete')
+            if weather_policy is not None else 'not_requested'))
     feasible = [result for result in results if result.status == 'arrived']
     fastest = min(feasible, key=lambda result: result.travel_seconds) if feasible else None
     comfortable = None
@@ -162,4 +169,7 @@ def compare_routes(environment: Environment, start: datetime, target: Vector,
                            dataset_id=getattr(environment, 'dataset_id', None),
                            dataset_version=getattr(environment, 'version', None)
                            if getattr(environment, 'dataset_id', None) is not None else None,
-                           forecast_products=getattr(environment, 'product_metadata', ()))
+                           forecast_products=getattr(environment, 'product_metadata', ()),
+                           weather_verification_scope=SEGMENT_WEATHER_SCOPE
+                           if weather_policy is not None and getattr(environment, 'certify_weather_segment', None) is not None
+                           else WEATHER_VERIFICATION_SCOPE)
