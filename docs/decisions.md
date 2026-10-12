@@ -276,3 +276,11 @@ GPX 1.1 exporterar planerade vägpunkter, inte GPS-spår.
 Isolerade PyPI/npm-beroenden låses exakt med hashar/integritet och CI installeras
 från låsfiler. Ingen editor vald. Apache/systemtjänst förbereds i deployment/
 och kräver samlat administratörs-/publiceringsgodkännande innan aktivering.
+
+## 2026-10-12: Isolerad Vinga-landgranskning
+
+Publik syntetisk demo är användarbekräftat aktiverad och visuellt kontrollerad.
+Utveckling fortsätter i separat worktree/venv för att inte ändra kod som den
+aktiva beräkningsprocessen laddar. Fryst ODbL-kustutdrag och konservativa konvexa
+höljen återanvänder segmentmotorn; karttiles förblir separat opt-in-presentation.
+Ingen verifierad navigerbarhet/djup eller ny publik aktivering påstås.

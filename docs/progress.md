@@ -990,3 +990,30 @@ passerar. Commitinnehåll granskas och push-CI följs. Tidigare 76 lokala loggra
 bevaras ostagade. Nytt samlat root-försök: /usr/bin/bash
 /home/web/seaparser/app/deployment/activate-demo.sh. Offentlig slutverifiering
 kvarstår tills detta körts; agenten har inte rootbehörighet eller aktiverat tjänsten.
+
+## 2026-10-12: Bekräftad aktivering och isolerad verklig landgranskning
+
+Användaren bekräftar att offentlig aktivering och visuell kontroll lyckats.
+Detta är användarbekräftat; ingen ny serverkonfiguration eller återaktivering
+utfördes i denna leverans. Privat konfiguration, TLS, rättigheter och databas
+är oförändrade.
+
+Arbetet ligger på development/real-map-data i /tmp/seaparser-real-map-data,
+med egen venv/node_modules. Aktiv checkout och dess orelaterade lokala
+progress-ändringar bevaras. Vinga-utdraget fryser sex OSM-landringar med
+källhash/version/tid och ODbL-attribution. Separat granskningsexport visar
+land, konservativa routinghöljen och opt-in OSM-bakgrund. Okänt djup och okänd
+fullständighet markeras. Befintlig syntetisk demo behålls oförändrad.
+
+Riktade sex tester passerar: oberoende hullreferens, punktinneslutning,
+hela segment/marginal/omväg, WGS84 mot geodesisk referens, öppna ringar,
+frysta indata och offentlig exportallowlist. Hela sviten och CI följer nedan.
+Nästa steg: integrera fryst regionalt prognosunderlag/API-ruttjämförelse;
+land-/bakgrundsgranskningen ändrar inte den publika demonstrationen.
+
+Verifiering: 211 Python-tester (158 domän + 53 övriga) och 5 frontendtester
+passerade. Första sandboxkörningen stoppades i frontendprocessen. En efterföljande
+körning hittade att egna granskningsfiler låg i syntetiska dist; detta rättades
+med separat frontend/land-dist, utan att ändra regressionstestets allowlist.
+Full `make check` passerade efter denna rättning (exit 0). `make land-preview` genererar
+endast publika granskningsresurser; inget kopierades till /home/web/seaparser/public.

@@ -16,3 +16,12 @@ frontend-check:
 
 migration-plan:
 	$(PYTHON) -B -m scripts.migrate --environment development
+
+# Isolated review only; no webroot copying, service restart or tile download.
+.PHONY: land-preview
+land-preview:
+	node frontend/build.mjs
+	mkdir -p frontend/land-dist
+	cp -R frontend/dist/vendor frontend/land-dist/
+	cp frontend/dist/index.html frontend/dist/map.css frontend/dist/main.mjs frontend/dist/map-component.mjs frontend/dist/controller.mjs frontend/dist/client.mjs frontend/land-dist/
+	$(PYTHON) -B -m scripts.land_preview --output frontend/land-dist

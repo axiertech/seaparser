@@ -30,3 +30,47 @@ Demobeslut: Leaflet 1.9.4 (BSD-2-Clause, officiellt stabil version) distribueras
 lokalt från versionslåst npm, utan tile-URL. Externa bakgrunder lämnas urkopplade
 för offlineflöde och oklar hosted trafikpolicy. Detta binder inte framtida kart-
 eller designereditorval. [Leaflet-versioner](https://leafletjs.com/download.html).
+
+## Vinga: separat granskningsleverans 2026-10-12
+
+`make land-preview` skapar `frontend/land-dist/land-review.html` och två GeoJSON-filer.
+Det är en separat land-/bakgrundsgranskning, inte en ny publik planeringsprofil.
+Syntetiska index/API/prognoser och regressioner ändras inte. Lokal server behövs
+för fetch; exempel: `.venv/bin/python -m http.server 8766 --bind 127.0.0.1
+--directory frontend/land-dist` på ledig port. Ingen kopiering till webbroten eller tjänstomstart ingår.
+
+Källa: ett manuellt, begränsat OSM API-utdrag för bbox
+11.58,57.62,11.63,57.65; den frysta filen omfattar sex slutna landringar inom
+11.593–11.614°E, 57.629–57.637°N runt Vinga. `fixtures/vinga-land.geojson`
+innehåller hämttid, källhash, way-id/version/tid, täckning och licens.
+Bidragares personuppgifter från XML ingår inte. Offlineimportören
+`scripts.import_vinga_land` tar XML och explicit `--retrieved-at`; inga HTTP-anrop.
+Öppna/icke entydigt sammanfogade kustlinjer inkluderas inte: fullständighet är
+uttryckligen okänd. API-bbox kan dessutom missa korsande ways utan nod i bbox.
+Frånvaro av land i utdraget betyder därför inte fri passage.
+[Officiellt bbox-kontrakt](https://wiki.openstreetmap.org/wiki/API_v0.6#Retrieving_map_data_by_bounding_box:_GET_/api/0.6/map).
+
+Landdatabas och härledda routinghöljen distribueras under ODbL-1.0 med
+© OpenStreetMap contributors och nedladdningsbara källmetadata.
+Licensen medger kommersiell användning med attribution/share-alike-villkor;
+det ger inte obegränsad rätt till hosted API eller tiles.
+[Licens](https://opendatacommons.org/licenses/odbl/1-0/),
+[OSM:s licensförklaring](https://www.openstreetmap.org/copyright),
+[API-policy](https://operations.osmfoundation.org/policies/api/).
+
+Bakgrund: OSM standard raster, endast efter manuellt klick. Normal webbläsarcache,
+synlig attribution och Referer, ingen prefetch/offlinearkiv eller automatisk
+hämtning i tester. Best-effort utan SLA; annan leverantör krävs om produkttrafik
+inte ryms inom policyn. [Tile-policy](https://operations.osmfoundation.org/policies/tiles/).
+OpenSeaMap/OpenWaters-alternativen ovan är fortsatt separata, inte valda här.
+
+Routingadapter använder WGS84 AEQD vid 57.633°N, 11.605°E, bara det angivna
+rektangulära området (under 1.5 km radie); referenstest mot geodesiska avstånd
+på 1000 m, tolerans 0.01 m. Orange visar ursprungliga landringar, rött deras
+konservativa konvexa höljen. Exakta predikat kontrollerar att alla projicerade
+landpunkter ligger i höljet; ett konvext hölje täcker även ringens raka kanter
+och insida. Befintlig motor testar hela segment inklusive 10 m marginal.
+Höljet kan spärra vikar/passager och garanterar inte källprecision, strandens
+verkliga läge eller fullständighet. Det är geometriskt underlag, ingen snabbaste
+väderrutt. Koppling av området till fryst väder/API-planering är nästa steg.
+Djup, djupgåendeutrymme och höjdreferens är okända; inget tidvatten kombineras.

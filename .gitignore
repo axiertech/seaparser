@@ -26,3 +26,5 @@ coverage/
 *.log
 data/
 tmp/
+
+frontend/land-dist/
