@@ -808,3 +808,37 @@ HTTPS på https://seaparser.com/ och /index.html svarar 403; offentlig åtkomst
 public 755, index.html 644. Detta kan orsaka åtkomstfelet men är inte bevisad
 serverdiagnos. Inga rättigheter eller webbserverinställningar ändrade.
 Nästa steg: verifiera push-CI och rapportera åtkomsthindret för serveransvarig.
+
+## 2026-10-12: Planeringskrav och automatisk syntetisk polygonrouting
+
+Leverans på development/polygon-routing från development/scenario-demo.
+Produktkrav/backlog prioriterar geografisk routing före AIS/presentationspolering;
+planeringsflödet är sjökortsnära granskning och waypointöverföring till plotter,
+utan GPS-följning. Kartbakgrund separeras från versions-/kvalitetsmärkt
+hinderunderlag för land/öar/grund/djup/restriktioner. Djupgående och marginal
+planeras; okänt djup är unknown och tidvatten kräver kompatibla höjdreferenser.
+Geografiska koordinater, karta och GPX är förberedda som nästa leveranser;
+verkliga källor kräver täcknings-/licens-/kostnadsgranskning före integration.
+
+Implementerat: frysta enkla, även konkava, syntetiska polygoner; exakta rationella
+predikat för hela slutna segment och euklidisk marginal på lagrade lokala tal.
+Hårda förbud skiljs från informationspolygoner. Begränsad synlighetsgraf vid
+utvidgade boxhörn genererar kompletta vägar i geometrisk ordning. Befintlig
+vind/ström/polar/komfort och tidsberoende rutt-/avgångsmotor utvärderar samtliga
+kandidater med samma frysta dataset; ingen sammanslagning av geografiska tillstånd.
+Numeriska färdsegment och faktisk ankomst kontrolleras fortsatt. Sökbudget,
+trunkering och orsak följer JSON; ingen global geometrisk/väderoptimalitet.
+Metod och avgränsningar finns i geographic-routing.md. CLI: scripts.plan_polygon.
+
+Verifierat: make check passerar 193 Python-tester (158 domän +35 övriga),
+inklusive 15 nya geometriska/sök-/integrationsreferenser; Node har 0 tester,
+HTML/CSS-, syntax-, konfigurations-, låsfil- och domängränskontroller passerar.
+Tester omfattar konkavitet, kant-/marginalkontakt, 3–4–5- och diagonalreferenser,
+hela segment, flera hinder, sökbudget och begränsad generatorläsning. Tidsberoende
+ström ger längre geometrisk väg som snabbare alternativ. Fryst prognos/polar,
+väderöverskridande/dataluckor och ankomstkontroll verifieras med automatgenererade
+vägar. Två CLI-körningar ger byteidentisk JSON. Diff/whitespace granskade.
+Äldre 76 lokala arbetsloggrader bevaras och tas inte med i committen.
+Inga nya paket/konton/betalningar, databasändringar, publiceringar eller main-merge.
+Nästa steg: verifiera push-CI för exakt commit; därefter begränsad geografisk
+koordinatadapter och waypointexport enligt dokumenterade kontrakt.

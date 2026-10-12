@@ -13,10 +13,12 @@ root = Path(__file__).resolve().parents[1]
 for folder in ("prototype", "infrastructure", "application", "presentation", "scripts", "tests"):
     for path in (root / folder).rglob("*.py"):
         tree = ast.parse(path.read_text(), filename=str(path.relative_to(root)))
-        if path.name in ("calculation.py", "model.py", "environment.py", "obstacles.py", "routes.py", "polar.py", "sailing.py", "weather.py", "forecast.py", "departures.py", "forecast_data.py", "forecast_metadata.py", "segment_weather.py"):
+        if path.name in ("calculation.py", "model.py", "environment.py", "obstacles.py", "routes.py", "polar.py", "sailing.py", "weather.py", "forecast.py", "departures.py", "forecast_data.py", "forecast_metadata.py", "segment_weather.py", "polygon.py", "auto_routing.py"):
             allowed = {"dataclasses", "datetime", "math", "typing"}
-            if path.name == "segment_weather.py":
+            if path.name in ("segment_weather.py", "polygon.py"):
                 allowed.add("fractions")
+            if path.name == "auto_routing.py":
+                allowed.add("heapq")
             for node in ast.walk(tree):
                 if isinstance(node, (ast.Import, ast.ImportFrom)):
                     if isinstance(node, ast.ImportFrom) and node.level:

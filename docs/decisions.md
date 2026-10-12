@@ -247,3 +247,21 @@ Användaren godkänner uttryckligen att endast den genererade självförsörjand
 index.html publiceras i /home/web/seaparser/public för https://seaparser.com/.
 Inga repositoryfiler, inställningar, loggar eller nycklar kopieras, och
 webbserverns konfiguration ändras inte. Detta utökar inte databasmandatet.
+
+## 2026-10-12: Planeringsflöde och automatisk syntetisk polygonomväg
+
+Användarens beslut prioriterar geografisk routing före AIS och presentationspolering.
+SeaParser erbjuder sjökortsnära kartgranskning och överföring av planerade
+vägpunkter till plotter, utan GPS-följning. Kartbakgrund är separat från versions-
+och kvalitetsmärkt routingsunderlag för land/öar/grund/djup/restriktioner.
+Hårda förbud och informationslager skiljs; okänt djup är unknown och djup/tidvatten
+kräver kompatibla höjdreferenser. Verkliga källor kräver region-/licensgranskning.
+
+Första automatiska sökning använder lokala syntetiska enkla polygoner, hela
+segment och euklidisk marginal. Begränsad graf med utvidgade boxhörn genererar
+kompletta vägar i geometrisk ordning; varje väg simuleras sedan med befintlig
+vind/ström/polar/komfort/prognoskontroll. Ingen geografisk tillståndssammanslagning
+eller global optimalitet påstås. Budgetar och söktrunkering följer resultatet.
+Exakta rationella predikat avser lagrade lokala tal, inte verklig källprecision.
+Geografiska koordinater, kartvisning och GPX förbereds i geographic-routing.md;
+inga nya paket, verkliga källor, betalningar, publiceringar eller databasändringar.

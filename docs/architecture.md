@@ -68,3 +68,12 @@ JSON-rapporter; HTML/CSS ligger i frontend/. scripts/export_scenario_html.py
 orkestrerar syntetiska scenarier utanför ruttmotorn och genererar en enda
 självförsörjande HTML-fil. Publik webbrot innehåller endast genererad visning.
 Se frontend/README.md för export, bevisstatus och avgränsningar.
+
+Geografisk routing separerar versionsbundet hinder-/djupunderlag från kartbakgrund.
+Lokala syntetiska polygoner prövar slutna segment och euklidisk marginal med exakta
+predikat på lagrade tal. En begränsad graf genererar kompletta kandidater före
+befintlig tidsberoende simulering; geometrisk längd är ingen väderkostnad.
+application/obstacle_planning.py redovisar sökstatus separat från färdresultat.
+Geografisk transformation, kartpresentation och waypointexport för plotter är
+nästa steg; ingen GPS-följning. Se geographic-routing.md för avgränsningar,
+metadata och kompatibla vertikala datum för djup/tidvatten.

@@ -9,6 +9,7 @@ from prototype.forecast import FixedClock, ForecastPolicy, utc_time
 from prototype.forecast_data import ForecastDataset, MAX_SEGMENT_INTERVALS
 from prototype.model import ConstantBoat, Vector
 from prototype.obstacles import Rectangle
+from prototype.polygon import Polygon
 from prototype.presentation import export_departure_comparison
 from prototype.routes import RouteCandidate
 from prototype.sailing import PolarBoat
@@ -51,7 +52,7 @@ class PlanRequest:
     forecast_policy: ForecastPolicy
     boat: ConstantBoat | PolarBoat = PolarBoat()
     position: Vector = Vector(0, 0)
-    obstacles: tuple[Rectangle, ...] = ()
+    obstacles: tuple[Rectangle | Polygon, ...] = ()
     step_seconds: float = 10
     max_seconds: float = 86400
     max_steps: int = 100000
@@ -74,8 +75,8 @@ class PlanRequest:
         object.__setattr__(self, 'departures', tuple(utc_time(t, 'Avgångstid') for t in departures))
         candidates = bounded_tuple(self.candidates, self.max_candidates, 'Rutter')
         obstacles = bounded_tuple(self.obstacles, self.max_obstacles, 'Hinder')
-        if any(type(c) is not RouteCandidate for c in candidates) or any(type(o) is not Rectangle for o in obstacles):
-            raise ValueError('Endast frysta kandidatrutter och syntetiska rektangelhinder stöds')
+        if any(type(c) is not RouteCandidate for c in candidates) or any(type(o) not in (Rectangle, Polygon) for o in obstacles):
+            raise ValueError('Endast frysta kandidatrutter och syntetiska rektangel-/polygonhinder stöds')
         object.__setattr__(self, 'candidates', candidates)
         object.__setattr__(self, 'obstacles', obstacles)
 

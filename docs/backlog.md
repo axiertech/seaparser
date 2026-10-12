@@ -10,8 +10,12 @@ progress.md är arbetslogg, inte en aktuell komplett backlog.
 | Kontinuerligt datastöd över integrerade segment | Klar, CI godkänd på 8453a14 | Avvisa passerade masker, saknade interpolationsstöd och rum/tid utanför täckning; små luckor ska inte kunna hoppas över |
 | Reproducerbart syntetiskt planeringsscenario | Klar, CI godkänd på ef9f261 | Offlinekommando med fryst dataset, båtmodell, parametrar och spårbar resultatidentitet; körbar referens för framtida integration |
 | Kontinuerliga hårda vädergränser | Klar, CI godkänd på 5d3d710 | Konservativa cellhöljen för markvind/Hs; osäkert bevis får inte godkännas |
-| HTML-granskningsvisning | Implementerad, verifieras i aktuell leverans | Fem syntetiska scenarier, separerad presentation, exakt JSON-export; ingen editor vald |
-| Geodetisk adapter och verkliga prognoser | Beslut behövs före integration | Region, källkvalitet, format, licens och eventuell kostnad behöver väljas |
+| HTML-granskningsvisning | Klar, CI godkänd på dacfaaf | Fem syntetiska scenarier, separerad presentation, exakt JSON-export; ingen editor vald |
+| Automatisk polygonomväg i lokalt plan | Implementerad och lokalt verifierad; CI kontrolleras efter push | Exakta segment-/marginalpredikat och begränsad graf; kompletta tidsberoende kandidater |
+| Geografiska koordinater och kartvisning | Näst efter polygonrouting | Explicit CRS/axelordning, begränsad projektion, kartbakgrund separerad från hinder; oberoende tester |
+| Export av planerade vägpunkter | Därefter | Exempelvis GPX-rutt till plotter, ordning/koordinater/schemavalidering; ingen GPS-följning |
+| Verkliga kart-/hinder-/prognoskällor | Källbeslut före integration | Region, täckning, kvalitet, kommersiell licens, offline/export/attribution och kostnad; ingen källa vald |
+| Djupgående och säkerhetsmarginal | Planerad, före djupbaserad navigerbarhet | Explicit okänt djup; kompatibla vertikala datum krävs för tidvatten/djup |
 | Tidvatten och stationsström | Adapter-/region-/licensbeslut återstår | Separata vattenståndsdatum och strömriktning/djup; ingen områdesextrapolation utan verifierad modell |
 | Fler spårbara båtprofiler och manövrer | Beslut behövs före verkliga profiler | Polarrättigheter, representativa båtar och manövermodell; automatisk kryss ingår inte i nuvarande prototyp |
 | Mobil presentation och visuell editor | Utvärdering återstår | Egna komponenter, responsivitet, versionshantering, export, licens och kostnad före bindande val |
@@ -22,7 +26,10 @@ Arbetet ovan innebär ingen drift/publicering, merge till main, serverkonfigurat
 eller ändring av befintliga databasobjekt. Synliga resultat från syntetiska
 scenarier är inte navigationsunderlag. Uppdatera tabellen när en del har verifierats.
 
-Huvudprioritet är fortsatt väderrouting, ström, komfort och avgångstider.
+Huvudprioritet är geografisk routing runt hinder tillsammans med väderrouting,
+ström, polar, komfort och avgångstider. AIS och presentationspolering kommer senare.
+Planeringsflödet är kartgranskning och waypointöverföring till plotter utan GPS.
+Metod, sökbegränsningar och nästa kontrakt: [geographic-routing.md](geographic-routing.md).
 AIS-kontrakt/ersatt testplan: [traffic-planning.md](traffic-planning.md).
 OpenWaters produktspecifika kandidatgranskning: [openwaters-review.md](openwaters-review.md).
 Inga konton, token eller betalda tjänster skapas innan särskilt beslut.

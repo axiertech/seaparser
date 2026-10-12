@@ -1,0 +1,18 @@
+"""Generate geometry once, then evaluate full routes at every frozen departure."""
+from dataclasses import asdict, replace
+import json
+from prototype.auto_routing import generate_routes, SearchPolicy
+from .planning import canonical, digest, run_plan
+
+
+def run_obstacle_plan(request, policy=SearchPolicy()):
+    search = generate_routes(request.position,request.target,request.obstacles,policy)
+    plan = None
+    if search.candidates:
+        plan = json.loads(run_plan(replace(request,candidates=search.candidates)))
+    identity = {'geometry_algorithm':'polygon-box-visibility-simple-paths-v1',
+                'search':asdict(search),'request':asdict(request)}
+    return canonical({'geometry_algorithm':identity['geometry_algorithm'],
+                      'geometry_search':asdict(search),'planning':plan,
+                      'input_sha256':digest(identity),
+                      'limitations':'Ingen verifierad grafkandidat är inte bevis för att ingen möjlig rutt finns.'})

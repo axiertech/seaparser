@@ -73,3 +73,44 @@ kommersiell användning och driftsbegränsningar separat för AIS, tidvatten och
 ström. [openwaters-review.md](openwaters-review.md) redovisar vad som är verifierat
 i officiell dokumentation och vad som återstår. Ingen leverantör är vald och
 inga nya konton, token, betalda tjänster eller integrationer ingår nu.
+
+## Planeringsflöde och geografiskt underlag 2026-10-12
+
+SeaParser är ett planeringsverktyg med sjökortsnära kartpresentation. Användaren
+jämför och granskar rutten och för över planerade vägpunkter till sin plotter.
+GPS-följning ingår inte. Kartpresentationen ersätter inte officiella sjökort.
+Geografisk routing runt hinder prioriteras före AIS och vidare presentationspolering.
+
+Kartbakgrund och routingsunderlag är separata produkter. En snygg eller detaljerad
+karta är inget bevis för att ruttmotorn känner land, farliga djup eller restriktioner.
+Routing ska ha versionsbundna polygoner för land, öar, grund, djupområden och
+restriktioner. Varje underlag ska ange källa, version, täckning, koordinatreferens,
+giltighet/uppdateringstid och kvalitetsstatus (verifierad, uppskattad eller okänd).
+Hårt förbjudna områden ska blockera hela färdsegment inklusive konfigurerad
+säkerhetsmarginal. Informationslager ska märkas tydligt och får inte automatiskt
+bli förbud eller bevis för fri passage. Okända områden eller okända djup ska visas
+som uttryckligen okända; frånvaro av hinder är inget navigerbarhetsbevis.
+
+Planera båtens djupgående och separat säkerhetsmarginal under kölen. Djupdata ska
+ange enhet, vertikalt datum, källa/version, kvalitet och täckning. Tidvatten och
+djup får endast kombineras när referenserna är kompatibla eller en spårbar,
+verifierad transformation finns. Okänt datum/djup ger otillräckligt underlag;
+ingen antagen nollnivå. Vågor, osäkerhet och eventuell squat kräver senare modell
+innan verklig klarering kan intygas. Hinder-/djuppolicy gäller båda ruttmålen.
+
+Nästa begränsade leverans är automatisk omväg runt syntetiska enkla polygoner i
+befintligt lokalt öst/nord-plan, med hela-segment-kontroll och marginal i meter.
+Geometriska referenstester ska vara oberoende av sökalgoritmen. Genererade
+kandidater ska simuleras med befintlig tidsberoende vind, ström, polar, komfort,
+prognos- och väderkontroll. Geometriskt kortast väg är inte nödvändigtvis snabbast
+väderrutt. Sökgränser och ofullständig sökning ska redovisas; frånvaro av verifierad
+kandidat innebär inte att alla möjliga rutter är prövade.
+
+Därefter förbereds geografiska koordinater, sjökortsnära kartvisning och export
+av granskade planerade vägpunkter (exempelvis GPX). Datum/projektion, axelordning,
+enheter, geografisk utsträckning och segmentmodell måste valideras separat.
+Export ska bevara waypointordning och skilja planerad bana från GPS-spår; plotterns
+import och rutten ska granskas av användaren. Verkliga kart-/hinderkällor kräver
+separat utvärdering av region, täckning, upplösning, kvalitet, uppdateringar,
+kommersiella rättigheter, attribution, cachning/offline/export och kostnad före
+integration. Ingen leverantör, visuell editor eller betald resurs väljs nu.

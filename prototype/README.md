@@ -889,3 +889,14 @@ inte verklig källkvalitet, båttrajektoria, kontinuerlig polar-/manövergenomf�
 vågornas riktningsentydighet eller exakt komfortexponering. Tm02/riktning och
 komfortintegration kontrolleras fortfarande vid uppslag. Inga verkliga
 prognoser, AIS, navigationsgarantier eller nya tjänster har kopplats.
+
+## Automatisk syntetisk polygonomväg
+
+polygon.py kontrollerar hela slutna segment mot enkla polygoner med euklidisk
+marginal och exakta predikat på lagrade tal. auto_routing.py genererar begränsade
+kompletta grafvägar kring utvidgade boxhörn. Geometrisk ordning är ingen
+väderoptimering: application/obstacle_planning.py återanvänder ordinarie
+rutt-/avgångsberäkning för varje kandidat, utan att slå ihop tillstånd.
+Kör scripts.plan_polygon för reproducerbar JSON. Sökbudgetar, avbrott och
+begränsningar beskrivs i docs/geographic-routing.md. Ingen GPS-följning eller
+verklig navigerbarhetsgaranti; djup/tidvattenintegration är endast planerad.
