@@ -46,3 +46,10 @@ i den syntetiska adaptern. Lokalt geografiskt origo, enheter, referensramar,
 interpolationsregel och gap/masker valideras före planering. För frysta rutnät
 kontrolleras dessutom interpolationsstöd längs hela accepterade integrerade
 segment. Hårda vädervärden verifieras fortfarande endast vid uppslag och ankomst.
+
+application/planning.py samordnar ett fryst PlanRequest till domänens
+avgångsjämförelse och ett reproducerbart JSON-resultat med indata-/dataset-/
+båtfingeravtryck. scripts/plan_synthetic.py komponerar syntetisk adapter och
+usecase samt sköter CLI-presentation. Ingen transport eller databas ingår.
+Algoritm-/schemaversion och alla parametrar följer resultatet; observerad
+exekveringstid hålls separat från den deterministiska resultatidentiteten.

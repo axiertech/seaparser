@@ -653,3 +653,37 @@ lokal numerisk bana/datastöd är inte verifierade kontinuerliga hårda väderv�
 eller verklig båttrajektoria. Inga server-/databasändringar eller nya tjänster.
 Tidigare76 lokala loggrader bevaras ostagade. Nästa del efter granskning/push och
 godkänd CI: reproducerbart syntetiskt planeringsscenario med spårbara indata.
+
+## Reproducerbart syntetiskt planeringsscenario 2026-10-12
+
+Segmentkontrollens commit8453a14 har godkänd GitHub CI; fortsatt enligt backlog.
+application/planning.py samordnar fryst PlanRequest och oförändrade domänflöden.
+Versionerad syntetisk fixture och scripts.plan_synthetic ger ett helt offline
+scenario med två avgångar/tre rutter, testpolar eller konstantmodell, valfritt
+syntetiskt hinder och uttryckligt avgångskriterium. Inga privata inställningar,
+nätverks-/SQL-anrop eller installationer. Manifest anger algoritm/schema,
+samtliga parametrar inklusive cellkontrolltak, båtprofil/antaganden, produktmetadata
+och SHA-256 för hela datasetinnehållet, båten och indata. Ursprungliga listor
+kopieras begränsat; båda policyerna är obligatoriska i detta usecase.
+
+Verifierat: make check,135 prototyp- och24 övriga tester (159 totalt), alla
+godkända. Sju nya tester täcker oberoende polarrestider, snabbast/bekvämast,
+blockerad direktväg/senare infeasibility, byte-identisk JSON utan nätverk,
+fingeravtryck vid ändring av data under oförändrad etikett samt båt/parametrar/
+policy/tid/rutter, fryst request/begränsningar, CLI/felstatus och halverat steg.
+Första avgången: direkt50 s/E100, nord71,247896 s/E35,9940 vid10 s-steg;
+analytisk omväg20sqrt(2)/1,2 +60/2 +20sqrt(2)/1,6 ≈71,248 s. Halverat steg
+behåller val och uppfyller0,01 s/0,5 exponeringssekunder. Senare avgång får
+kortare restid men senare ETA; diagonaler kan sakna tillåten kompensationskurs.
+Ingen generell bästa avgång väljs. Observationsmätning av demo-körningen:
+0,1284 s och287394 resultatbytes före slutlig manifestkomplettering; inte ett SLA.
+
+Syntax/konfiguration/importgränser/Actions-SHA och frontendkontroller passerar;
+frontend har0 produkttester. Migrations-/PostgreSQL-testplan passerar offline
+utan anslutning. git diff --check passerar. Egna filer/hemligheter granskas före
+commit; tidigare76 orelaterade loggrader bevaras ostagade. Begränsningar: endast
+inbyggda frysta båtmodeller har serialiserare; domänens utbytbarhet behålls.
+Hash identifierar innehåll, inte källans äkthet/kvalitet. Byte-identitet gäller
+verifierad Pythonmiljö. Vädervärden mellan uppslag är fortsatt inte kontinuerligt
+verifierade. Inga verkliga tjänster, databasändringar eller merge till main.
+Nästa steg: granskad push/CI och samlad status för den sammanhängande leveransen.

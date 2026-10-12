@@ -765,3 +765,60 @@ ankomst. Omarkerade fel/toppar och legacy-callbacks kräver fortsatt annan valid
 Åtta nya regressionstester använder tunna rum-/tidsceller, missing-noder, diagonal
 passage/kantkontakt, exklusiv ankomstgräns, kontrollbudget, båda beräkningsflödena,
 rutt-/avgångsval, säker omväg och halverat tidssteg.
+
+## Reproducerbart planeringsscenario
+
+Kör hela det syntetiska planeringsflödet offline, utan privat konfiguration:
+
+```bash
+.venv/bin/python -B -m scripts.plan_synthetic > /tmp/seaparser-plan.json
+.venv/bin/python -B -m scripts.plan_synthetic --blocked-direct > /tmp/seaparser-blocked.json
+.venv/bin/python -B -m scripts.plan_synthetic --boat constant --step-seconds 5
+.venv/bin/python -B -m scripts.plan_synthetic --selection-criterion earliest_arrival
+```
+
+Standardbåten är den uppskattade testpolaren, inte en uppmätt båt. Fixtureversion1
+(`infrastructure/synthetic_forecast.py`) använder lokalt WGS84-origo58°N/11°E,
+östnoder[-50,0,20,80,100,150] m, nordnoder[-50,0,20,50] m och tidsnoder vid avgång
++0/300/600/1800 s. Markvinden är4 m/s från norr; östströmmen interpoleras från
+0 till0,2 m/s mellan300 och600 s. Hs är1 m vid/under nord0 och1/3 m från nord20,
+linjärt däremellan. Tm02=5 s, vågor från norr. Båda avgångarna (02:00/02:10 UTC)
+använder samma planeringstid00:00, dataset och hårda gränser5 m/s/1 m; prognosen
+är utfärdad100 s före planeringen, maxålder600 s. Data är handvalda testdata.
+
+Tre rutter: direkt100 m österut; nord/syd via(20,±20),(80,±20). --blocked-direct
+lägger till syntetiskt slutet hinder x40..60/y-5..5 m. Max extra komfortrestid40 s,
+standardsteg10 s, måltolerans0,01 m; övriga budgetar redovisas i manifestet.
+Ingen väntan eller automatisk kryssplanering. Den senare avgångens diagonaler
+kan sakna tillåten polar-/strömkompensation och redovisas som infeasible.
+
+Oberoende referens för första avgången: testpolaren vid4 m/s vattenvind ger2 m/s
+vid90°,1,2 m/s vid45° och1,6 m/s vid135°. Direkt tar50 s. Omvägens referens är
+20√2/1,2 +60/2 +20√2/1,6 ≈71,248 s (testtolerans0,01 s). Utan hinder är nord
+bekvämare än direkt; med hinder väljs en genomförbar omväg och den senare avgången
+har inget genomförbart alternativ. Halverat steg10→5 s behåller första avgångens
+val, ger omvägsrestid inom0,01 s och exponering inom0,5 syntetiska exponerings-
+sekunder. Dessa toleranser gäller detta kontrollerade scenario, inte all väderdata.
+
+`application/planning.py` har ett fryst PlanRequest och run_plan-usecase. Request
+kräver ForecastDataset, båda policyerna och en explicit UTC-planeringstid. Listor
+för avgångar/rutter/hinder kopieras begränsat. Applikationslagret stöder här endast
+de två inbyggda frysta båtmodellerna med känd serialisering; domänens utbytbara
+BoatPerformance-gränssnitt behålls. En framtida egen modell behöver ett explicit,
+oföränderligt serialiseringskontrakt för motsvarande spårbarhet.
+
+Manifestet innehåller schema/algoritmversion, planeringstid, samtliga parametrar,
+båtprofil/antaganden, produktmetadata och SHA-256 för dataset, båt och kompletta
+indata. Datasetets hash omfattar värden och masker, inte bara id/version.
+Algoritmversionen måste uppdateras när numeriskt beteende ändras. Hasharna är
+reproducerbarhetsidentifierare, **inte** bevis på källans äkthet eller kvalitet.
+Identiska underlag/versioner/parametrar ger byte-identisk kanonisk UTF-8-JSON på
+den verifierade Pythonmiljön. Ingen rörlig väggklocka eller exekveringstid blandas
+in i resultatidentiteten. Byte-identitet mellan framtida Python-/plattformversioner
+är inte verifierad. Mät körtid separat; representativ observerad tid dokumenteras
+i arbetsloggen utan att göra ett SLA av den.
+
+Resultatet redovisar alla kandidater/avbrott, snabbast/bekvämast per avgång samt
+kortast restid och tidigast ankomst separat. Ingen avgång väljs utan uttryckligt
+kriterium. Scope och olika kontrollomfattningar följer exporten. Scenariot gör
+inga HTTP-/SQL-anrop och inte heller installation, drift eller verklig navigation.

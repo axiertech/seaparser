@@ -190,3 +190,15 @@ Detta verifierar datastöd för det lokala integrerade segmentet, inte kontinuer
 hårda vädervärden, källnoggrannhet eller verklig navigation. Legacy miljöcallbacks
 saknar detta kontrakt. Tidigare begränsning om missade markerade maskceller är
 ersatt endast för frysta rutnät med aktiverad segmentkontroll.
+
+## 2026-10-12: Reproducerbart offline-usecase för syntetisk planering
+
+Ett fryst PlanRequest i applikationslagret kräver känt fryst dataset/båtmodell,
+båda policyerna och explicit planeringstid. Usecaset återanvänder befintlig motor
+för två angivna avgångar och tre kandidatrutter i den versionerade fixture-demon.
+Resultatet märker uppskattad båtdata och inkluderar kanoniska SHA-256-fingeravtryck
+för fullständiga indata, prognosinnehåll/masker och båtprofil samt schema-/
+algoritmversion. Inget väggklocksvärde blandas i resultatidentiteten.
+Determinism gäller verifierad Pythonmiljö; hash är inget autenticitet-/kvalitets-
+bevis. CLI kan välja konstantmodell, syntetiskt hinder och uttryckligt avgångs-
+kriterium. Inga nya beroenden, externa prognoser eller produkttjänster införs.

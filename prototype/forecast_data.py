@@ -9,6 +9,9 @@ from .forecast_metadata import ProductMetadata
 from .model import Vector
 
 
+MAX_SEGMENT_INTERVALS = 4096
+
+
 class DataUnavailable(ValueError):
     """No extrapolation or interpolation through invalid support."""
 
@@ -135,7 +138,7 @@ class GridProduct:
         return tuple(result)
 
 
-    def validate_segment(self, start, start_time, end, end_time, *, max_intervals=4096):
+    def validate_segment(self, start, start_time, end, end_time, *, max_intervals=MAX_SEGMENT_INTERVALS):
         """Prove support along one affine space/time segment, not weather values.
 
         Split at all crossed grid planes; check endpoints and each open cell.
