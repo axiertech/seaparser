@@ -12,11 +12,11 @@ from prototype.sailing import PolarBoat
 from prototype.weather import WeatherPolicy
 
 
-def demo_request(*, boat='polar', blocked_direct=False, step_seconds=10, selection_criterion=None):
+def demo_request(*, boat='polar', blocked_direct=False, step_seconds=10, selection_criterion=None, scenario='baseline'):
     if boat not in ('polar', 'constant'):
         raise ValueError('Okänd syntetisk båtmodell')
     return PlanRequest(
-        dataset=synthetic_snapshot(), planning_time=PLAN,
+        dataset=synthetic_snapshot(scenario), planning_time=PLAN,
         departures=(START, START+timedelta(seconds=600)), target=Vector(100, 0),
         candidates=(RouteCandidate('direct'), RouteCandidate('north', (Vector(20, 20), Vector(80, 20))),
                     RouteCandidate('south', (Vector(20, -20), Vector(80, -20)))),
@@ -30,12 +30,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--boat', choices=('polar', 'constant'), default='polar')
     parser.add_argument('--blocked-direct', action='store_true')
+    parser.add_argument('--scenario', choices=('baseline', 'weather-limit', 'unverified', 'missing-waves'), default='baseline')
     parser.add_argument('--step-seconds', type=float, default=10)
     parser.add_argument('--selection-criterion', choices=('shortest_travel_time', 'earliest_arrival'))
     args = parser.parse_args()
     try:
         print(run_plan(demo_request(boat=args.boat, blocked_direct=args.blocked_direct,
-                                   step_seconds=args.step_seconds, selection_criterion=args.selection_criterion)))
+                                   step_seconds=args.step_seconds, selection_criterion=args.selection_criterion, scenario=args.scenario)))
     except ValueError as error:
         parser.exit(2, str(error)+'\n')
 

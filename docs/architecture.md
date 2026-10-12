@@ -62,3 +62,9 @@ passagetider. Ruttmotorn läser inte AIS-strömmar. Ingen GPS-/trafikövervaknin
 CPA-/kollisionsanalys eller undanmanöver ingår. Tidvatten och stationsström får
 separata adapterkontrakt med vertikalt datum respektive riktning/djup; ingen
 stationsprognos får bli ett områdesfält utan verifierad modell.
+
+HTML-granskningsverktyget i presentation/scenario_html.py konsumerar befintliga
+JSON-rapporter; HTML/CSS ligger i frontend/. scripts/export_scenario_html.py
+orkestrerar syntetiska scenarier utanför ruttmotorn och genererar en enda
+självförsörjande HTML-fil. Publik webbrot innehåller endast genererad visning.
+Se frontend/README.md för export, bevisstatus och avgränsningar.

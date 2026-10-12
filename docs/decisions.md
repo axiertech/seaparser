@@ -232,3 +232,18 @@ finns i traffic-planning.md; ingen AIS-kod implementeras nu. AIS-SOG är redan
 konto/token eller inköp; AIS/tidvatten/ström har separata täcknings-/licensbesked.
 Stationsström kräver verifierad rumslig modell före områdesanvändning och behåller
 riktning/djup; tidvatten behåller vertikalt referensdatum. Se openwaters-review.md.
+
+## 2026-10-12: Lokal HTML-rapport och begränsad demopublicering
+
+Granskningsvisningen återger färdiga oförändrade JSON-rapporter. Beräkning,
+presentationskod och HTML/CSS-layout är separata. Fem syntetiska scenarier
+visar fri väg, hinder, konstaterat överskridande, otillräckligt konservativt
+bevis och vågdatalucka. Heldragen bana visar endast accepterade segment.
+Ingen verifierad kandidat innebär inget bevis om andra möjliga rutter.
+Kortast restid och tidigast ankomst visas separat, utan allmänt avgångsval.
+Visuell editor och verkliga prognoskällor väljs inte i denna leverans.
+
+Användaren godkänner uttryckligen att endast den genererade självförsörjande
+index.html publiceras i /home/web/seaparser/public för https://seaparser.com/.
+Inga repositoryfiler, inställningar, loggar eller nycklar kopieras, och
+webbserverns konfiguration ändras inte. Detta utökar inte databasmandatet.

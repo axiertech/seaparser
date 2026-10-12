@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<title>SeaParser · syntetisk scenariogranskning</title>
+<style>$STYLE</style>
+</head>
+<body>
+<header class="masthead"><span class="brand">SeaParser</span><span class="eyebrow">Lokalt granskningsverktyg · frysta rapporter</span></header>
+<main>
+<section class="intro"><p class="eyebrow">Reproducerbart offline-scenario</p><h1>Jämför vägar och avgångar.</h1>
+<p class="lead">Utforska vad den syntetiska modellen kan verifiera – och vad underlaget lämnar öppet.</p>
+<p class="notice">Uppskattade testdata. Ingen navigationsprodukt, ingen AIS eller GPS-följning. Inga data hämtas när sidan visas.</p></section>
+<section class="legend" aria-label="Så läser du kontrollerna">
+<div><span class="badge verified">Verifierade modellgränser</span><p>Den undersökta kandidaten klarar aktiverade kontroller i modellen. Det betyder inte att en verklig färd är säker.</p></div>
+<div><span class="badge exceeded">Konstaterat överskridande</span><p>En utförd modellkontroll visar ett överskridande av en hård vind- eller våggräns.</p></div>
+<div><span class="badge unknown">Otillräckligt underlag / bevis</span><p>Saknade data eller ett otillräckligt konservativt bevis. Kandidaten godkänns inte.</p></div>
+</section>
+<p class="scope">Ingen verifierad kandidatrutt är inte bevis för att ingen möjlig rutt finns. Endast rapportens angivna tider och rutter är undersökta.</p>
+<nav class="scenario-nav" aria-label="Scenarier">$NAV</nav>
+$SCENARIOS
+<section class="limitations"><h2>Vad granskningen omfattar</h2>
+<ul><li>Lokalt öst/nord-plan i meter, syntetiska rektanglar och uppskattad båtprestanda. Kartbilden är ingen sjökarta.</li>
+<li>Konservativa gränser för markrelativ vindstyrka och signifikant våghöjd längs integrerade segment; faktisk ankomst kontrolleras separat.</li>
+<li>Ett högt cellhörn utanför banan kan ge otillräckligt bevis. Komfort, vågriktning, manövrer och verklig källkvalitet är inte kontinuerligt verifierade.</li>
+<li>Syntetisk komfortexponering är inte validerad för verkliga båtrörelser. Hårda gränser får aldrig vägas bort av komfort eller tidsvinst.</li>
+<li>Visningen avrundar tal. JSON-exporten bevarar full rapportprecision. Kortast restid och tidigast ankomst är separata kriterier.</li></ul>
+<p>Layouten kan ändras i HTML/CSS-mallen utan ändringar i beräkningen. Detta verktyg väljer ingen designereditor.</p></section>
+</main><footer>SeaParser · granskningsvy för ett begränsat syntetiskt scenario</footer>
+</body></html>

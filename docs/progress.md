@@ -783,3 +783,28 @@ Nästa verifiering: normal push och GitHub CI på slutlig dokumentations-SHA.
 Orelaterade76 lokala loggrader bevaras ostagade. Inga databasanrop/ändringar,
 serverkonfigurationsändringar, betalda resurser eller main-merge.
 Huvudprioriteten förblir väderrouting, ström, komfort och avgångstider.
+
+## 2026-10-12: HTML-visning av frysta syntetiska scenarier
+
+Leverans på development/scenario-demo från development/segment-weather.
+Separat HTML/CSS-layout och presentationslager visar kandidater, endast
+accepterade delbanor, hinder, avgång, restid, ankomst och syntetisk komfort.
+Fem scenarier skiljer verifierade modellgränser, konstaterat överskridande och
+otillräckligt bevis/data. Ingen verifierad rutt betyder inte att andra rutter
+är omöjliga. Datasetversion, fryst klocka, uppskattad båt och SHA-256 visas;
+JSON-exporten bevarar ursprunglig rapport. Ingen editor vald; AIS lågprioriterat.
+
+Verifierat: make check passerar 178 Python-tester (146 domän +32 övriga,
+inklusive 8 rapport/exporttester), AST/domängränser och lokala HTML/CSS-kontroller.
+Node-testkörningen har 0 tester, inte 178 frontendtester. Diff granskad;
+inga nya paket, nätverksanrop i beräkningen, databasändringar eller main-merge.
+Äldre 76 lokala arbetsloggrader bevaras separat och ingår inte i leveransen.
+
+Endast genererad index.html kopierad till /home/web/seaparser/public.
+Storlek 1002510 byte; SHA-256 f6499d63fdf3e84381810538570cbb3f98862e69cecaa855127072b7e9af51e2
+överensstämmer med exporten. Inga konfigurationsfiler/loggar/nycklar kopierade.
+HTTPS på https://seaparser.com/ och /index.html svarar 403; offentlig åtkomst
+är alltså inte verifierad som fungerande. Föräldrakatalogen seaparser har 750,
+public 755, index.html 644. Detta kan orsaka åtkomstfelet men är inte bevisad
+serverdiagnos. Inga rättigheter eller webbserverinställningar ändrade.
+Nästa steg: verifiera push-CI och rapportera åtkomsthindret för serveransvarig.

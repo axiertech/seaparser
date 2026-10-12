@@ -2,7 +2,13 @@
   "name": "seaparser-frontend",
   "version": "0.1.0",
   "private": true,
-  "engines": {"node": "22.22.1", "npm": "9.2.0"},
+  "engines": {
+    "node": "22.22.1",
+    "npm": "9.2.0"
+  },
   "packageManager": "npm@9.2.0",
-  "scripts": {"check": "node --check check.mjs", "test": "node --test"}
+  "scripts": {
+    "check": "node check.mjs",
+    "test": "node --test"
+  }
 }
