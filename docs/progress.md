@@ -888,3 +888,13 @@ Workflow hade ett ociterat installationskommando med kolon följt av mellanslag
 Riktad verifiering med scripts.check passerar 201 Python-tester och samtliga
 backend-/lås-/domänkontroller. Kartkoden är oförändrad från godkänd lokal
 helhetskontroll. Uppföljningscommit pushas utan force-push; exakt CI följs igen.
+
+### CI:s npm-version
+
+Run 38293506158 startade men npm ci avvisades med EBADENGINE: runnerns npm var
+10.9.4 medan projektets låsta version är 9.2.0. CI kör nu exakt npm 9.2.0 med
+npm exec i isolerad verktygscache, från repositoryroten, utan global installation
+eller ändrade projektversioner. Officiell registryversion/Node-kompatibilitet
+verifierad. Exakta CI-kommandon för npm ci, check och test passerar lokalt,
+inklusive alla 4 frontendtester och kart/API/GPX-flödet. Backend är oförändrad
+från 201 godkända tester. Ny korrigeringscommit följs med förnyad exakt CI-kontroll.
