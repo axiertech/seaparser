@@ -132,3 +132,27 @@ Offline granskningskontrakt och acceptansmatris: [forecast-run-provenance.md](fo
 Befintliga filers faktiska run-evidens och gap: [forecast-run-inventory.md](forecast-run-inventory.md). Inget utfärdande/run-ID återfunnet; creation_date får inte användas som ersättning.
 
 Regional vinds geometri, rotation, masker och segmentstöd: [regional-wind-acceptance.md](regional-wind-acceptance.md). Offline acceptansdesign; verklig MET-import och run-förenlighet fortfarande blockerade.
+
+## 2026-10-13: MET-redirect avvisas före destinationshämtning
+
+Granskning fann att urllibs standardredirect kunde lämna den fasta URL-listan
+för metadata. MET använder nu en separat opener som avvisar redirects före
+nytt HTTP-anrop. Alla redirects kräver källgranskning, även tillbaka till en
+metadata-URL. Feltexten innehåller inte destination eller privat query.
+Detta kan avvisa en legitim källredirect tills den granskas; inget nytt endpoint
+eller undantag antas. DDS/DAS/ASCII-budget och formatkontroller kvarstår.
+
+Tio riktade probetester passerar. HTTPRedirectHandlers faktiska felhantering
+för 301/302/303/307/308 testas offline: destinationsopener anropas aldrig.
+Separat test visar att ett redirectfel bevarar oberoende MET-resultat och alla
+tre planeringsblockerare. Den verkliga MET-openern har enbart den avvisande
+redirect-handlern. Inget nätverksförsök eller nytt väderuttag görs i dessa tester.
+Ingen routing, adapter, databas eller publik demonstration ändras.
+
+Full scripts/check.py passerar: 158+101=259 Python-tester, syntax, låsfiler,
+pip check och domängränser. Frontend run check passerar; full frontendintegration
+var oförändrad och godkänd med sex tester i passets första kodleverans.
+Alla tre marina hashvärden matchar fortfarande manifestet. Logg:
+autonomy/logs/met-redirect-check-20261013T2154Z.log.
+Nästa oberoende granskning: metadata-probens CSV/bytesbudget och partiella
+transportproveniens; inga nya källor eller hävda planning_blockers.

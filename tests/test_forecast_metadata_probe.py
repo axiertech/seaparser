@@ -1,10 +1,13 @@
 from pathlib import Path
+from contextlib import nullcontext
+from io import BytesIO
 import tempfile
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
+from urllib.request import Request
 
-from scripts.probe_forecast_metadata import MAX_METADATA_BYTES, MET_URLS, list_marine_metadata, probe, read_met_metadata
+from scripts.probe_forecast_metadata import MAX_METADATA_BYTES, MET_URLS, MetadataRedirectRejected, list_marine_metadata, probe, read_met_metadata
 
 
 class MetadataProbeTests(unittest.TestCase):
@@ -18,7 +21,7 @@ class MetadataProbeTests(unittest.TestCase):
     def test_metadata_size_and_html_rejected(self):
         for content in (b'X' * (MAX_METADATA_BYTES + 1), b'<html>not data</html>'):
             response = SimpleNamespace(read=lambda n: content)
-            with patch('scripts.probe_forecast_metadata.urlopen') as opener:
+            with patch('scripts.probe_forecast_metadata.MET_OPENER.open') as opener:
                 opener.return_value.__enter__.return_value = response
                 with self.assertRaises(ValueError):
                     read_met_metadata(next(iter(MET_URLS.values())))
@@ -30,13 +33,47 @@ class MetadataProbeTests(unittest.TestCase):
             wrong = b'Dataset { } test;' if filename.endswith('.das') else b'Attributes { }'
             for content, accepted in ((expected, True), (wrong, False)):
                 with self.subTest(filename=filename, accepted=accepted):
-                    with patch('scripts.probe_forecast_metadata.urlopen') as opener:
+                    with patch('scripts.probe_forecast_metadata.MET_OPENER.open') as opener:
                         opener.return_value.__enter__.return_value.read.return_value = content
                         if accepted:
                             self.assertEqual(read_met_metadata(url), content)
                         else:
                             with self.assertRaises(ValueError):
                                 read_met_metadata(url)
+
+    def test_redirect_rejected_before_any_destination_request(self):
+        original = Request(MET_URLS['met-forecast.dds'])
+        handler = MetadataRedirectRejected()
+        handler.parent = Mock()
+        for code in (301, 302, 303, 307, 308):
+            for destination in (MET_URLS['met-forecast.dds'],
+                                MET_URLS['met-forecast.dds'].removesuffix('.dds'),
+                                'https://example.com/private?token=synthetic-secret'):
+                with self.subTest(code=code, destination=destination):
+                    with self.assertRaises(ValueError) as error:
+                        getattr(handler, f'http_error_{code}')(
+                            original, BytesIO(), code, 'redirect', {'location': destination})
+                    self.assertNotIn('synthetic-secret', str(error.exception))
+                    handler.parent.open.assert_not_called()
+
+    def test_redirect_failure_preserves_independent_probe_results(self):
+        def open_metadata(request, **kwargs):
+            if request.full_url.endswith('.dds'):
+                return MetadataRedirectRejected().redirect_request(
+                    request, None, 302, 'redirect', {}, 'https://example.com/full.nc')
+            content = b'Attributes { }' if request.full_url.endswith('.das') else b'Dataset { } test;'
+            response = SimpleNamespace(read=lambda n: content)
+            return nullcontext(response)
+        with tempfile.TemporaryDirectory() as directory:
+            with patch('scripts.probe_forecast_metadata.MET_OPENER.open', side_effect=open_metadata), \
+                    patch('scripts.probe_forecast_metadata.list_marine_metadata', return_value=[]):
+                report = probe(Path(directory)/'probe', marine=object())
+            self.assertFalse((Path(directory)/'probe'/'met-forecast.dds').exists())
+        self.assertEqual([x['status'] for x in report['met']],
+                         ['blocked', 'metadata_received', 'metadata_received'])
+        self.assertFalse(report['metadata_complete'])
+        self.assertEqual(report['routing_status'], 'data_unavailable')
+        self.assertEqual(len(report['blockers']), 3)
 
     def test_marine_get_is_strictly_listing_and_dry_run(self):
         calls = []

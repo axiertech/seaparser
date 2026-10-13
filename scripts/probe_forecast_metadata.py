@@ -13,7 +13,7 @@ import logging
 import os
 from pathlib import Path
 import socket
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 
 MET_BASE = ('https://thredds.met.no/thredds/dodsC/metpparchive/2026/10/13/'
@@ -26,12 +26,22 @@ MARINE_LISTS = (('waves', 'cmems_mod_bal_wav_anfc_PT1H-i', '202311'),
                 ('current', 'cmems_mod_bal_phy_anfc_PT1H-i', '202411'))
 
 
+class MetadataRedirectRejected(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        # A reviewed metadata URL must not silently become a weather-file fetch.
+        # Do not include the destination, which could contain private query data.
+        raise ValueError('Metadata redirects require separate source review')
+
+
+MET_OPENER = build_opener(MetadataRedirectRejected())
+
+
 def read_met_metadata(url):
     if url not in MET_URLS.values():
         raise ValueError('Only the reviewed metadata endpoints are allowed')
     request = Request(url, headers={'User-Agent': 'SeaParser-metadata-audit/0.1 (+https://seaparser.com)',
                                    'Accept-Encoding': 'identity'})
-    with urlopen(request, timeout=15) as response:
+    with MET_OPENER.open(request, timeout=15) as response:
         data = response.read(MAX_METADATA_BYTES + 1)
     if len(data) > MAX_METADATA_BYTES:
         raise ValueError('Metadata response size budget exceeded')

@@ -1438,3 +1438,27 @@ autonomy/logs/wind-contract-tests-20261013T2152Z.log. Diff check passerar.
 Källåtkomst och push/CI fortfarande blockerade; planning_blockers oförändrade.
 Nästa oberoende uppgift: granska konkret provensbudget och säker avvisning i
 befintlig metadata-probe (inklusive felrespons/redirect), utan nya datakällor.
+
+## 2026-10-13: MET-redirect avvisas före destinationshämtning
+
+Granskning fann att urllibs standardredirect kunde lämna den fasta URL-listan
+för metadata. MET använder nu en separat opener som avvisar redirects före
+nytt HTTP-anrop. Alla redirects kräver källgranskning, även tillbaka till en
+metadata-URL. Feltexten innehåller inte destination eller privat query.
+Detta kan avvisa en legitim källredirect tills den granskas; inget nytt endpoint
+eller undantag antas. DDS/DAS/ASCII-budget och formatkontroller kvarstår.
+
+Tio riktade probetester passerar. HTTPRedirectHandlers faktiska felhantering
+för 301/302/303/307/308 testas offline: destinationsopener anropas aldrig.
+Separat test visar att ett redirectfel bevarar oberoende MET-resultat och alla
+tre planeringsblockerare. Den verkliga MET-openern har enbart den avvisande
+redirect-handlern. Inget nätverksförsök eller nytt väderuttag görs i dessa tester.
+Ingen routing, adapter, databas eller publik demonstration ändras.
+
+Full scripts/check.py passerar: 158+101=259 Python-tester, syntax, låsfiler,
+pip check och domängränser. Frontend run check passerar; full frontendintegration
+var oförändrad och godkänd med sex tester i passets första kodleverans.
+Alla tre marina hashvärden matchar fortfarande manifestet. Logg:
+autonomy/logs/met-redirect-check-20261013T2154Z.log.
+Nästa oberoende granskning: metadata-probens CSV/bytesbudget och partiella
+transportproveniens; inga nya källor eller hävda planning_blockers.
