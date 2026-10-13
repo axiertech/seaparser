@@ -16,6 +16,7 @@ CURRENT_FIELDS = {
     'vo': ('northward_sea_water_velocity', ('m s-1', 'm/s')),
 }
 MASK_FIELDS = {'mask': ('sea_binary_mask', ('1',))}
+BATHY_FIELDS = {'deptho': ('sea_floor_depth_below_geoid', ('m',)), **MASK_FIELDS}
 
 
 def validate_fields(variables, expected):

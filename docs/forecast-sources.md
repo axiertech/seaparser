@@ -121,6 +121,60 @@ föreskriven attribution/citering och produkt-DOI. Attribution vid användning:
 `Generated using E.U. Copernicus Marine Service Information; DOI: 10.48670/moi-00010, 10.48670/moi-00011`.
 Kontrollera produktsidan/licensen före vidare distribution.
 
+## Fryst, avgränsat Copernicus-uttag 2026-10-13
+
+Toolbox 2.5.0 använde den redan sparade autentiseringen. Två dynamiska uttag
+hämtades i samma anropade giltighetsfönster, 2026-10-13 12:00–16:00 UTC, inom
+11.58–11.63°E och 57.62–57.65°N. Ett tredje uttag hämtade produktens statiska
+mask och batymetri. Ingen autentisering eller credential kopierades till
+repositoryt. Data är små (vardera under 30 KB) och ligger frysta i
+`fixtures/vinga-copernicus/`; manifestet innehåller exakt produkt/dataset/version,
+subset, UTC hämtningstid, käll-URL och SHA-256. Attribution finns i manifestet.
+
+Vågfilen är `cmems_mod_bal_wav_anfc_PT1H-i`, version `202311`, variablerna
+`VHM0` (m), `VTM02` (s, Tm02) och `VMDR` (grader, vågornas från-riktning).
+Strömfilen är `cmems_mod_bal_phy_anfc_PT1H-i`, version `202411`, variablerna
+`uo`/`vo` (m/s, öst/nord, mot-riktning), på dokumenterad ytligaste modellnivå
+0.501646 m positiv nedåt. Båda innehåller fem gemensamma giltighetstider
+12, 13, 14, 15 och 16 UTC. Interpolationsgiltigheten är halvöppen
+`[12:00,16:00)`; sista tidpunkten är endast övre gräns, inte giltig observation.
+
+Nätfilerna innehåller giltighetstid men ingen identifierbar modellkörtid eller
+prognosutfärdandetid. Hämtningstid och kataloguppdatering är inte utfärdandetid;
+`issued_at` sparas därför som okänd. Copernicus-forecast och värdena kan granskas,
+men friskhetskontrollen avvisar dem tills verklig köridentitet/utfärdande hittas.
+Vindprognos saknas fortsatt. Därför kan detta underlag **inte** ge verklig
+regional ruttplanering, snabbaste/bekvämaste alternativ eller GPX.
+
+Den statiska delen (`cmems_mod_bal_wav_anfc_static`, version `202311`, del
+`bathy`) har 2×2 binära havsmaskceller och djupvärden 16–25 m. De fyra vågnoderna
+är märkta hav. Djupvariabeln är `deptho` i meter med standardnamnet
+`sea_floor_depth_below_geoid`; detta är modellbatymetri och används inte för
+att godkänna säkerhetsmarginal, djupgående, landrutt eller tidvatten. Dess
+vertikala datum/kompatibilitet och fullständighet för navigation har inte
+validerats. Strömgriden är förskjuten ungefär 12 m från våg/maskgriden och får
+inte ärva deras mask genom närmaste-granne-interpolation.
+
+Den providerbegränsade CF-adaptern kontrollerar standardnamn/enheter, separata
+grider och giltighet, omvandlar `uo`/`vo` direkt till öst/nordvektorer och
+`VMDR` från-riktning till komponenter. Den accepterar endast de fyra statiska
+maskceller som ligger exakt på våggriden; maskland blir datalucka. Lokala
+WGS84/AEQD-axlar är centrerade på 57.633°N, 11.605°E och projektionens avvikelse
+från separabla gridaxlar begränsas till 1 m. Adaptern hämtar inte nätverk. Den
+skapar bara current- och waves-produkter, utan wind; freshness- och
+täckningskontrollen avvisar fortfarande en rutt. Griden med 2×2 celler är en
+fält-/adapterverifiering, inte ett kontinuerligt kust- eller landmaskbevis.
+
+Offlinekontroll:
+
+```bash
+.venv/bin/python -B -m scripts.audit_copernicus fixtures/vinga-copernicus
+```
+
+Den läser frysta NetCDF-filer, verifierar hash, koordinater, variabler, tidsaxel
+och mask och rapporterar `fields_verified`; det är uttryckligen inte
+`route_verified`. Prognosutfärdande och regional vindgrid är nästa blockerare.
+
 ### Privat autentisering på servern
 
 Copernicus Marine Toolbox 2.5.0 är senaste stabila versionen enligt officiella

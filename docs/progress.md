@@ -1247,3 +1247,29 @@ SSH-överlevnad. Exakt terminalstart för endast frånkopplingsprov:
 `bash /home/web/seaparser/autonomy/start-probe.sh`; framtida explicit socket
 `/home/web/seaparser/autonomy/tmux.sock`. Längre bakgrundsarbete aktiveras inte
 före verifierat SSH-prov och avslutad/överlämnad prognossession.
+
+# Copernicus-avgränsat prognosuttag 2026-10-13
+
+Tidigare nätverksförsök i sandboxen stoppades av nätverksbegränsning. Därefter
+hämtades avgränsade Copernicus-data via godkänd nätverkskörning med Toolboxens
+redan sparade autentisering; inga credential-värden lästes ut eller sparades.
+Fryst fixture under `fixtures/vinga-copernicus/` innehåller vågprognos,
+ytström och statisk mask/batymetri med dataset/version, subset, hämtningstid,
+källor, attribution och SHA-256. Kontroll av hela filerna och reproducerbar
+normalisering passerar.
+
+CF-adaptern levererar endast vågor och ytström efter kontroll av grid,
+standardnamn, enheter, mask och giltighetsintervall. Den interpolerar inte
+över saknade celler eller utanför grid/tid och lämnar issue time okänd. Den
+vägrar därför ruttberäkning utan färskhetsunderlag; vind saknas fortsatt.
+Två gånger två celler och den statiska bathymetrin är inte ett komplett
+routingsunderlag. Djup, navigerbarhet och regional verklig väderrutt är inte
+verifierade. Exakt avgränsning och kommandon finns i
+[`forecast-sources.md`](forecast-sources.md).
+
+Verifiering 2026-10-13: fryst audit och byte-identisk regenerering passerar;
+20 riktade Copernicus-tester passerar; `make check` passerar med 88 Python- och
+6 frontendtester. Loopback-integrationen krävde körning utanför sandboxen;
+utan den tillåtelsen nekades lokal API-bindning och testet kunde inte starta.
+Nästa steg: verifiera prognosens officiella utfärdandetid och hitta ett
+regionalt vindunderlag innan någon verklig regional väderrutt kan godkännas.

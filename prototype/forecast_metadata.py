@@ -36,12 +36,16 @@ class ProductMetadata:
     dataset_id: str
     version: str
     source: str
-    issued_at: datetime
+    issued_at: datetime | None
     valid_from: datetime
     valid_until: datetime
     coverage: Coverage
     units: tuple[str, ...]
     reference_frame: str
+    retrieved_at: datetime | None = None
+    source_url: str | None = None
+    license_url: str | None = None
+    source_sha256: str | None = None
 
     def __post_init__(self):
         specs = {'wind': (('m/s', 'm/s'), 'ground-to-true-east-north'),
@@ -54,7 +58,16 @@ class ProductMetadata:
         object.__setattr__(self, 'units', tuple(self.units))
         if (self.units, self.reference_frame) != specs[self.product]:
             raise ValueError('Produkten måste vara normaliserad till kända enheter och referensramar')
-        for name in ('issued_at', 'valid_from', 'valid_until'):
-            object.__setattr__(self, name, utc_time(getattr(self, name), name))
+        for name in ('issued_at', 'retrieved_at', 'valid_from', 'valid_until'):
+            value = getattr(self, name)
+            if value is not None:
+                object.__setattr__(self, name, utc_time(value, name))
+        for name in ('source_url', 'license_url', 'source_sha256'):
+            value = getattr(self, name)
+            if value is not None and (not isinstance(value, str) or not value.strip()):
+                raise ValueError(f'{name} måste vara en icke-tom text när den anges')
+        if self.source_sha256 is not None and (len(self.source_sha256) != 64 or
+                any(char not in '0123456789abcdef' for char in self.source_sha256)):
+            raise ValueError('Källans SHA-256 måste vara 64 hexadecimala tecken')
         if self.valid_from >= self.valid_until:
             raise ValueError('Positivt giltighetsintervall krävs')

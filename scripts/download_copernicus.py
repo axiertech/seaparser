@@ -13,17 +13,22 @@ from math import isfinite
 from pathlib import Path
 import sys
 
-from infrastructure.copernicus_fields import CURRENT_FIELDS, MASK_FIELDS, WAVE_FIELDS, validate_fields
+from infrastructure.copernicus_fields import BATHY_FIELDS, CURRENT_FIELDS, WAVE_FIELDS, validate_fields
 
 
 REQUESTS = (
     ('waves', 'cmems_mod_bal_wav_anfc_PT1H-i', WAVE_FIELDS),
     ('current', 'cmems_mod_bal_phy_anfc_PT1H-i', CURRENT_FIELDS),
-    ('wave-mask', 'cmems_mod_bal_wav_anfc_static', MASK_FIELDS),
+    ('wave-mask', 'cmems_mod_bal_wav_anfc_static', BATHY_FIELDS),
 )
 START, END = '2026-10-13T12:00:00Z', '2026-10-13T16:00:00Z'
 BBOX = dict(minimum_longitude=11.58, maximum_longitude=11.63,
             minimum_latitude=57.62, maximum_latitude=57.65)
+SOURCE_URLS = {
+    'waves': 'https://data.marine.copernicus.eu/product/BALTICSEA_ANALYSISFORECAST_WAV_003_010/description',
+    'current': 'https://data.marine.copernicus.eu/product/BALTICSEA_ANALYSISFORECAST_PHY_003_006/description',
+    'wave-mask': 'https://data.marine.copernicus.eu/product/BALTICSEA_ANALYSISFORECAST_WAV_003_010/description',
+}
 
 
 def selection(catalogue, dataset_id, fields):
@@ -34,8 +39,6 @@ def selection(catalogue, dataset_id, fields):
     version = datasets[0].versions[0]
     matches = []
     for part in version.parts:
-        if part.retired_date:
-            continue
         for service in part.services:
             if service.service_name not in ('arco-geo-series', 'static-arco'):
                 continue
@@ -59,7 +62,8 @@ def selection(catalogue, dataset_id, fields):
         shallow = [float(c.minimum_value) for c in depths]
         if shallow[0] != shallow[1] or not isfinite(shallow[0]) or shallow[0] < 0:
             raise ValueError('Unverified surface depth')
-        kwargs.update(minimum_depth=shallow[0], maximum_depth=shallow[0], vertical_axis='depth')
+        kwargs.update(minimum_depth=shallow[0], maximum_depth=shallow[0] + .5,
+                      vertical_axis='depth')
     return kwargs
 
 
@@ -76,7 +80,9 @@ def main():
     args.output.mkdir(mode=0o700, parents=True, exist_ok=False)
     manifest = {'schema': 1, 'toolbox_version': marine.__version__, 'bbox': BBOX,
                 'start': START, 'end': END, 'files': [],
-                'attribution': 'Generated using E.U. Copernicus Marine Service Information; DOI: 10.48670/moi-00010, 10.48670/moi-00011'}
+                 'attribution': 'Generated using E.U. Copernicus Marine Service Information; DOI: 10.48670/moi-00010, 10.48670/moi-00011',
+                'forecast_issued_at': None,
+                'issuance_status': 'unknown; valid times do not identify the model run'}
     for label, dataset_id, fields in REQUESTS:
         catalogue = marine.describe(dataset_id=dataset_id, disable_progress_bar=True, raise_on_error=True)
         request = selection(catalogue, dataset_id, fields)
@@ -100,6 +106,8 @@ def main():
                  'part': request['dataset_part'], 'service': request['service'],
                  'filename': path.name, 'sha256': sha256(path.read_bytes()).hexdigest(),
                  'retrieved_at': datetime.now(timezone.utc).isoformat(),
+                 'source_url': SOURCE_URLS[label],
+                 'license_url': 'https://marine.copernicus.eu/user-corner/service-commitments-and-license',
                  'request': {k: v for k, v in request.items() if k != 'output_directory'}}
         manifest['files'].append(entry)
         (args.output / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')

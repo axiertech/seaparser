@@ -55,6 +55,8 @@ class ForecastPolicy:
         elif weather.waves is not None:
             records.append(('Vågor', weather.waves.issued_at))
         for name, issued_at in records:
+            if issued_at is None:
+                raise ValueError(f'{name}: prognosens utfärdandetid saknas')
             issued_at = utc_time(issued_at, f'{name}: utfärdandetid')
             age = (planning_time - issued_at).total_seconds()
             if age < 0:

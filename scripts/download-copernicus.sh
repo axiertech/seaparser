@@ -2,7 +2,7 @@
 set -euo pipefail
 umask 077
 WORKTREE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
-BASE=/home/web/seaparser/autonomy/copernicus
+BASE=${1:-/tmp/seaparser-copernicus}
 mkdir -p "$BASE"
 exec 9>"$BASE/download.lock"
 flock -n 9 || exit 75

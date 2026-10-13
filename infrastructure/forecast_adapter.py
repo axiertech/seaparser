@@ -33,6 +33,8 @@ class SyntheticFixtureAdapter:
 
     def _product(self, raw):
         name = raw['product']
+        if raw.get('issued_at') is None:
+            raise ValueError('Syntetiska regressionsdata kräver explicit utfärdandetid')
         if name not in ('wind', 'current', 'waves'):
             raise ValueError('Okänd produkt')
         expected_reference = 'ground-from-true-north-tm02' if name == 'waves' else (

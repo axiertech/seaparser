@@ -31,7 +31,7 @@ class RequestSelectionTests(unittest.TestCase):
     def test_shallow_single_current_depth(self):
         depth = NS(coordinate_id='depth', coordinate_unit='m', minimum_value=0.5)
         request = selection(self.catalogue(CURRENT_FIELDS, (depth,)), 'test', CURRENT_FIELDS)
-        self.assertEqual((request['minimum_depth'], request['maximum_depth']), (0.5, 0.5))
+        self.assertEqual((request['minimum_depth'], request['maximum_depth']), (0.5, 1.0))
         depth.coordinate_unit = 'unknown'
         with self.assertRaises(ValueError):
             selection(self.catalogue(CURRENT_FIELDS, (depth,)), 'test', CURRENT_FIELDS)
@@ -44,6 +44,15 @@ class RequestSelectionTests(unittest.TestCase):
             selection(catalogue, 'test', WAVE_FIELDS)
         with self.assertRaises(ValueError):
             selection(self.catalogue(CURRENT_FIELDS), 'test', WAVE_FIELDS)
+
+
+@unittest.skipUnless(find_spec('xarray') and find_spec('numpy'), 'NetCDF extras only in the Toolbox environment')
+class FrozenCopernicusFixtureTests(unittest.TestCase):
+    def test_raw_files_recreate_the_checked_provider_payload(self):
+        from scripts.freeze_copernicus_reference import freeze
+        directory = Path(__file__).resolve().parents[1] / 'fixtures' / 'vinga-copernicus'
+        expected = json.loads((directory / 'reference.json').read_text())
+        self.assertEqual(freeze(directory), expected)
 
 
 @unittest.skipUnless(find_spec('xarray') and find_spec('numpy'), 'NetCDF extras only in the Toolbox environment')

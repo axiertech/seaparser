@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "toolbox_version": "2.5.0",
+  "bbox": {
+    "minimum_longitude": 11.58,
+    "maximum_longitude": 11.63,
+    "minimum_latitude": 57.62,
+    "maximum_latitude": 57.65
+  },
+  "start": "2026-10-13T12:00:00Z",
+  "end": "2026-10-13T16:00:00Z",
+  "forecast_issued_at": null,
+  "issuance_status": "unknown; valid times do not identify the model run",
+  "attribution": "Generated using E.U. Copernicus Marine Service Information; DOI: 10.48670/moi-00010, 10.48670/moi-00011",
+  "files": [
+    {
+      "product": "waves",
+      "dataset_id": "cmems_mod_bal_wav_anfc_PT1H-i",
+      "version": "202311",
+      "part": "default",
+      "service": "arco-geo-series",
+      "filename": "waves.nc",
+      "sha256": "19150fc84c94e44138588776a7afefe95721615bcae5d3abdfc211a8dc956c5e",
+      "retrieved_at": "2026-10-13T04:51:54.535589+00:00",
+      "source_url": "https://data.marine.copernicus.eu/product/BALTICSEA_ANALYSISFORECAST_WAV_003_010/description",
+      "license_url": "https://marine.copernicus.eu/user-corner/service-commitments-and-license"
+    },
+    {
+      "product": "current",
+      "dataset_id": "cmems_mod_bal_phy_anfc_PT1H-i",
+      "version": "202411",
+      "part": "default",
+      "service": "arco-geo-series",
+      "filename": "current.nc",
+      "sha256": "b2372937e0840a5a58216fd9db7cadf044390fb332f1f8a8d6cd0d6b2cb230f1",
+      "retrieved_at": "2026-10-13T04:52:20.863569+00:00",
+      "source_url": "https://data.marine.copernicus.eu/product/BALTICSEA_ANALYSISFORECAST_PHY_003_006/description",
+      "license_url": "https://marine.copernicus.eu/user-corner/service-commitments-and-license"
+    },
+    {
+      "product": "static",
+      "dataset_id": "cmems_mod_bal_wav_anfc_static",
+      "version": "202311",
+      "part": "bathy",
+      "service": "static-arco",
+      "filename": "wave-mask.nc",
+      "sha256": "0df1bbd2a4676f4178beb1d44673d38059665d6534b6366a8939f99b0701030c",
+      "retrieved_at": "2026-10-13T05:01:25.850062+00:00",
+      "source_url": "https://data.marine.copernicus.eu/product/BALTICSEA_ANALYSISFORECAST_WAV_003_010/description",
+      "license_url": "https://marine.copernicus.eu/user-corner/service-commitments-and-license"
+    }
+  ]
+}

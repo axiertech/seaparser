@@ -1,5 +1,5 @@
 import unittest
-from infrastructure.copernicus_fields import CURRENT_FIELDS, WAVE_FIELDS, current_node, validate_fields, wave_node
+from infrastructure.copernicus_fields import BATHY_FIELDS, CURRENT_FIELDS, WAVE_FIELDS, current_node, validate_fields, wave_node
 
 
 class CopernicusFieldTests(unittest.TestCase):
@@ -40,3 +40,10 @@ class CopernicusFieldTests(unittest.TestCase):
         attrs['uo']['units'] = 'knots'
         with self.assertRaises(ValueError):
             validate_fields(attrs, CURRENT_FIELDS)
+
+    def test_static_bathymetry_metadata_is_retained_without_route_interpretation(self):
+        attrs = {k: {'standard_name': v[0], 'units': v[1][0]} for k, v in BATHY_FIELDS.items()}
+        validate_fields(attrs, BATHY_FIELDS)
+        attrs['deptho']['standard_name'] = 'sea_floor_depth_below_sea_level'
+        with self.assertRaises(ValueError):
+            validate_fields(attrs, BATHY_FIELDS)
