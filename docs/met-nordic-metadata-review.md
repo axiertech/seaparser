@@ -204,3 +204,33 @@ scope=offline_audit_failed, routing_status=data_unavailable, issued_at=null
 och endast felklass, och avslutar med exit 1. Rådata och filvägar återges inte
 i felrapporten. Inget partiellt lyckat svar skrivs. Giltig fixturediagnostik
 är oförändrad och kvalificerar fortfarande ingen routing.
+
+## Koordinattalens utbredning mot marina fixtures
+
+Valfri --marine-directory komponerar befintlig MET-/vindgranskning med
+befintlig Copernicus-audit av de tre sparade NetCDF-filerna. Ingen ny decoder
+eller adapter införs. Före NetCDF-auditen begränsas varje fil till 512000 byte;
+manifeststruktur och samtliga råhashar kontrolleras. Koordinater läses från
+faktiska NetCDF, inte en payload med deklarerade källhashar.
+
+MET:s 56 producentnoder har numeriska extremer latitud 57.60443–57.669865 och
+longitud 11.558033–11.664452. De fyra våg- och fyra strömnoderna ligger inom
+dessa talintervall. Marina grid är inte identiska: våglatituder
+57.62477111816406/57.64143753051758, strömlatituder
+57.62488555908203/57.64155197143555; även longituderna skiljer sig.
+Ingen rumslig interpolation, datumbindning, måltransformation eller masköverföring
+görs. En lat/lon-box är inte den transformerade native-cellens utsträckning,
+och en nodjämförelse bevisar inte hela celler/segment eller att sfäriska och
+marina geografiska referenser är förenliga.
+
+Rapporten anger scope=coordinate_number_extents_not_spatial_coverage_proof,
+datum_equivalence_verified=false och whole_cell_coverage_verified=false.
+Dessa false betyder overifierat, inte bevisad oförenlighet. Alla nio källhashar
+binds separat; inga antagna gemensamma körningar. Utfärdande förblir null,
+data_unavailable och blockerare från båda befintliga auditer kvarstår.
+
+Kör offline:
+
+```bash
+.venv/bin/python -B -m scripts.audit_met_metadata fixtures/met-nordic-metadata --wind-sample fixtures/met-nordic-wind-sample --marine-directory fixtures/vinga-copernicus
+```

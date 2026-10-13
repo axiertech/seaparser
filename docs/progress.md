@@ -1809,3 +1809,19 @@ verifierade oförändrade. Loggar autonomy/logs/marine-support-
 {check,frontend}-20261013T2303Z.log. Nästa oberoende del: precisera faktiska
 marin-/vindgridens rumsliga bindning i offlinegranskningen; endast diagnostik,
 med explicit kvarstående datum-/geometri-/cellstöds- och run-spärrar.
+
+## 2026-10-13 23:06 UTC – separata grid och numeriska utbredningar
+
+Befintliga auditer komponerade offline för källbundna koordinattal: samtliga
+åtta marina noder är numeriskt inom MET-subsettens lat/lon-extremer, men
+våg/strömgriden är olika. Ingen datumlikvärdighet, cell-/segmenttäckning,
+masköverföring eller regridding antas. Nio hashreferenser redovisas separat;
+alla spärrar kvarstår. Fyra riktade tester passerar inklusive ändrade bytes,
+överbudget och fel manifest. Ingen ny hämtning/decoder/adapter.
+Full scripts/check.py passerar: 160+146=306 Python-tester, syntax, låsfiler,
+pip check och domängränser. Frontend run check passerar. Sammansatt audit
+kontrollerar nio källhashar; råfixtures och tidigare vind-review oförändrade.
+Loggar autonomy/logs/coordinate-extents-{check,frontend}-20261013T2307Z.log
+och coordinate-extents-audit-20261013T2307Z.json. Nästa oberoende del:
+precisera dokumenterade marine run-/utfärdandebegrepp från officiella
+produktmanualer, utan att intyga bindning till det historiska ARCO-uttaget.

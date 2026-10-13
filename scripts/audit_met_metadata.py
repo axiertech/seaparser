@@ -243,15 +243,64 @@ def audit_wind_sample(directory, metadata_directory):
             'routing_status': 'data_unavailable', 'blockers': metadata['blockers']}
 
 
+def audit_coordinate_extents(metadata_directory, wind_directory, marine_directory):
+    """Compare coordinate numbers only, without assuming compatible datums."""
+    from scripts.audit_copernicus import audit as audit_marine
+
+    metadata_directory, marine_directory = Path(metadata_directory), Path(marine_directory)
+    wind = audit_wind_sample(wind_directory, metadata_directory)
+    # Bound inputs before composing the existing NetCDF audit; no new decoder.
+    manifest = json.loads(bounded_read(marine_directory, 'manifest.json'))
+    files = manifest.get('files') if type(manifest) is dict else None
+    if (type(files) is not list or len(files) != 3
+            or any(type(entry) is not dict or type(entry.get('filename')) is not str
+                   or type(entry.get('sha256')) is not str
+                   or not re.fullmatch(r'[0-9a-f]{64}', entry['sha256']) for entry in files)
+            or {entry['filename'] for entry in files} != {'waves.nc', 'current.nc', 'wave-mask.nc'}):
+        raise ValueError('Complete marine source manifest required')
+    for filename in ('waves.nc', 'current.nc', 'wave-mask.nc'):
+        bounded_read(marine_directory, filename)
+    marine = audit_marine(marine_directory)
+    text = bounded_read(metadata_directory, 'vinga-latlon.txt').decode('utf-8')
+    latitude, longitude = (matrix(text, name, 8, 7) for name in ('latitude', 'longitude'))
+    latitudes = [float(value) for row in latitude for value in row]
+    longitudes = [float(value) for row in longitude for value in row]
+    bounds = {'min_latitude': min(latitudes), 'max_latitude': max(latitudes),
+              'min_longitude': min(longitudes), 'max_longitude': max(longitudes)}
+    products = {}
+    for name in ('waves', 'current'):
+        product = marine[name]
+        lat, lon = product['latitude'], product['longitude']
+        products[name] = {'latitude': lat, 'longitude': lon, 'node_count': len(lat) * len(lon),
+                          'coordinate_numbers_inside_met_extents':
+                              all(bounds['min_latitude'] <= value <= bounds['max_latitude'] for value in lat)
+                              and all(bounds['min_longitude'] <= value <= bounds['max_longitude'] for value in lon)}
+    return {'scope': 'coordinate_number_extents_not_spatial_coverage_proof',
+            'met_extents': bounds, 'marine_products': products,
+            'marine_grids_identical': (marine['waves']['latitude'] == marine['current']['latitude']
+                                       and marine['waves']['longitude'] == marine['current']['longitude']),
+            'met_source_hashes': wind['metadata_source_hashes'], 'wind_source_sha256': wind['sha256'],
+            'marine_source_hashes': marine['manifest_file_hashes'],
+            'datum_equivalence_verified': False, 'whole_cell_coverage_verified': False,
+            'issued_at': None, 'routing_status': 'data_unavailable',
+            'blockers': list(dict.fromkeys(wind['blockers'] + marine['blockers']))}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('directory', type=Path)
     parser.add_argument('--wind-sample', type=Path, help='Audit the frozen native sample; never qualify routing')
+    parser.add_argument('--marine-directory', type=Path, help='Compare coordinate numbers; requires --wind-sample')
     args = parser.parse_args()
+    if args.marine_directory and not args.wind_sample:
+        parser.error('--marine-directory requires --wind-sample')
     try:
         report = audit(args.directory)
         if args.wind_sample:
             report['wind_sample'] = audit_wind_sample(args.wind_sample, args.directory)
+        if args.marine_directory:
+            report['coordinate_extents'] = audit_coordinate_extents(args.directory, args.wind_sample,
+                                                                   args.marine_directory)
     except (OSError, UnicodeError, ValueError) as error:
         print(json.dumps({'schema': 1, 'scope': 'offline_audit_failed', 'routing_status': 'data_unavailable',
                           'issued_at': None, 'error_kind': type(error).__name__}))
