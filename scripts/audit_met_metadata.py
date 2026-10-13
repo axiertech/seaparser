@@ -13,6 +13,36 @@ MAX_BYTES = 512_000
 SOURCE_FILES = {'met-forecast.dds', 'met-forecast.das', 'met-time-coordinates.txt',
                 'native-axes.txt', 'vinga-latlon.txt'}
 PROJ4 = '+proj=lcc +lat_0=63 +lon_0=15 +lat_1=63 +lat_2=63 +no_defs +R=6.371e+06'
+TIME_UNITS = 'seconds since 1970-01-01 00:00:00 +00:00'
+
+
+def time_metadata(dds, das, ascii_text):
+    """Validate only the frozen DAP layout, not arbitrary DAP datasets."""
+    for text in (dds, ascii_text.split('---------------------------------------------')[0]):
+        if (re.findall(r'^    Float64 time[^\n]*$', text, re.M) != ['    Float64 time[time = 59];']
+                or len(re.findall(r'^    Float64 forecast_reference_time;$', text, re.M)) != 1):
+            raise ValueError('Reviewed DDS/ASCII time declarations required')
+    for name in ('wind_speed_10m', 'wind_direction_10m'):
+        declaration = f'Float32 {name}[time = 59][y = 2321][x = 1796];'
+        if dds.count(declaration) != 1:
+            raise ValueError('Reviewed wind DDS dimensions required')
+    for name in ('time', 'forecast_reference_time'):
+        blocks = re.findall(r'^    ' + name + r' \{\n([^{}]*)^    \}', das, re.M)
+        if len(blocks) != 1:
+            raise ValueError('Unambiguous DAS time attributes required')
+        for attribute, value in (('units', TIME_UNITS), ('standard_name', name)):
+            values = re.findall(r'^        String ' + attribute + r' "([^"]*)";$', blocks[0], re.M)
+            if values != [value]:
+                raise ValueError('Reviewed UTC time units and standard names required')
+        if re.search(r'\bcalendar\b', blocks[0]):
+            raise ValueError('Calendar attribute differs from reviewed absent metadata')
+    references = re.findall(r'^forecast_reference_time, ([^\n]+)$', ascii_text, re.M)
+    if len(references) != 1:
+        raise ValueError('Unambiguous ASCII model reference required')
+    reference = numbers(references[0], 1)[0]
+    if reference != Decimal(1791849600):
+        raise ValueError('Model reference differs from reviewed source value')
+    return reference
 
 
 def bounded_read(directory, filename):
@@ -68,6 +98,7 @@ def audit(directory):
         texts[entry['filename']] = data.decode('utf-8')
         hashes[entry['filename']] = digest
     das = texts['met-forecast.das']
+    reference = time_metadata(texts['met-forecast.dds'], das, texts['met-time-coordinates.txt'])
     if f'String proj4 "{PROJ4}";' not in das:
         raise ValueError('Only the reviewed native spherical LCC is supported')
     axes = {name: axis(texts['native-axes.txt'], name, count)
@@ -122,6 +153,8 @@ def audit(directory):
                             for name, values in axes.items()},
             'validity': {'count': len(times), 'first_epoch_seconds': str(times[0]),
                          'last_epoch_seconds': str(times[-1]), 'step_seconds': '3600'},
+            'model_reference': {'epoch_seconds': str(reference), 'units': TIME_UNITS,
+                                'calendar_attribute': None, 'meaning': 'model_reference_not_issuance'},
             'source_projection_vs_provider_latlon_max_spherical_distance_m': max(errors),
             'east_variation_across_rows_m': east_spread, 'north_variation_across_columns_m': north_spread,
             'separable_axis_max_error_lower_bound_m': max(east_spread, north_spread) / 2,

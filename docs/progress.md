@@ -1688,3 +1688,18 @@ met-offline-audit-20261013T2235Z.json. Körkommando i met-nordic-metadata-review
 Alla planning_blockers kvarstår, inga paket/nätverksanrop/publiceringsändringar.
 Nästa oberoende del: precisera tids-/referensdiagnostik och säkra felgränser i
 offlineaudit, eller negativa källstödstester enligt regriddingkontraktet.
+
+## 2026-10-13 22:40 UTC – MET-tidsstruktur offline
+
+Förstärkt den befintliga metadataauditens DDS/DAS/ASCII-kontroller, utan ny
+adapter eller datahämtning. Källans modellreferens redovisas separat från
+utfärdandetid. Fem nya negativa regressioner kontrollerar fel tidsenhet, DDS-
+dimensioner, saknad/dubbel skalär och ändrad källreferens även med nya hashar.
+Alla planning_blockers kvarstår; issued_at=null och data_unavailable.
+Verifiering: tio riktade tester och full scripts/check.py passerar
+(158+121=279 Python-tester, syntax, pip check, låsfiler och domängränser).
+Frontend run check passerar. Fem MET-källfiler och tre marina NetCDF-filer
+är oförändrade. Loggar: autonomy/logs/met-time-structure-check-20261013T2240Z.log
+och met-time-structure-frontend-20261013T2242Z.log; JSON-diagnostik
+met-time-structure-audit-20261013T2240Z.json. Nästa oberoende del:
+negativa källstödstester enligt regriddingkontraktet eller auditens felgränser.

@@ -143,3 +143,15 @@ JSON skrivs till stdout; fixtures ändras inte. Scope/routing_status anger allti
 diagnostik/data_unavailable och issued_at förblir null, oberoende av manifestflaggor.
 Funktionens granskade projektion och lokala origo är explicita, inte antagna
 utifrån en godtycklig fil. Andra projektioner kräver ny granskning.
+
+Offlineauditens tidskontroll binder nu DDS/ASCII-deklarationerna till 59 värden,
+vindfältens DDS-dimensioner till 59×2321×1796 och DAS-tidsattribut till de
+faktiskt observerade UTC-sekundenheterna och standardnamnen. Den kräver en
+entydig skalär ASCII-modellreferens och redovisar 1791849600 epoch-sekunder
+(2026-10-13 00:00 UTC) separat som model_reference_not_issuance. Frånvarande
+calendar-attribut redovisas som null; ingen kalender eller utfärdandetid fylls i.
+Detta är strikt verifiering av den frysta granskade layouten, inte en generell
+DAP-parser eller bevis att separata nätverkssvar härrör från samma körning.
+Hashar identifierar sparade svar; modellreferensen kvalificerar inte marin
+run-förenlighet. Ändrade tidsenheter, dimensioner, saknad/dubbel referens och
+ändrat referensvärde avvisas även med uppdaterat manifest.

@@ -1,4 +1,5 @@
 from hashlib import sha256
+from decimal import Decimal
 import json
 from pathlib import Path
 import shutil
@@ -42,6 +43,40 @@ class METMetadataAuditTests(unittest.TestCase):
                                184.738574436333, delta=0.000001)
         self.assertEqual(report['routing_status'], 'data_unavailable')
         self.assertIsNone(report['issued_at'])
+        self.assertEqual(Decimal(report['model_reference']['epoch_seconds']), Decimal(1791849600))
+        self.assertIsNone(report['model_reference']['calendar_attribute'])
+
+    def test_changed_time_units_are_rejected_even_with_updated_hash(self):
+        self.change_source('met-forecast.das', 'seconds since 1970', 'hours since 1970', refresh_hash=True)
+        with self.assertRaisesRegex(ValueError, 'UTC time units'):
+            audit(self.directory)
+
+    def test_dds_time_dimension_must_match_ascii(self):
+        self.change_source('met-forecast.dds', 'time[time = 59]', 'time[time = 58]', refresh_hash=True)
+        with self.assertRaisesRegex(ValueError, 'DDS/ASCII time declarations'):
+            audit(self.directory)
+
+    def test_wind_dimension_must_match_reviewed_native_axes(self):
+        self.change_source('met-forecast.dds', 'wind_speed_10m[time = 59][y = 2321][x = 1796]',
+                           'wind_speed_10m[time = 59][y = 2321][x = 1795]', refresh_hash=True)
+        with self.assertRaisesRegex(ValueError, 'wind DDS dimensions'):
+            audit(self.directory)
+
+    def test_missing_or_duplicate_reference_is_rejected(self):
+        for replacement in ('', 'forecast_reference_time, 1.7918496E9\nforecast_reference_time, 1.7918496E9'):
+            with self.subTest(replacement=replacement):
+                path = self.directory / 'met-time-coordinates.txt'
+                path.write_bytes((FIXTURE / path.name).read_bytes())
+                self.change_source(path.name, 'forecast_reference_time, 1.7918496E9', replacement,
+                                   refresh_hash=True)
+                with self.assertRaisesRegex(ValueError, 'ASCII model reference'):
+                    audit(self.directory)
+
+    def test_source_reference_cannot_be_replaced_by_manifest_date(self):
+        self.change_source('met-time-coordinates.txt', 'forecast_reference_time, 1.7918496E9',
+                           'forecast_reference_time, 1.791846E9', refresh_hash=True)
+        with self.assertRaisesRegex(ValueError, 'reviewed source value'):
+            audit(self.directory)
 
     def test_changed_bytes_are_rejected(self):
         self.change_source('native-axes.txt', '-896442.2', '-896441.2')
