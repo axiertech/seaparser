@@ -224,3 +224,21 @@ Nästa oberoende möjlighet: ett avgränsat metadata-only åtkomstförsök med
 sandboxundantag prövat av auto-review, eftersom tidigare fel var från den
 begränsade nätverksmiljön; ingen ny marin väderfil får hämtas. Vid avslag eller
 fortsatt källfel: dokumentera exakt resultat och fortsätt offlinegranskning.
+
+## 2026-10-13: MET-metadata nådd med godkänt sandboxundantag
+
+Granskat metadata-only försök gav tre faktiska MET-svar: DDS/DAS/tids-ASCII.
+Metadatafixture och granskning finns i fixtures/met-nordic-metadata och
+met-nordic-metadata-review.md. 1796×2321 Lambert-grid med sfärradie 6371000 m,
+59 timsteg och explicit modellreferens 2026-10-13 00Z återfunna. Ingen faktisk
+höjdkoordinat/cell_methods, regional cellgeometri eller utfärdande verifierade.
+Inga vindvärden eller nya marina data hämtade. Alla planning_blockers kvarstår.
+Nästa steg är begränsad native koordinatgranskning, inte vindadapter/routing.
+
+Övergripande metadataförsök slutade exit 124 vid 180 s-gränsen under Copernicus-
+steget. Ingen marin CSV eller report.json skapades; orsaken inom det steget är
+inte verifierad. MET:s tre lyckade svar bevarades och hash-/bytekontrollerades.
+Partiell arbetsrapport autonomy/met-source-partial-result-20261013T2205Z.json.
+Tolv metadata-probetester passerar; lokala dokumentlänkar kontrollerade.
+Tidigare kodcommit 080483b har 265 Python-tester och frontend check godkända.
+Ingen kod ändras i denna metadata-/dokumentationsleverans.

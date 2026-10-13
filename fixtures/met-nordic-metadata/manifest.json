@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "scope": "metadata_only",
+  "observed_at": "2026-10-13T22:03:23.858571+00:00",
+  "source": "MET Norway fixed Nordic forecast DAP metadata",
+  "files": [
+    {
+      "filename": "met-forecast.dds",
+      "url": "https://thredds.met.no/thredds/dodsC/metpparchive/2026/10/13/met_forecast_1_0km_nordic_20261013T00Z.nc.dds",
+      "bytes": 3687,
+      "sha256": "0f9def84356801e3578aef42cfb46cbc624de088a8d44951301fd8ca1f986c09"
+    },
+    {
+      "filename": "met-forecast.das",
+      "url": "https://thredds.met.no/thredds/dodsC/metpparchive/2026/10/13/met_forecast_1_0km_nordic_20261013T00Z.nc.das",
+      "bytes": 5524,
+      "sha256": "e5900e5e61f5c6101a7f39b41f6d43c04f3e43a35e5b829a0f95c40ac454a8df"
+    },
+    {
+      "filename": "met-time-coordinates.txt",
+      "url": "https://thredds.met.no/thredds/dodsC/metpparchive/2026/10/13/met_forecast_1_0km_nordic_20261013T00Z.nc.ascii?forecast_reference_time,time",
+      "bytes": 990,
+      "sha256": "8814dac572cc1b4b3218bf490db6ffee0f7e639d3c8b8baabae037a039d4302f"
+    }
+  ],
+  "forecast_reference_time": "2026-10-13T00:00:00Z",
+  "issued_at": null,
+  "time_units": "seconds since 1970-01-01 00:00:00 +00:00",
+  "calendar_attribute": null,
+  "valid_time_count": 59,
+  "first_time": "2026-10-13T00:00:00+00:00",
+  "last_time": "2026-10-15T10:00:00+00:00",
+  "routing_status": "data_unavailable",
+  "blockers": [
+    "regional_wind_not_imported",
+    "source_height_and_averaging_semantics_not_verified",
+    "native_grid_coverage_not_verified",
+    "model_issue_time_unverified",
+    "cross_product_model_run_compatibility_unverified"
+  ],
+  "attribution": "Norwegian Meteorological Institute, met.no",
+  "license_url": "https://www.met.no/en/free-meteorological-data/Licensing-and-crediting"
+}
