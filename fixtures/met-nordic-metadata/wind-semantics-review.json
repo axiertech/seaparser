@@ -1,0 +1,21 @@
+{
+  "status": "official_documentation_received",
+  "url": "https://raw.githubusercontent.com/wiki/metno/NWPdocs/MET-Nordic-dataset.md",
+  "observed_at": "2026-10-13T22:25:18.803075+00:00",
+  "bytes": 22554,
+  "sha256": "54fb01023b93f4740b93f11edc80fb604bf51b7ac74a29d43662ac672aca10d9",
+  "matched_variables": [
+    "wind_speed_10m",
+    "wind_direction_10m"
+  ],
+  "height_m": 10,
+  "averaging_seconds": 600,
+  "documented_direction": "from; zero north, 90 east",
+  "routing_status": "data_unavailable",
+  "scope": "documentation_review_not_import_certification",
+  "fixed_payload_das_sha256": "e5900e5e61f5c6101a7f39b41f6d43c04f3e43a35e5b829a0f95c40ac454a8df",
+  "time_window_alignment": null,
+  "height_reference": null,
+  "issued_at": null,
+  "source_document_not_archived": "Only digest and structured review retained; re-review if document changes"
+}

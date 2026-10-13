@@ -1638,3 +1638,20 @@ Nästa oberoende del: faktisk officiell MET-höjd-/medelperiodsemantik.
 Sexton metadata-probetester passerar; diff check passerar. Ingen kod ändrad i
 leveransen; föregående 02ff72a har 269 Python-tester/frontend check godkända.
 Logg autonomy/logs/marine-stage-tests-20261013T2223Z.log.
+
+## 2026-10-13: officiell MET-vindsemantik kontrollerad
+
+MET Nordic-dokumentation beskriver vindfälten vid 10 m som 600 s medelvärden
+med FRÅN-riktning norr=0°, öster=90°. Detta stämmer med befintlig DAS-identitet/
+enheter. Dokumenthash och DAS-hash binds i wind-semantics-review.json; hela
+artikeln kopieras inte. Medelfönstrets placering/höjdreferens förblir null.
+600 s medel är separat från källans 3600 s prognossteg och får inte bli byvind
+eller momentant timmax. Inga CF-bounds/height-attribut fabriceras.
+Alla planning_blockers kvarstår; ingen vindimport/adapter eller nya väderdata.
+Detaljer: met-nordic-metadata-review.md. Nästa del: regriddingens beviskontrakt.
+
+Verifiering: 16 prognosdatatester och 9 Copernicus-adaptertester passerar.
+Strukturerad semantik, dokument-/DAS-/granskningshashbindning, åtta källhashar
+och dokumentlänkar kontrollerade; diff check passerar. Logg:
+autonomy/logs/met-semantics-tests-20261013T2228Z.log. Ingen kodändring;
+senaste kodcommit 02ff72a har 269 Python-tester/frontend check godkända.

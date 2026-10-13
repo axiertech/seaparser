@@ -65,5 +65,10 @@
     "filename": "geometry-review.json",
     "sha256": "e133b64ad1fada1ebb1cf252eed7c9f9d9094c4d403eba7516ec23c4450d7a55",
     "status": "diagnostic_only_not_routing_qualified"
+  },
+  "wind_semantics_review": {
+    "filename": "wind-semantics-review.json",
+    "sha256": "3f7dab144f771b76105f1531956056150e4a639144f428c0835c03f11c2d7c10",
+    "status": "documentation_only_not_import_certification"
   }
 }

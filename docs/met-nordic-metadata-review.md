@@ -96,3 +96,33 @@ behandlas som motorns separerbara lokala grid. En framtida granskad native-grid-
 eller regriddingmetod krävs, med datastöd och konservativa hårdgränser bevarade.
 Ingen sådan metod implementeras nu. Höjd/medelperiod, vindmask, utfärdande,
 marina run och förenlighetsregel kvarstår också. data_unavailable oförändrat.
+
+## Officiell höjd-/medelperiodsgranskning
+
+Den [officiella MET Nordic-sidan](https://github.com/metno/NWPdocs/wiki/MET-Nordic-dataset#parameters)
+kontrollerades mot sparad DAS. Leverantören beskriver båda vindfälten vid 10 m
+med 10-minutersmedel; riktningen anger varifrån vinden kommer med norr=0° och
+öster=90°. Dokumenterade enheter är m/s respektive grader. Detta stöder
+normalisering till MOT-komponenter före interpolation. Ingen faktisk vindimport görs.
+
+[wind-semantics-review.json](../fixtures/met-nordic-metadata/wind-semantics-review.json)
+binder den strukturerade granskningen till dokumentets SHA-256 och aktuell DAS-hash.
+Den offentliga markdowntexten var 22554 bytes vid läsningen; endast digest och
+strukturerad granskning sparas, inte hela dokumentet. Sidan är föränderlig och
+hashen ersätter inte en framtida kontroll när källmetoden eller dokumentet ändras.
+
+DAS saknar fortfarande höjdkoordinat och cell_methods. Dokumentationsstöd är
+separat från attribut i just payloaden. Det lästa underlaget anger inte explicit
+medelfönstrets placering före/efter giltighetstiden eller höjdreferensen i ett
+verifierbart koordinatfält. Dessa uppgifter förblir null i granskningen. Inga
+tidsbounds eller vertikala metadata fabriceras från text eller variabelnamn.
+
+600 s medelperiod är inte 600 s prognossteg: befintlig tidskoordinat har 3600 s
+mellan noder. Medelvind får inte omtolkas som momentan vind, byvind eller maximalt
+värde över timintervallet. Produktens prognossteg och mät-/medelsemantik ska
+bevaras separat i en framtida källspecifik normalisering.
+
+Alla planeringsblockerare kvarstår, även i MET-manifestet. Denna semantikgranskning
+certifierar inte maskat datastöd, lokal regridding, utfärdandetid eller kompatibla
+marina körningar. Nästa begränsade oberoende del är ett beviskontrakt för eventuell
+regridding mot motorns hårdgränser; metod och tolerans är ännu inte valda.
