@@ -1387,3 +1387,20 @@ Frontend test: första körning exit 1; socket.socket() gav PermissionError i
 sandboxen. Godkänt sandboxundantag för befintliga lokala tester gav exit 0,
 sex frontendtester passerar inklusive syntetisk och Vinga API/karta/GPX.
 Loggar: autonomy/logs/met-envelope-{check,frontend,frontend-recheck,fixture}-20261013T2143Z.*.
+
+## 2026-10-13 21:47 UTC: granskningskontrakt för run-proveniens
+
+Dokumenterat forecast-run-provenance.md med källbunden evidens, åtskilda tidsbegrepp,
+historisk ARCO-urvalsbindning, blandade run/revisioner, regional vindgranskning
+och negativ acceptansmatris. Design endast: ingen certifierare, adapter eller
+ändrad planeringsspärr. Inga nya källfakta påstås verifierade offline och inga
+numeriska förenlighetströsklar antas. Backlog/blockerardokument länkar kontraktet.
+
+Verifiering: nio Copernicus-adaptertester och åtta metadata-probetester passerar;
+dokumentets interna länkar och alla tre marina SHA-256 verifierade; diff check
+passerar. Dokumentationsändring kräver inte ny full frontendkörning; föregående
+kodleverans f589b8b har 257 Python- och sex frontendtester godkända lokalt.
+Push/CI för den leveransen fortsatt blockerade av SSH-systemkonfiguration och
+Unknown tool från GitHub-connectorn; denna dokumentation är oberoende arbete.
+Nästa steg: gå igenom befintlig offlineaudit mot kontraktets evidensfält och
+redovisa exakt vilken evidens som saknas, utan ny datatransport eller hävda spärrar.

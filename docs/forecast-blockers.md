@@ -126,3 +126,5 @@ Frontend test: första körning exit 1; socket.socket() gav PermissionError i
 sandboxen. Godkänt sandboxundantag för befintliga lokala tester gav exit 0,
 sex frontendtester passerar inklusive syntetisk och Vinga API/karta/GPX.
 Loggar: autonomy/logs/met-envelope-{check,frontend,frontend-recheck,fixture}-20261013T2143Z.*.
+
+Offline granskningskontrakt och acceptansmatris: [forecast-run-provenance.md](forecast-run-provenance.md). Design endast; ingen run-certifiering eller hävd spärr.

@@ -35,3 +35,5 @@ OpenWaters produktspecifika kandidatgranskning: [openwaters-review.md](openwater
 Inga konton, token eller betalda tjänster skapas innan särskilt beslut.
 
 Aktuell källgranskning och datagränser: [forecast-sources.md](forecast-sources.md).
+
+Run-proveniens: [granskningskontrakt](forecast-run-provenance.md) dokumenterat offline. Källbunden evidens, historisk ARCO-bindning och förenlighetsregel återstår; designen certifierar inga befintliga prognoser.
