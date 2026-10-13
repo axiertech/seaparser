@@ -1,6 +1,6 @@
 import copy
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 from pathlib import Path
@@ -12,6 +12,9 @@ from prototype.forecast_data import DataUnavailable, ForecastDataset, GridProduc
 from prototype.calculation import evaluate_conditions
 from prototype.model import ConstantBoat, Vector
 from prototype.routes import RouteCandidate, compare_routes
+from prototype.departures import compare_departures
+from prototype.presentation import export_departure_comparison
+from prototype.weather import WeatherPolicy
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -166,6 +169,55 @@ class CopernicusAdapterTests(unittest.TestCase):
                                   product.metadata.planning_blockers)
                     self.assertEqual(product.metadata.version,
                                      FIXTURE['products'][product.metadata.product]['version'])
+
+    def test_departure_objectives_and_export_preserve_marine_provenance_rejection(self):
+        for name in ('current', 'waves'):
+            self.payload['products'][name].update(issued_at='2026-10-13T11:00:00Z',
+                                                   run_compatibility_verified=True, planning_blockers=[])
+        current, waves = CopernicusMarineAdapter().normalize(self.payload).products
+        time = current.times[0]
+        # Synthetic wind isolates marine provenance; it has no marine source identity.
+        wm = replace(current.metadata, product='wind', dataset_id='synthetic-negative-test-wind',
+                     source='synthetic-negative-test', issued_at=time-timedelta(hours=1),
+                     source_sha256=None, source_url=None, license_url=None, retrieved_at=None,
+                     planning_blockers=())
+        values = tuple(tuple(tuple((0., 5.) for _ in current.east_m)
+                             for _ in current.north_m) for _ in current.times)
+        wind = GridProduct(wm, current.east_m, current.north_m, current.times, values)
+        snapshot = ForecastDataset('negative-test-combined', '1', (wind, current, waves))
+        position = Vector(sum(current.east_m)/2, sum(current.north_m)/2)
+        routes = (RouteCandidate('direct'), RouteCandidate('via', (position + Vector(5, 1),)))
+        for policy in (None, ForecastPolicy(7200)):
+            for criterion in (None, 'shortest_travel_time', 'earliest_arrival'):
+                with self.subTest(policy=policy, criterion=criterion):
+                    result = compare_departures(snapshot, (time, time+timedelta(hours=1)),
+                                                position+Vector(10, 0), routes, position=position,
+                                                clock=FixedClock(time), forecast_policy=policy,
+                                                weather_policy=WeatherPolicy(20, 10),
+                                                selection_criterion=criterion, step_seconds=1,
+                                                max_seconds=30, max_departures=2, max_candidates=2)
+                    exported = json.loads(export_departure_comparison(result))
+                    self.assertEqual(exported['status'], 'no_feasible_departure')
+                    for key in ('selected', 'shortest_travel', 'earliest_arrival'):
+                        self.assertIsNone(exported[key])
+                    self.assertEqual(len(exported['departures']), 2)
+                    for row in exported['departures']:
+                        report = row['routes']
+                        self.assertIsNone(report['fastest_candidate'])
+                        self.assertIsNone(report['comfortable_candidate'])
+                        self.assertEqual(len(report['candidates']), 2)
+                        for candidate in report['candidates']:
+                            self.assertEqual(candidate['status'], 'data_unavailable')
+                            self.assertIn('cross_product_model_run_compatibility_unverified', candidate['reason'])
+                            self.assertIn('model_issue_time_unverified', candidate['reason'])
+                            self.assertTrue(all(not leg['steps'] for leg in candidate['legs']))
+                        marine = [m for m in report['forecast_products'] if m['product'] != 'wind']
+                        self.assertEqual(len(marine), 2)
+                        for metadata in marine:
+                            self.assertIsNone(metadata['issued_at'])
+                            self.assertIn('model_issue_time_unverified', metadata['planning_blockers'])
+                            self.assertEqual(metadata['source_sha256'],
+                                             FIXTURE['products'][metadata['product']]['source_sha256'])
 
     def test_wave_current_validity_must_match(self):
         self.payload['products']['waves']['times'][-1] = '2026-10-13T17:00:00Z'

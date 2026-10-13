@@ -1781,3 +1781,17 @@ verifierade oförändrade. Loggar autonomy/logs/marine-issuance-gate-
 {check,frontend}-20261013T2257Z.log. Nästa oberoende del: verifiera att
 båda ruttmål och alla avgångar håller samma proveniensspärr efter import,
 med syntetisk vind enbart i negativa tester för att isolera marin proveniens.
+
+## 2026-10-13 22:59 UTC – marina spärrar genom avgång och export
+
+Ny integrationsregression för två avgångar/två rutter, komfortpolicy, valfri
+färskhetspolicy och tre avgångsurval. Alla 24 kandidatbedömningar avvisas med
+run-/utfärdandeorsak; inga tids-/komfortval eller accepterade steg. JSON behåller
+issued_at=null, blockerare och marina källhashar. Syntetisk vind är separat
+testidentitet. Elva riktade adaptertester passerar. Ingen produktionskod ändrad.
+Full scripts/check.py passerar: 160+139=299 Python-tester, syntax, låsfiler,
+pip check och domängränser. Frontend run check passerar. Nio källhashar
+verifierade oförändrade. Loggar autonomy/logs/marine-departure-gate-
+{check,frontend}-20261013T2300Z.log. Nästa oberoende del: bevara och
+regressionstesta saknat/maskat komponentstöd i befintlig marin adapter;
+produktmasker hålls separata och verklig routing förblir spärrad.

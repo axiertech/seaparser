@@ -149,3 +149,13 @@ Befintligt test med tillagd syntetisk vind verifierar fortfarande att route-,
 segment- och villkorskontroller avvisar run-förenlighet även utan färskhetspolicy.
 Färskhetspolicy avvisar den saknade utfärdandetiden separat. Inga verkliga
 prognosdatum fylls i och inget bevisformat eller ny adapter införs.
+
+Avgångs-/exportregressionen prövar nu två avgångar och två kompletta rutter
+med komfortpolicy, med/utan färskhetspolicy samt inget urval, kortast restid
+och tidigast ankomst. Syntetisk testvind har separat märkt identitet utan
+marina källhashar. Alla 24 kandidatbedömningar får data_unavailable med
+både run- och utfärdandeorsak; tids-/komfortalternativ och globala urval
+förblir null. Exporten behåller båda marina issued_at=null, planning_blockers
+och faktisk uttagshash per produkt. Inga accepterade steg exporteras.
+Detta verifierar avvisning genom befintlig motor/presentation, inte proveniens
+eller väderkvalitet i det verkliga underlaget.
