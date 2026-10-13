@@ -1795,3 +1795,17 @@ verifierade oförändrade. Loggar autonomy/logs/marine-departure-gate-
 {check,frontend}-20261013T2300Z.log. Nästa oberoende del: bevara och
 regressionstesta saknat/maskat komponentstöd i befintlig marin adapter;
 produktmasker hålls separata och verklig routing förblir spärrad.
+
+## 2026-10-13 23:02 UTC – marina stödhörn och produktmasker
+
+Tre nya negativa adapterregressioner prövar alla fem dynamiska komponenters
+saknade stödhörn samt vågmaskens land/okända värden. Interpolation avvisas
+utan nollersättning; den andra produktens värden bevaras. Vågmask påverkar
+inte strömvärden och kvalificerar inte strömproveniens. Fjorton riktade tester
+passerar. Ingen produktionskod eller råfixture ändrad; alla spärrar kvarstår.
+Full scripts/check.py passerar: 160+142=302 Python-tester, syntax, låsfiler,
+pip check och domängränser. Frontend run check passerar. Nio källhashar
+verifierade oförändrade. Loggar autonomy/logs/marine-support-
+{check,frontend}-20261013T2303Z.log. Nästa oberoende del: precisera faktiska
+marin-/vindgridens rumsliga bindning i offlinegranskningen; endast diagnostik,
+med explicit kvarstående datum-/geometri-/cellstöds- och run-spärrar.

@@ -159,3 +159,17 @@ förblir null. Exporten behåller båda marina issued_at=null, planning_blockers
 och faktisk uttagshash per produkt. Inga accepterade steg exporteras.
 Detta verifierar avvisning genom befintlig motor/presentation, inte proveniens
 eller väderkvalitet i det verkliga underlaget.
+
+## Separata produktmasker och saknat komponentstöd
+
+Negativa adapterreferenser prövar saknad uo respektive vo och saknad VHM0,
+VTM02 respektive VMDR i ett tids-/cellstencil med icke-noll vikter. Hela noden
+förblir None och interpolation över stödet avvisas som datalucka; ingen nolla
+eller komponent från annan produkt ersätter den saknade uppgiften. Den andra
+marina produktens frysta värden är oförändrade. Vågmask 0 eller null gör den
+berörda vågnoden saknad vid alla tider, medan strömvärden/interpolation är
+oförändrade. Strömmens proveniens förblir okänd och spärrad.
+
+Dessa är explicit modifierade kopior för negativa testfall. De bevisar inte
+faktisk strömmask, navigerbarhet eller regional täckning i originaluttaget.
+Råfixtures/hashar och båda planeringsspärrarna kvarstår oförändrade.

@@ -115,6 +115,46 @@ class CopernicusAdapterTests(unittest.TestCase):
         self.payload['products']['static']['data']['mask'][0][0] = 0
         self.assertEqual(self.snapshot.products[0].values[0][0][0], before)
 
+    def test_missing_current_component_invalidates_stencil_without_wave_mask_substitution(self):
+        for component in ('uo', 'vo'):
+            with self.subTest(component=component):
+                payload = copy.deepcopy(FIXTURE)
+                payload['products']['current']['data'][component][1][0][0] = None
+                current, waves = CopernicusMarineAdapter().normalize(payload).products
+                self.assertIsNone(current.values[1][0][0])
+                self.assertEqual(waves.values, self.snapshot.products[1].values)
+                position = Vector(sum(current.east_m)/2, sum(current.north_m)/2)
+                with self.assertRaisesRegex(DataUnavailable, 'Datalucka'):
+                    current.interpolate(position, current.times[0]+timedelta(minutes=30))
+                self.assertIn('model_issue_time_unverified', current.metadata.planning_blockers)
+
+    def test_each_missing_wave_component_preserves_unknown_stencil(self):
+        for component in ('VHM0', 'VTM02', 'VMDR'):
+            with self.subTest(component=component):
+                payload = copy.deepcopy(FIXTURE)
+                payload['products']['waves']['data'][component][1][0][0] = None
+                current, waves = CopernicusMarineAdapter().normalize(payload).products
+                self.assertIsNone(waves.values[1][0][0])
+                self.assertEqual(current.values, self.snapshot.products[0].values)
+                position = Vector(sum(waves.east_m)/2, sum(waves.north_m)/2)
+                with self.assertRaisesRegex(DataUnavailable, 'Datalucka'):
+                    waves.interpolate(position, waves.times[0]+timedelta(minutes=30))
+
+    def test_wave_static_mask_never_masks_or_certifies_current(self):
+        for mask in (0, None):
+            with self.subTest(mask=mask):
+                payload = copy.deepcopy(FIXTURE)
+                payload['products']['static']['data']['mask'][0][0] = mask
+                current, waves = CopernicusMarineAdapter().normalize(payload).products
+                self.assertEqual(current.values, self.snapshot.products[0].values)
+                self.assertTrue(all(plane[0][0] is None for plane in waves.values))
+                position = Vector(sum(current.east_m)/2, sum(current.north_m)/2)
+                self.assertEqual(current.interpolate(position, current.times[0]),
+                                 self.snapshot.products[0].interpolate(position, current.times[0]))
+                self.assertIsNone(current.metadata.issued_at)
+                self.assertIn('cross_product_model_run_compatibility_unverified',
+                              current.metadata.planning_blockers)
+
     def test_dates_and_payload_flags_do_not_certify_run_compatibility(self):
         for name in ('current', 'waves'):
             self.payload['products'][name]['issued_at'] = '2026-10-13T11:00:00Z'
