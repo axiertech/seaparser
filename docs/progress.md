@@ -1177,3 +1177,29 @@ Uppdaterat `docs/forecast-sources.md` med dessa källvillkor och kvarstående st
 Nästa konkreta steg: verifiera ett åtkomligt native forecast-grid med giltig
 köridentitet, wet mask, wave period och strömdjup; därefter mappa till befintlig
 ForecastDataset och låta befintlig täcknings-/vädercertifiering avvisa luckor.
+
+## 2026-10-13: Copernicus-dataförberedelse och autentiseringsblockerare
+
+Aktiv branch `development/real-map-data`, startcommit `593317e`.
+Copernicus-katalogen verifierad mot officiella sidor: vågprodukt
+`BALTICSEA_ANALYSISFORECAST_WAV_003_010` / dataset
+`cmems_mod_bal_wav_anfc_PT1H-i` (DOI `10.48670/moi-00011`); fysikprodukt
+`BALTICSEA_ANALYSISFORECAST_PHY_003_006` / dataset
+`cmems_mod_bal_phy_anfc_PT1H-i` (DOI `10.48670/moi-00010`). Vinga täcks av
+produktområdena; katalogen anger 1 nm, timvisa 00Z/12Z forecast, vågperiod,
+mask/batymetri i vågprodukten och 56 vertikala strömnivåer i fysikprodukten.
+Faktiska variabelnamn/uniter, validity/run-förenlighet, våg-Tm02 och maskvärden
+har inte verifierats i en hämtad fil.
+
+Avgränsad hämtning förberedd till 11.58–11.63°E, 57.62–57.65°N,
+2026-10-13 12–16 UTC. Copernicus L3 NRT vind är daglig satellitobservation,
+inte framtida vindprognos; full verklig rutt kräver separat forecast-wind-grid.
+MET:s punktvind bevisar inte rumslig täckning. Kvarvarande luckor: gemensam
+wet mask/tidskörning, värden/enheter/strömdjup samt användbar vindprognos.
+
+Autentiseringssteg är dokumenterat i `docs/forecast-sources.md`: Toolbox 2.5.0
+som seaparser, inloggning i dold interaktiv SSH-prompt och credentials i
+`/home/web/seaparser/.copernicusmarine-credentials` med läge 0600. Ingen credential
+har lästs eller skapats. Sandboxens DNS stoppar PyPI/Copernicus-nedladdning;
+Toolbox 2.5.0 kunde därför inte installeras, och dataset, adapter och rutttester
+kan inte verifieras förrän autentisering och datafiler är åtkomliga.

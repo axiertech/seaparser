@@ -75,6 +75,84 @@ inloggning. Ingen Copernicus/CDSE-inloggning eller nedladdning har gjorts;
 produktens aktuella licens, dataset och metadata behöver fortfarande granskas
 före import.
 
+## Copernicus Marine-förhandsgranskning 2026-10-13
+
+Aktuell katalog visar två aktiva forecast-produkter för Östersjön/Kattegatt/
+Skagerrak. Vinga ligger inom bådas publicerade område. Vågproduktens DOI är
+`10.48670/moi-00011`, produkt-ID
+`BALTICSEA_ANALYSISFORECAST_WAV_003_010` och timdataset
+`cmems_mod_bal_wav_anfc_PT1H-i`. Katalogen anger WAM 4.7, cirka 1 nautisk mil
+(2 km), timvis data och två körningar per dygn: 00Z med 10 dygn respektive 12Z
+med 6 dygn. Variablerna omfattar signifikant våghöjd, period och riktning för
+total sjö/vindsjö/svall samt binär havs/landmask och batymetri. Exakt NetCDF-
+variabelnamn, enheter, giltighetskoordinater och datasetversion ska bekräftas i
+datasetmetadata och hämtad fil före adaptering.
+
+Fysikproduktens DOI är `10.48670/moi-00010`, produkt-ID
+`BALTICSEA_ANALYSISFORECAST_PHY_003_006` och timdataset
+`cmems_mod_bal_phy_anfc_PT1H-i`. Katalogen anger NEMO 4.2.1, cirka 1 nautisk
+mile, 56 vertikala nivåer, horisontell ström och 00Z/12Z forecast med 10/6
+dygns horisont. Katalogen bekräftar nivåer men inte djupkoordinatens tecken,
+referens, ytligaste nivå, units eller om giltighet/runmetadata matchar vågfilen;
+detta måste inspekteras i faktisk fil. Ström på ytlagret är inte en verifierad
+modell av ström vid båtens hela djupgående.
+
+Avgränsat första uttag: båda timdataseten, lon 11.58–11.63°E, lat
+57.62–57.65°N, giltighet 2026-10-13 12:00–16:00 UTC. Detta är en liten
+4-timmars Vinga-ruta för schema-/datakontroll, inte en verifierad helruttprognos.
+Ändra inte tidsfönstret för att dölja att det saknas stöd; använd metadata för
+att välja en gemensam framtida period om detta uttag inte längre är tillgängligt.
+Behåll den ursprungliga NetCDF-filen och dess SHA-256. Kontrollera initiering/run,
+valid time, CRS/koordinater, geometri, enheter, fill values, havs-/landmask,
+vågperiod Tm02, ytligaste strömnivå och båda produkternas samtidiga tidsstöd.
+
+Copernicus har också Baltic L3 NRT-satellitvind (`WIND_BAL_PHY_HR_L3_NRT_012_102`,
+DOI `10.48670/mds-00332`): dagliga 1 km havsytobservationer med oregelbunden
+uppdatering. Katalogens senaste giltighet var 29 september 2026. Det är inte en
+vindprognos och får inte användas som framtida ruttväder. Global scatterometer-
+vind är också observationer (daglig, cirka 0.125°), inte forecast. Någon
+Copernicus atmosfärisk vindprognos för rutten har inte verifierats. MET:s
+Locationforecast ger punktvind; MET:s råa nordiska grid är en kandidat, men den
+tidigare länkade THREDDS-katalogvägen gav 404. Därför kan inte en fullständig
+verklig vind/våg/ström-rutt ännu godkännas.
+
+Kommersiell användning är enligt Copernicus hjälpdokumentation avgiftsfri med
+föreskriven attribution/citering och produkt-DOI. Attribution vid användning:
+`Generated using E.U. Copernicus Marine Service Information; DOI: 10.48670/moi-00010, 10.48670/moi-00011`.
+Kontrollera produktsidan/licensen före vidare distribution.
+
+### Privat autentisering på servern
+
+Copernicus Marine Toolbox 2.5.0 är senaste stabila versionen enligt officiella
+PyPI 2026-10-13. För att skapa dess standardcredentials ska ägaren logga in på
+servern som Linux-användaren `seaparser` och köra interaktivt:
+
+```bash
+cd /tmp/seaparser-real-map-data
+.venv/bin/python -m pip install --index-url https://pypi.org/simple 'copernicusmarine==2.5.0'
+umask 077
+.venv/bin/copernicusmarine login
+chmod 600 /home/web/seaparser/.copernicusmarine-credentials
+```
+
+Skriv användarnamn/e-post och lösenord endast vid Toolboxens interaktiva
+prompt i den privata SSH-terminalen; lösenordet ekas inte. Det hamnar då i
+`/home/web/seaparser/.copernicusmarine-credentials`, inte i shellhistorik,
+miljövariabler eller Git. Skicka aldrig värden eller terminaldump hit. Kontrollera
+inloggningen utan att visa konfigurationen:
+
+```bash
+.venv/bin/copernicusmarine login --check-credentials-valid
+```
+
+Nedladdningen kräver även DNS/HTTPS från servern till Copernicus auth- och
+datatjänsterna. Aktuell agent-sandbox kan inte lösa externa DNS-namn, så toolbox,
+inloggning och filhämtning har ännu inte körts där. När autentiseringen finns kan
+subset hämtas från ovanstående dataset och bounding box med `copernicusmarine
+subset`; välj endast den gemensamma giltiga tiden i dessa fyra timmar. Adapter,
+datavalidering och ruttutvärdering ska implementeras först efter granskning av de
+faktiska NetCDF-metadata och värdena.
+
 ## Kandidatbegränsning
 
 `.venv/bin/python -B -m scripts.audit_candidates` jämför 2 och 8 kandidater
