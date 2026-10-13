@@ -364,3 +364,21 @@ Verifiering: två exakta Fraction-motexempel, 11 segmentvädertester och 8 datas
 segmenttester passerar. Dokumentlänkar och diff check kontrollerade. Logg:
 autonomy/logs/regridding-proof-tests-20261013T2231Z.log. Ingen kodändring;
 senaste kodcommit 02ff72a har 269 Python-tester/frontend check godkända.
+
+## 2026-10-13: reproducerbar MET-offlineaudit utan ny adapter
+
+scripts.audit_met_metadata återanvänder granskad femfilsfixture, begränsar
+läsning, verifierar hash/bytes och exakt Decimal-axel-/tidsstöd samt subsetkartor.
+Geometrin räknas om mot 56 producentnoder; rapport innehåller native axlar,
+giltighet och lokalt separerbarhetsfel. Ingen HTTP, vindimport eller ny domänmodell.
+Manifestflaggor/datum kan inte ge routinggodkännande; issued_at förblir null.
+
+Fem nya regressioner passerar: oberoende koordinatreferens, hashfel, felaktigt
+axelsteg trots ny hash, annan projektion och falska routing/datumflaggor.
+Full scripts/check.py passerar: 158+116=274 Python-tester, syntax, låsfiler,
+pip check/domängränser. Frontend run check passerar. Åtta källhashar oförändrade.
+Loggar autonomy/logs/met-offline-{check,targeted}-20261013T2236Z.log och
+met-offline-audit-20261013T2235Z.json. Körkommando i met-nordic-metadata-review.md.
+Alla planning_blockers kvarstår, inga paket/nätverksanrop/publiceringsändringar.
+Nästa oberoende del: precisera tids-/referensdiagnostik och säkra felgränser i
+offlineaudit, eller negativa källstödstester enligt regriddingkontraktet.

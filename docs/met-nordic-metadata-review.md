@@ -126,3 +126,20 @@ Alla planeringsblockerare kvarstår, även i MET-manifestet. Denna semantikgrans
 certifierar inte maskat datastöd, lokal regridding, utfärdandetid eller kompatibla
 marina körningar. Nästa begränsade oberoende del är ett beviskontrakt för eventuell
 regridding mot motorns hårdgränser; metod och tolerans är ännu inte valda.
+
+## Reproducerbar offlineaudit
+
+Kör utan nätverk eller nya nedladdningar:
+
+```bash
+.venv/bin/python -B -m scripts.audit_met_metadata fixtures/met-nordic-metadata
+```
+
+Verktyget läser endast det granskade femfilsformatet, med 512 KB-budget per fil,
+kontrollerar hash/byteantal, Decimal-axelsteg, tidssteg och subsetkartornas bindning
+till native axlar. Det reproducerar jämförelsen mot de 56 producentnoderna och
+lokal separerbarhetsdiagnostik. Det är ingen generell DAP-parser eller vindadapter.
+JSON skrivs till stdout; fixtures ändras inte. Scope/routing_status anger alltid
+diagnostik/data_unavailable och issued_at förblir null, oberoende av manifestflaggor.
+Funktionens granskade projektion och lokala origo är explicita, inte antagna
+utifrån en godtycklig fil. Andra projektioner kräver ny granskning.

@@ -1,0 +1,142 @@
+"""Offline audit of the reviewed frozen MET DAP metadata, never a wind adapter."""
+import argparse
+from decimal import Decimal
+from hashlib import sha256
+import json
+from math import isfinite
+from pathlib import Path
+import re
+
+from pyproj import CRS, Transformer
+
+MAX_BYTES = 512_000
+SOURCE_FILES = {'met-forecast.dds', 'met-forecast.das', 'met-time-coordinates.txt',
+                'native-axes.txt', 'vinga-latlon.txt'}
+PROJ4 = '+proj=lcc +lat_0=63 +lon_0=15 +lat_1=63 +lat_2=63 +no_defs +R=6.371e+06'
+
+
+def bounded_read(directory, filename):
+    path = directory / filename
+    with path.open('rb') as handle:
+        data = handle.read(MAX_BYTES + 1)
+    if len(data) > MAX_BYTES:
+        raise ValueError('Metadata byte budget exceeded')
+    return data
+
+
+def numbers(line, count):
+    values = tuple(Decimal(value.strip()) for value in line.split(','))
+    if len(values) != count or not all(value.is_finite() for value in values):
+        raise ValueError('Finite coordinate values and exact dimensions required')
+    return values
+
+
+def axis(text, name, count):
+    matches = re.findall(r'^' + re.escape(name) + r'\[' + str(count) + r'\]\n([^\n]+)', text, re.M)
+    if len(matches) != 1:
+        raise ValueError('Unambiguous reviewed ASCII axis required')
+    return numbers(matches[0], count)
+
+
+def matrix(text, name, rows, columns):
+    matches = re.findall(r'^' + name + r'\.' + name + r'\[' + str(rows) + r'\]\[' +
+                         str(columns) + r'\]\n(.*?)\n\n', text, re.M | re.S)
+    if len(matches) != 1 or len(matches[0].splitlines()) != rows:
+        raise ValueError('Exact reviewed ASCII matrix required')
+    result = []
+    for index, line in enumerate(matches[0].splitlines()):
+        label, separator, values = line.partition(',')
+        if not separator or label != f'[{index}]':
+            raise ValueError('Ordered matrix rows required')
+        result.append(numbers(values, columns))
+    return result
+
+
+def audit(directory):
+    directory = Path(directory)
+    manifest = json.loads(bounded_read(directory, 'manifest.json'))
+    entries = manifest.get('files', [])
+    if (manifest.get('schema') != 1 or len(entries) != len(SOURCE_FILES)
+            or {entry['filename'] for entry in entries} != SOURCE_FILES):
+        raise ValueError('Complete reviewed five-file metadata manifest required')
+    texts, hashes = {}, {}
+    for entry in entries:
+        data = bounded_read(directory, entry['filename'])
+        digest = sha256(data).hexdigest()
+        if digest != entry['sha256'] or len(data) != entry['bytes']:
+            raise ValueError('Metadata hash or byte count mismatch')
+        texts[entry['filename']] = data.decode('utf-8')
+        hashes[entry['filename']] = digest
+    das = texts['met-forecast.das']
+    if f'String proj4 "{PROJ4}";' not in das:
+        raise ValueError('Only the reviewed native spherical LCC is supported')
+    axes = {name: axis(texts['native-axes.txt'], name, count)
+            for name, count in (('x', 1796), ('y', 2321))}
+    for values in axes.values():
+        if any(b - a != 1000 for a, b in zip(values, values[1:])):
+            raise ValueError('Exact 1000 metre increasing native axis required')
+    times = axis(texts['met-time-coordinates.txt'], 'time', 59)
+    if (times[0] != 1791849600 or times[-1] != 1792058400
+            or any(b - a != 3600 for a, b in zip(times, times[1:]))):
+        raise ValueError('Reviewed exact hourly validity required')
+    subset = manifest['coordinate_subset']
+    indices = [subset[key] for key in ('x_first', 'x_last', 'y_first', 'y_last')]
+    if any(type(value) is not int for value in indices):
+        raise ValueError('Integer source indices required')
+    xf, xl, yf, yl = indices
+    if not (0 <= xf < xl < len(axes['x']) and 0 <= yf < yl < len(axes['y'])):
+        raise ValueError('Subset indices outside native axes')
+    rows, columns = yl - yf + 1, xl - xf + 1
+    if rows * columns > 1024:
+        raise ValueError('Coordinate matrix node budget exceeded')
+    text = texts['vinga-latlon.txt']
+    latitude, longitude = (matrix(text, name, rows, columns) for name in ('latitude', 'longitude'))
+    for name in ('latitude', 'longitude'):
+        if (axis(text, name + '.x', columns) != axes['x'][xf:xl + 1]
+                or axis(text, name + '.y', rows) != axes['y'][yf:yl + 1]):
+            raise ValueError('Subset maps differ from native axes')
+    native = CRS.from_proj4(PROJ4)
+    inverse = Transformer.from_crs(native, native.geodetic_crs, always_xy=True)
+    local = CRS.from_proj4('+proj=aeqd +lat_0=57.633 +lon_0=11.605 +ellps=WGS84 +units=m +no_defs')
+    local_transform = Transformer.from_crs('EPSG:4326', local, always_xy=True)
+    geod, errors, east, north = native.get_geod(), [], [], []
+    for j in range(rows):
+        east_row, north_row = [], []
+        for i in range(columns):
+            lat, lon = float(latitude[j][i]), float(longitude[j][i])
+            if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+                raise ValueError('Geographic coordinate outside bounds')
+            plon, plat = inverse.transform(float(axes['x'][xf + i]), float(axes['y'][yf + j]), errcheck=True)
+            errors.append(geod.inv(lon, lat, plon, plat)[2])
+            e, n = local_transform.transform(lon, lat, errcheck=True)
+            east_row.append(e); north_row.append(n)
+        east.append(east_row); north.append(north_row)
+    east_spread = max(max(row[i] for row in east) - min(row[i] for row in east) for i in range(columns))
+    north_spread = max(max(row) - min(row) for row in north)
+    if not all(isfinite(value) for value in errors + [east_spread, north_spread]):
+        raise ValueError('Nonfinite geometry diagnostic')
+    return {'schema': 1, 'scope': 'offline_coordinate_diagnostic_not_routing_qualification',
+            'source_hashes': hashes, 'source_node_count': rows * columns,
+            'native_axes': {name: {'count': len(values), 'first_m': str(values[0]),
+                                  'last_m': str(values[-1]), 'step_m': '1000'}
+                            for name, values in axes.items()},
+            'validity': {'count': len(times), 'first_epoch_seconds': str(times[0]),
+                         'last_epoch_seconds': str(times[-1]), 'step_seconds': '3600'},
+            'source_projection_vs_provider_latlon_max_spherical_distance_m': max(errors),
+            'east_variation_across_rows_m': east_spread, 'north_variation_across_columns_m': north_spread,
+            'separable_axis_max_error_lower_bound_m': max(east_spread, north_spread) / 2,
+            'local_axis_diagnostic': 'Existing WGS84 AEQD; datum equivalence not certified',
+            'issued_at': None, 'routing_status': 'data_unavailable',
+            'blockers': ['regional_wind_not_imported', 'native_grid_to_local_geometry_unqualified',
+                         'model_issue_time_unverified', 'cross_product_model_run_compatibility_unverified']}
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('directory', type=Path)
+    args = parser.parse_args()
+    print(json.dumps(audit(args.directory), indent=2))
+
+
+if __name__ == '__main__':
+    main()
