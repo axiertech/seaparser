@@ -6,6 +6,7 @@ Neither a file modification date nor a filename is accepted as model issuance.
 """
 import argparse
 import csv
+from io import StringIO
 from datetime import datetime, timezone
 from hashlib import sha256
 import json
@@ -72,13 +73,19 @@ def list_marine_metadata(marine, output):
             path = output / filename
             if not path.is_file() or path.stat().st_size > MAX_METADATA_BYTES:
                 raise ValueError('File-list metadata missing or exceeds budget')
-            data = path.read_bytes()
-            rows = list(csv.reader(data.decode('utf-8').splitlines(), strict=True))
+            # Recheck bytes actually read: a preceding stat is not a read budget.
+            with path.open('rb') as handle:
+                data = handle.read(MAX_METADATA_BYTES + 1)
+            if len(data) > MAX_METADATA_BYTES:
+                raise ValueError('File-list metadata exceeds read budget')
+            # Preserve bounded transport evidence even if CSV validation fails.
+            entry.update(bytes=len(data), sha256=sha256(data).hexdigest())
+            rows = list(csv.reader(StringIO(data.decode('utf-8'), newline=''), strict=True))
             if not rows or rows[0] != ['filename', 'size', 'last_modified_datetime', 'etag']:
                 raise ValueError('Unexpected file-list columns')
             if any(len(row) != 4 or not row[0] or not row[1].isdigit() for row in rows[1:]):
                 raise ValueError('Invalid file-list row')
-            entry.update(sha256=sha256(data).hexdigest(), file_count=len(rows) - 1,
+            entry.update(file_count=len(rows) - 1,
                          status='file_list_only' if len(rows) > 1 else 'no_matching_files')
         except Exception as error:
             # Preserve other products' evidence without disclosing library messages.

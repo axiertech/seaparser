@@ -156,3 +156,25 @@ Alla tre marina hashvärden matchar fortfarande manifestet. Logg:
 autonomy/logs/met-redirect-check-20261013T2154Z.log.
 Nästa oberoende granskning: metadata-probens CSV/bytesbudget och partiella
 transportproveniens; inga nya källor eller hävda planning_blockers.
+
+## 2026-10-13: CSV-läsbudget och partiell transportproveniens
+
+Metadata-probens marina CSV-läsning begränsas nu till 512001 bytes och
+kontrollerar faktiskt läst antal mot 512000-bytebudgeten. Stat-kontrollen kvarstår
+men räcker inte ensam när en fil växer. Överbudgetdata får ingen godkänd hash/
+filräkning i rapporten. Toolboxens skapande av listfilen sker före denna kontroll;
+ändringen begränsar lokal läsning, inte bibliotekets interna nätverksöverföring.
+
+Ett under-budget-svar behåller bytes/SHA-256 även vid felaktig CSV/header/UTF-8.
+Status är fortsatt blocked, file_count saknas och model_issue_time är null.
+Hashen är transportbevis, inte lyckad validering eller run-identitet.
+CSV läses med StringIO(newline='') så parsern får ursprungliga radgränser.
+Tolv riktade probetester passerar, inklusive simulerad filväxt mellan stat/läsning
+och hashproveniens för ogiltig header. Inga nya metadata-/väderanrop i testerna.
+Planning_blockers och data_unavailable kvarstår. Publik demonstration är orörd.
+
+Full scripts/check.py passerar: 158+103=261 Python-tester, syntax, låsfiler,
+pip check och domängränser. Frontend run check passerar. Logg:
+autonomy/logs/metadata-budget-check-20261013T2156Z.log.
+Nästa oberoende del: auditens dokumenterade modellreferens/issued_at-semantik,
+med konservativ avvisning och syntetiska CF-regressioner före framtida certifiering.

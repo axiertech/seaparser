@@ -1,6 +1,7 @@
 from pathlib import Path
 from contextlib import nullcontext
 from io import BytesIO
+from hashlib import sha256
 import tempfile
 from types import SimpleNamespace
 import unittest
@@ -128,6 +129,46 @@ class MetadataProbeTests(unittest.TestCase):
             self.assertFalse(report['metadata_complete'])
             self.assertTrue(all(x['status'] == expected for x in report['copernicus']))
             self.assertEqual(report['routing_status'], 'data_unavailable')
+
+    def test_bounded_invalid_csv_retains_transport_hash_not_validation(self):
+        data = b'not the expected CSV header\n'
+        def get(**kwargs):
+            (kwargs['output_directory'] / kwargs['create_file_list']).write_bytes(data)
+            return SimpleNamespace(files=[], number_of_files_to_download=0)
+        marine = SimpleNamespace(__version__='2.5.0', get=get)
+        with tempfile.TemporaryDirectory() as directory, patch('scripts.probe_forecast_metadata.socket.getaddrinfo'):
+            entries = list_marine_metadata(marine, Path(directory))
+        for entry in entries:
+            self.assertEqual(entry['status'], 'blocked')
+            self.assertEqual(entry['bytes'], len(data))
+            self.assertEqual(entry['sha256'], sha256(data).hexdigest())
+            self.assertNotIn('file_count', entry)
+            self.assertIsNone(entry['model_issue_time'])
+
+    def test_file_growth_cannot_bypass_metadata_read_budget(self):
+        def get(**kwargs):
+            (kwargs['output_directory'] / kwargs['create_file_list']).write_bytes(b'small at stat')
+            return SimpleNamespace(files=[], number_of_files_to_download=0)
+        marine = SimpleNamespace(__version__='2.5.0', get=get)
+        original_open = Path.open
+        handles = []
+        def open_file(path, mode='r', *args, **kwargs):
+            if mode == 'rb':
+                handle = Mock(wraps=BytesIO(b'X' * (MAX_METADATA_BYTES + 2)))
+                handle.__enter__ = Mock(return_value=handle)
+                handle.__exit__ = Mock(return_value=False)
+                handles.append(handle)
+                return handle
+            return original_open(path, mode, *args, **kwargs)
+        with tempfile.TemporaryDirectory() as directory, \
+                patch('scripts.probe_forecast_metadata.socket.getaddrinfo'), \
+                patch.object(Path, 'open', open_file):
+            entries = list_marine_metadata(marine, Path(directory))
+        self.assertEqual(len(handles), 2)
+        for handle in handles:
+            handle.read.assert_called_once_with(MAX_METADATA_BYTES + 1)
+        self.assertTrue(all(entry['status'] == 'blocked' for entry in entries))
+        self.assertTrue(all('sha256' not in entry for entry in entries))
 
     def test_complete_transport_never_removes_planning_blockers(self):
         def get(**kwargs):
