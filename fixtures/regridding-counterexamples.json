@@ -1,0 +1,44 @@
+{
+  "scope": "synthetic_exact_counterexamples_not_routing_data",
+  "wind": {
+    "native_knots": [
+      [
+        "0",
+        "0"
+      ],
+      [
+        "1/2",
+        "20"
+      ],
+      [
+        "1",
+        "0"
+      ]
+    ],
+    "native_interpolation": "piecewise_linear",
+    "north_component": "0",
+    "target_endpoints": [
+      "0",
+      "1"
+    ],
+    "target_endpoint_values": [
+      "0",
+      "0"
+    ],
+    "limit": "10",
+    "native_peak_squared": "400",
+    "target_upper_squared": "0"
+  },
+  "mask": {
+    "invalid_closed_interval": [
+      "2/5",
+      "3/5"
+    ],
+    "valid_target_endpoints": [
+      "0",
+      "1"
+    ],
+    "invalid_interior_witness": "1/2"
+  },
+  "routing_status": "data_unavailable"
+}

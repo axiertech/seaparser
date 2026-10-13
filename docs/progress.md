@@ -1655,3 +1655,18 @@ Strukturerad semantik, dokument-/DAS-/granskningshashbindning, åtta källhashar
 och dokumentlänkar kontrollerade; diff check passerar. Logg:
 autonomy/logs/met-semantics-tests-20261013T2228Z.log. Ingen kodändring;
 senaste kodcommit 02ff72a har 269 Python-tester/frontend check godkända.
+
+## 2026-10-13: beviskontrakt före gridomvandling
+
+forecast-regridding-proof.md skiljer uppskattade simuleringstal från konservativa
+hårdgränshöljen, kräver hela transformerade cellstöd och källmask-/tidsstöd samt
+versions-/hashbindning. Ingen omvandlingsmetod/tolerans eller adapter vald.
+Exakta syntetiska motexempel i regridding-counterexamples.json visar dold 20 m/s-
+topp bakom nollmålknutar (gräns 10) samt maskat inre intervall bakom giltiga
+ändpunkter. Fraction-verifiering och befintliga segmentregressioner körda.
+Alla planning_blockers kvarstår; inga käll-/väderanrop eller publika ändringar.
+
+Verifiering: två exakta Fraction-motexempel, 11 segmentvädertester och 8 datastöds-
+segmenttester passerar. Dokumentlänkar och diff check kontrollerade. Logg:
+autonomy/logs/regridding-proof-tests-20261013T2231Z.log. Ingen kodändring;
+senaste kodcommit 02ff72a har 269 Python-tester/frontend check godkända.

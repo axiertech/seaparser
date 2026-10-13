@@ -39,3 +39,5 @@ Aktuell källgranskning och datagränser: [forecast-sources.md](forecast-sources
 Run-proveniens: [granskningskontrakt](forecast-run-provenance.md) dokumenterat offline. Källbunden evidens, historisk ARCO-bindning och förenlighetsregel återstår; designen certifierar inga befintliga prognoser.
 
 Regional vind: [acceptanskontrakt för grid/stöd](regional-wind-acceptance.md) klart som design. Native projektion/rotation, masksemantik och eventuell regridding måste verifieras före implementation; befintliga syntetiska tester kvalificerar inte MET.
+
+Gridomvandling: [beviskontrakt](forecast-regridding-proof.md) och exakta negativa referensfall dokumenterade. Metod, toleranser och implementation återstår; ingen verklig prognos kvalificerad.
