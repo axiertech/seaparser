@@ -80,3 +80,19 @@ bevis, inte en observerad överträdelse eller en säker rutt. Båda ruttmål oc
 alla avgångar ska använda samma frysta bevis och samma absoluta begränsningar.
 Alla nuvarande planning_blockers kvarstår. Ingen vind eller marin prognos
 kvalificeras av detta kontrakt.
+
+## Körbara negativa referenser
+
+`prototype/tests/test_regridding_counterexamples.py` jämför samma käll-/mål-
+segment med den befintliga GridProduct-certifieringen. Det representerade
+målfältet får verified, medan källfältets topp ger exceeded med vittne 20 m/s
+och dess inre mask ger unverified/data_unavailable utan vädervittne.
+Maskens båda slutna gränser och mittpunkt avvisas, även när ändpunkterna är
+giltiga. Detta är förväntat för två olika representerade underlag och visar
+varför målcertifikatet ensamt inte är källbevis efter omvandling.
+
+Rationell fixture räknas med Fraction för oberoende kända värden; GridProduct
+använder uttryckligt konverterade lagrade binära koordinater. Testet verifierar
+inte en verklig transformation, masktolkning eller regriddingalgoritm. Ingen
+metod/tolerans väljs, ingen adapter ändras och verklig routing förblir spärrad.
+Kör: `.venv/bin/python -B -m unittest discover -s prototype/tests -p test_regridding_counterexamples.py -v`.

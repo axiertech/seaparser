@@ -41,3 +41,7 @@ Run-proveniens: [granskningskontrakt](forecast-run-provenance.md) dokumenterat o
 Regional vind: [acceptanskontrakt för grid/stöd](regional-wind-acceptance.md) klart som design. Native projektion/rotation, masksemantik och eventuell regridding måste verifieras före implementation; befintliga syntetiska tester kvalificerar inte MET.
 
 Gridomvandling: [beviskontrakt](forecast-regridding-proof.md) och exakta negativa referensfall dokumenterade. Metod, toleranser och implementation återstår; ingen verklig prognos kvalificerad.
+
+Gridomvandlingens två minimala motexempel är nu körbara mot befintlig
+segmentcertifiering: källans topp/mask avvisas trots att glesare målfält
+certifieras. Detta kvalificerar ingen verklig omvandlingsmetod.

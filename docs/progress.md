@@ -1703,3 +1703,19 @@ Frontend run check passerar. Fem MET-källfiler och tre marina NetCDF-filer
 och met-time-structure-frontend-20261013T2242Z.log; JSON-diagnostik
 met-time-structure-audit-20261013T2240Z.json. Nästa oberoende del:
 negativa källstödstester enligt regriddingkontraktet eller auditens felgränser.
+
+## 2026-10-13 22:43 UTC – käll-/målbevisets negativa referenser
+
+Två nya domänregressioner återanvänder regridding-counterexamples.json och
+befintlig GridProduct/segmentcertifiering. Glesare målfält blir verified;
+källans topp ger exceeded med 20 m/s-vittne, dold sluten mask ger
+unverified/data_unavailable. Båda maskgränserna och mittpunkten avvisas.
+Inga runtime-/adapterändringar, nya beroenden eller datahämtningar. Samtliga
+planning_blockers kvarstår.
+Verifiering: båda riktade testerna och full scripts/check.py passerar
+(160+121=281 Python-tester, syntax, låsfiler, pip check och domängränser).
+Frontend run check passerar; källfixtures är oförändrade. Loggar:
+autonomy/logs/regridding-reference-{check,frontend}-20261013T2243Z.log.
+Nästa avgränsade källdel: en liten MET-native vind-/landfraktionssubset för
+källgranskning, med explicita budgetar och fortsatt data_unavailable; ingen
+marin återhämtning eller automatisk routingskvalificering.
