@@ -309,3 +309,7 @@ förenlighetsregler måste implementeras innan spärren kan hävas.
 Obligatoriska valid_from/valid_until valideras alltid som tidszonsmedvetna tider;
 bara issued_at/retrieved_at får vara okända. Befintlig publik demonstration
 publiceras eller ändras inte av denna leverans.
+
+Fortsatt metadataarbete, exakt terminalkommando och öppna acceptanskriterier:
+[forecast-blockers.md](forecast-blockers.md). Återanvänd befintliga marina
+filer; kör inte nedladdningsscriptet igen för samma uttag.

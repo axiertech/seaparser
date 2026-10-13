@@ -1302,3 +1302,27 @@ prognosfiler och dokumenterat MET Nordic forecast-grid. Behåll de befintliga
 marina filerna; hämta inte samma subset igen. Regional vind, utfärdandetid,
 run-förenlighet och strömmask är separata blockerare. Överlämningskvittot i
 /home/web/seaparser/autonomy/ anger slutcommit, lokala ändringar och nästa steg.
+
+## 2026-10-13: Run-spärrens CI godkänd, metadataarbete fortsatt
+
+Commit e0e61a844a3c8d0fbacc924cc6012ba971b2ef79 publicerades på
+`development/real-map-data` via GitHub-connector med vanlig fast-forward.
+CI 38351219008 completed/success för exakt commit, inklusive full kartintegration
+som lokal sandbox inte kunde starta. Därefter fortsatte arbetet med de separata
+prognosblockerarna enligt mandatet.
+
+MET Nordic Forecast identifierat i officiell MET-wiki som regionalt deterministiskt
+vindunderlag, med konkret forecast-sökväg och dokumenterade vind-/CRS-konventioner.
+Faktiska forecast-metadata och Vinga-täckning är inte verifierade. Officiell
+Copernicus-dokumentation skiljer mellan originalproducerade filer och ARCO:
+ytt identiskt subset är inte lösningen på saknad run-proveniens.
+
+Förberett scripts.probe_forecast_metadata för enbart små metadataanrop och
+Copernicus-filelist med dry_run/create_file_list, inga weather-värden eller
+nytt Copernicus-uttag. Agentförsök 05:28:42–05:28:44 UTC gav exit 2 med nätverksfel;
+rapport i autonomy/forecast-metadata-probe-20261013/report.json. Fyra nya
+säkerhets-/budget-/oberoende-anropstester passerar. Fortsatt blockerare och
+exakt SSH-terminalkommando dokumenteras i docs/forecast-blockers.md.
+Slutlig överlämning i autonomy/HANDOFF.md anger exakt slutcommit, arbetskatalog,
+lokala ändringar och nästa begränsade uppgift. Ingen publik drift ändrad och
+ingen ny eller parallell Codex-utvecklingskörning startad.
