@@ -128,3 +128,5 @@ sex frontendtester passerar inklusive syntetisk och Vinga API/karta/GPX.
 Loggar: autonomy/logs/met-envelope-{check,frontend,frontend-recheck,fixture}-20261013T2143Z.*.
 
 Offline granskningskontrakt och acceptansmatris: [forecast-run-provenance.md](forecast-run-provenance.md). Design endast; ingen run-certifiering eller hävd spärr.
+
+Befintliga filers faktiska run-evidens och gap: [forecast-run-inventory.md](forecast-run-inventory.md). Inget utfärdande/run-ID återfunnet; creation_date får inte användas som ersättning.

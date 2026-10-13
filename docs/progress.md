@@ -1404,3 +1404,21 @@ Push/CI för den leveransen fortsatt blockerade av SSH-systemkonfiguration och
 Unknown tool från GitHub-connectorn; denna dokumentation är oberoende arbete.
 Nästa steg: gå igenom befintlig offlineaudit mot kontraktets evidensfält och
 redovisa exakt vilken evidens som saknas, utan ny datatransport eller hävda spärrar.
+
+## 2026-10-13 21:50 UTC: offline marin evidensinventering
+
+Inventerat befintliga NetCDF-dimensioner, variabel-/attributnamn, utvalda
+källattribut och råa tidskoordinater till run-metadata-inventory.json.
+forecast-run-inventory.md redovisar faktiska fält och gap mot provenienskontraktet.
+Båda dynamiska filer saknar forecast_reference_time/run-ID; strömfilens
+creation_date=2024-11-25 17:05:11 används inte som utfärdande. Alla planning_blockers
+kvarstår. Auditens framtida koppling forecast_reference_time -> issued_at
+identifierad som semantikfråga; ingen kod eller befintlig referens ändras nu.
+
+Offlineaudit passerar, alla tre hashvärden matchar, issued_at förblir null och
+freeze regenererar exakt samma JSON-innehåll som reference.json. Befintliga
+Copernicus-importtester körda, se autonomy/logs/run-inventory-tests-20261013T2150Z.log.
+Inventerings-JSON/länkar och diff check kontrollerade. Inga nya beroenden,
+väderuttag, adapterspår, databasoperationer eller publika ändringar.
+Nästa oberoende del: precisera regional vinds rumsliga/maskade interpolationsstöd
+innan framtida MET-import; källmetadata och push/CI fortfarande blockerade.

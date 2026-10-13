@@ -1,0 +1,175 @@
+{
+  "schema": 1,
+  "scope": "offline_metadata_inventory",
+  "routing_status": "data_unavailable",
+  "files": [
+    {
+      "filename": "waves.nc",
+      "sha256": "19150fc84c94e44138588776a7afefe95721615bcae5d3abdfc211a8dc956c5e",
+      "hash_verified": true,
+      "dimensions": {
+        "time": 5,
+        "latitude": 2,
+        "longitude": 2
+      },
+      "variable_names": [
+        "VHM0",
+        "VMDR",
+        "VTM02",
+        "latitude",
+        "longitude",
+        "time"
+      ],
+      "global_attribute_names": [
+        "Conventions",
+        "cmems_product_id",
+        "copernicusmarine_version",
+        "easternmost_longitude",
+        "grid_resolution",
+        "institution",
+        "northernmost_latitude",
+        "source",
+        "southernmost_latitude",
+        "title",
+        "westernmost_longitude"
+      ],
+      "selected_global_attributes": {
+        "source": "FMI-WAM_CMEMS",
+        "institution": "Baltic MFC, PU Finnish Meteorological Institute",
+        "Conventions": "CF-1.0",
+        "title": "CMEMS WAM model fields (hourly)"
+      },
+      "time_variables": {
+        "time": {
+          "dimensions": [
+            "time"
+          ],
+          "values": [
+            1791892800,
+            1791896400,
+            1791900000,
+            1791903600,
+            1791907200
+          ],
+          "attributes": {
+            "standard_name": "time",
+            "long_name": "Time",
+            "units": "seconds since 1970-01-01",
+            "calendar": "standard",
+            "axis": "T"
+          }
+        }
+      }
+    },
+    {
+      "filename": "current.nc",
+      "sha256": "b2372937e0840a5a58216fd9db7cadf044390fb332f1f8a8d6cd0d6b2cb230f1",
+      "hash_verified": true,
+      "dimensions": {
+        "time": 5,
+        "depth": 1,
+        "latitude": 2,
+        "longitude": 2
+      },
+      "variable_names": [
+        "depth",
+        "latitude",
+        "longitude",
+        "time",
+        "uo",
+        "vo"
+      ],
+      "global_attribute_names": [
+        "Conventions",
+        "comment",
+        "compression",
+        "contact",
+        "copernicusmarine_version",
+        "creation_date",
+        "easternmost_longitude",
+        "file_quality_index",
+        "grid_resolution",
+        "institution",
+        "netcdf_version_id",
+        "northernmost_latitude",
+        "references",
+        "source",
+        "southernmost_latitude",
+        "start_date",
+        "stop_date",
+        "title",
+        "westernmost_longitude"
+      ],
+      "selected_global_attributes": {
+        "source": "CMEMS BAL MFC NEMO model output converted to NetCDF",
+        "institution": "Baltic MFC, PU Swedish Meteorological and Hydrological Institute",
+        "references": "https://marine.copernicus.eu/",
+        "creation_date": "2024-11-25 17:05:11",
+        "Conventions": "CF-1.0",
+        "title": "CMEMS NEMO hourly model fields"
+      },
+      "time_variables": {
+        "time": {
+          "dimensions": [
+            "time"
+          ],
+          "values": [
+            46306.5,
+            46306.541666666664,
+            46306.583333333336,
+            46306.625,
+            46306.666666666664
+          ],
+          "attributes": {
+            "standard_name": "time",
+            "long_name": "Time",
+            "units": "days since 1900-01-01",
+            "calendar": "proleptic_gregorian",
+            "axis": "T"
+          }
+        }
+      }
+    },
+    {
+      "filename": "wave-mask.nc",
+      "sha256": "0df1bbd2a4676f4178beb1d44673d38059665d6534b6366a8939f99b0701030c",
+      "hash_verified": true,
+      "dimensions": {
+        "latitude": 2,
+        "longitude": 2
+      },
+      "variable_names": [
+        "deptho",
+        "latitude",
+        "longitude",
+        "mask"
+      ],
+      "global_attribute_names": [
+        "Conventions",
+        "NCO",
+        "cmems_product_id",
+        "contact",
+        "copernicusmarine_version",
+        "credit",
+        "easternmost_longitude",
+        "grid_resolution",
+        "history",
+        "institution",
+        "licence",
+        "northernmost_latitude",
+        "producer",
+        "references",
+        "southernmost_latitude",
+        "title",
+        "westernmost_longitude"
+      ],
+      "selected_global_attributes": {
+        "institution": "Finnish Meteorological Institute",
+        "references": "http://marine.copernicus.eu",
+        "Conventions": "CF-1.0",
+        "title": "Bathymetry and mask for product BALTICSEA_ANALYSISFORECAST_WAV_003_010"
+      },
+      "time_variables": {}
+    }
+  ]
+}
