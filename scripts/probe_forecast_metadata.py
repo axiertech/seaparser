@@ -53,13 +53,17 @@ def read_met_metadata(url):
     return data
 
 
-def list_marine_metadata(marine, output, progress=None):
+def list_marine_metadata(marine, output, progress=None, *, product=None):
+    if product is not None and product not in ('waves', 'current'):
+        raise ValueError('Only reviewed marine products may be selected')
     if marine.__version__ != '2.5.0':
         raise ValueError('Reviewed Toolbox 2.5.0 required')
     # Fail before starting Toolbox retry loops if the catalogue cannot resolve.
     socket.getaddrinfo('stac.marine.copernicus.eu', 443)
     entries = []
     for label, dataset_id, version in MARINE_LISTS:
+        if product is not None and label != product:
+            continue
         filename = f'{label}-original-files.csv'
         entry = {'product': label, 'dataset_id': dataset_id, 'version': version,
                  'filename': filename, 'model_issue_time': None, 'status': 'in_progress'}

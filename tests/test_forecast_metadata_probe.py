@@ -131,6 +131,30 @@ class MetadataProbeTests(unittest.TestCase):
         self.assertTrue(all(x['model_issue_time'] is None for x in entries))
         self.assertTrue(all(x['file_count'] == 1 and x['status'] == 'file_list_only' for x in entries))
 
+    def test_independent_marine_selection_never_calls_the_other_product(self):
+        for product in ('waves', 'current'):
+            calls = []
+            def get(**kwargs):
+                calls.append(kwargs)
+                (kwargs['output_directory'] / kwargs['create_file_list']).write_text(
+                    'filename,size,last_modified_datetime,etag\nforecast.nc,123,date,hash\n')
+                return SimpleNamespace(files=[], number_of_files_to_download=0)
+            marine = SimpleNamespace(__version__='2.5.0', get=get)
+            with tempfile.TemporaryDirectory() as directory, patch('scripts.probe_forecast_metadata.socket.getaddrinfo'):
+                entries = list_marine_metadata(marine, Path(directory), product=product)
+            self.assertEqual(len(calls), 1)
+            self.assertEqual(calls[0]['create_file_list'], product + '-original-files.csv')
+            self.assertTrue(calls[0]['dry_run'])
+            self.assertEqual([e['product'] for e in entries], [product])
+            self.assertEqual(entries[0]['status'], 'file_list_only')
+            self.assertIsNone(entries[0]['model_issue_time'])
+
+    def test_unknown_marine_selection_rejected_before_transport(self):
+        with patch('scripts.probe_forecast_metadata.socket.getaddrinfo') as dns:
+            with self.assertRaises(ValueError):
+                list_marine_metadata(object(), Path('/unused'), product='unreviewed')
+        dns.assert_not_called()
+
     def test_marine_failure_preserves_other_product_and_redacts_error(self):
         for failed_product in ('waves', 'current'):
             calls = []

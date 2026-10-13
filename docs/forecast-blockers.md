@@ -290,3 +290,29 @@ autonomy/logs/metadata-checkpoint-check-20261013T2213Z.log och
 metadata-checkpoint-targeted-20261013T2213Z.log.
 Nästa begränsade del kan pröva endast marin metadata-listning med progress-
 checkpoints och kort tidsgräns, utan upprepning av MET eller marina väderuttag.
+
+## 2026-10-13: oberoende marina metadataförsök och produktval
+
+Ett metadata-only försök utan MET gav exit 124 efter 75 s med bevarad
+checkpoint active_step=copernicus:waves. Samma befintliga metadatafunktion kan
+nu välja product=waves eller current separat; andra val avvisas före transport.
+Default är fortsatt båda produkter. Dataset/version, create_file_list+dry_run,
+512 KB-läsbudget och checkpoints ändras inte. Ingen ny adapter eller källväg.
+Ett separat current-försök gav exit 124 efter 60 s med active_step=copernicus:current.
+Inga CSV eller NetCDF-filer skapades i något försök. Auto-review godkände de
+avgränsade anropen, inga avslag. Källans innehåll eller intern timeoutorsak
+är inte verifierad; checkpoints anger yttre produktanrop, inte bibliotekets delsteg.
+
+Arbetsrapporter: autonomy/marine-metadata-20261013T2215Z/report.json och
+current-metadata-20261013T2216Z/report.json. Extern exitkod/gräns samt checkpoint-
+hash i respektive execution-result.json och independent-marine-result-20261013T2218Z.json.
+In_progress i rapporten betyder ofullständigt försök; efter verifierad exit 124
+påstås ingen fortsatt aktivitet. Ingen bakgrundsprocess lämnas kvar.
+
+Sexton probetester passerar, inklusive att varje val bara anropar sin produkt
+med dry_run och okänt val avvisas före DNS. Full scripts/check.py passerar:
+158+111=269 Python-tester, syntax, låsfiler, pip check/domängränser.
+Frontend run check passerar. Logg autonomy/logs/independent-marine-check-20261013T2217Z.log.
+Alla planning_blockers/data_unavailable kvarstår; marina fixtures och publik demo orörda.
+Nästa oberoende diagnostik: isolera bibliotekets skrivskyddade konfigurations-/
+katalogdelsteg med en egen liten tidsbudget; återupprepa inte hela listan utan ny evidens.
