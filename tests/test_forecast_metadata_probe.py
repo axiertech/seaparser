@@ -2,6 +2,7 @@ from pathlib import Path
 from contextlib import nullcontext
 from io import BytesIO
 from hashlib import sha256
+import json
 import tempfile
 from types import SimpleNamespace
 import unittest
@@ -12,6 +13,44 @@ from scripts.probe_forecast_metadata import MAX_METADATA_BYTES, MET_URLS, Metada
 
 
 class MetadataProbeTests(unittest.TestCase):
+    def test_interrupted_marine_step_preserves_completed_product_and_met(self):
+        def get(**kwargs):
+            if kwargs['create_file_list'].startswith('current'):
+                raise KeyboardInterrupt('synthetic interruption; must not be logged')
+            (kwargs['output_directory'] / kwargs['create_file_list']).write_text(
+                'filename,size,last_modified_datetime,etag\nforecast.nc,123,date,hash\n')
+            return SimpleNamespace(files=[], number_of_files_to_download=0)
+        marine = SimpleNamespace(__version__='2.5.0', get=get)
+        with tempfile.TemporaryDirectory() as directory, patch('scripts.probe_forecast_metadata.socket.getaddrinfo'):
+            output = Path(directory)/'probe'
+            with self.assertRaises(KeyboardInterrupt):
+                probe(output, met_reader=lambda url: b'Dataset { } test;', marine=marine)
+            report = json.loads((output/'report.json').read_text())
+        self.assertEqual(report['attempt_status'], 'in_progress')
+        self.assertEqual(report['active_step'], 'copernicus:current')
+        self.assertIsNone(report['finished_at'])
+        self.assertFalse(report['metadata_complete'])
+        self.assertEqual([x['status'] for x in report['copernicus']], ['file_list_only', 'in_progress'])
+        self.assertEqual(len(report['copernicus'][0]['sha256']), 64)
+        self.assertEqual([x['status'] for x in report['met']], ['metadata_received'] * 3)
+        self.assertEqual(report['routing_status'], 'data_unavailable')
+        self.assertEqual(len(report['blockers']), 3)
+        self.assertNotIn('synthetic interruption', str(report))
+
+    def test_interrupted_met_step_leaves_parseable_initial_checkpoint(self):
+        def interrupted(url):
+            raise KeyboardInterrupt()
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)/'probe'
+            with self.assertRaises(KeyboardInterrupt):
+                probe(output, met_reader=interrupted, marine=object())
+            report = json.loads((output/'report.json').read_text())
+            self.assertFalse((output/'.report.json.tmp').exists())
+        self.assertEqual(report['attempt_status'], 'in_progress')
+        self.assertEqual(report['active_step'], 'met-forecast.dds')
+        self.assertEqual(report['met'], [])
+        self.assertFalse(report['metadata_complete'])
+
     def test_never_fetches_full_netcdf_or_wind_values(self):
         for url in ('https://example.com/file.nc', next(iter(MET_URLS.values())).removesuffix('.dds')):
             with self.assertRaises(ValueError):
@@ -179,6 +218,9 @@ class MetadataProbeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory, patch('scripts.probe_forecast_metadata.socket.getaddrinfo'):
             report = probe(Path(directory)/'probe', met_reader=lambda url: b'Dataset { } test;', marine=marine)
         self.assertTrue(report['metadata_complete'])
+        self.assertEqual(report['attempt_status'], 'finished')
+        self.assertIsNotNone(report['finished_at'])
+        self.assertIsNone(report['active_step'])
         self.assertEqual(report['routing_status'], 'data_unavailable')
         self.assertEqual(len(report['blockers']), 3)
         self.assertTrue(all(x['model_issue_time'] is None for x in report['copernicus']))

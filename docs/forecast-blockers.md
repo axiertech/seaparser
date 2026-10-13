@@ -262,3 +262,31 @@ metadata-probetester passerar. Logg autonomy/logs/met-coordinate-tests-20261013T
 verifieringskvitto autonomy/met-coordinate-verification-20261013T2211Z.json.
 Ingen applikationskod ändrad; tidigare 080483b har 265 Python-tester och
 frontend check godkända. Geometridiagnostiken kvalificerar inte verklig routing.
+
+## 2026-10-13: successiva metadata-checkpoints före långsamma steg
+
+probe_forecast_metadata skriver report.json före transportstart, före/efter
+varje MET-anrop, före Copernicus preflight och före/efter varje marin produkt.
+Varje skrivning sker till temporär fil som ersätter rapporten atomiskt; läsaren
+får föregående eller nytt fullständigt JSON, inte en avsiktligt halvskriven rapport.
+Detta är processavbrottstålighet, inte ett påstående om hållbarhet vid strömavbrott.
+
+attempt_status=in_progress, active_step och finished_at=null anger ofullständigt
+försök; det bevisar inte i sig timeout eller att processen fortfarande kör.
+Extern exitkod behövs för avslutsorsaken. metadata_complete förblir false tills
+samtliga steg avslutats och transportkriterier passerar. Slutrapport anger
+attempt_status=finished även vid källfel, med metadata_complete=false vid luckor.
+In_progress för en marin produkt får aldrig räknas som lyckad listning.
+
+Fjorton probetester passerar. Simulerat avbrott före första MET-svaret ger
+läsbar initial checkpoint; avbrott under andra marina produkten bevarar samtliga
+MET-resultat och första marina produktens hash. Alla planning_blockers kvarstår.
+Inga nya nätverksanrop/väderfiler, beroenden, adaptrar, databas eller publik ändring.
+
+Full scripts/check.py passerar: 158+109=267 Python-tester, syntax, låsfiler,
+pip check och domängränser. Frontend run check passerar. Tre marina och fem
+MET-källhashar är oförändrade. Loggar:
+autonomy/logs/metadata-checkpoint-check-20261013T2213Z.log och
+metadata-checkpoint-targeted-20261013T2213Z.log.
+Nästa begränsade del kan pröva endast marin metadata-listning med progress-
+checkpoints och kort tidsgräns, utan upprepning av MET eller marina väderuttag.

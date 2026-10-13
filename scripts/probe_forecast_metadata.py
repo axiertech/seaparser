@@ -53,7 +53,7 @@ def read_met_metadata(url):
     return data
 
 
-def list_marine_metadata(marine, output):
+def list_marine_metadata(marine, output, progress=None):
     if marine.__version__ != '2.5.0':
         raise ValueError('Reviewed Toolbox 2.5.0 required')
     # Fail before starting Toolbox retry loops if the catalogue cannot resolve.
@@ -62,7 +62,10 @@ def list_marine_metadata(marine, output):
     for label, dataset_id, version in MARINE_LISTS:
         filename = f'{label}-original-files.csv'
         entry = {'product': label, 'dataset_id': dataset_id, 'version': version,
-                 'filename': filename, 'model_issue_time': None}
+                 'filename': filename, 'model_issue_time': None, 'status': 'in_progress'}
+        entries.append(entry)
+        if progress is not None:
+            progress(entries)
         try:
             response = marine.get(dataset_id=dataset_id, dataset_version=version,
                                   filter='*20261013*', create_file_list=filename,
@@ -90,8 +93,16 @@ def list_marine_metadata(marine, output):
         except Exception as error:
             # Preserve other products' evidence without disclosing library messages.
             entry.update(status='blocked', error_type=type(error).__name__)
-        entries.append(entry)
+        if progress is not None:
+            progress(entries)
     return entries
+
+
+def write_report(output, report):
+    # Readers see either the preceding complete JSON or the new complete JSON.
+    temporary = output / '.report.json.tmp'
+    temporary.write_text(json.dumps(report, indent=2) + '\n')
+    temporary.replace(output / 'report.json')
 
 
 def probe(output, met_reader=read_met_metadata, marine=None):
@@ -99,10 +110,15 @@ def probe(output, met_reader=read_met_metadata, marine=None):
     output.mkdir(mode=0o700, parents=True, exist_ok=False)
     report = {'schema': 1, 'started_at': datetime.now(timezone.utc).isoformat(),
               'scope': 'metadata_only', 'met': [], 'copernicus': [],
+              'attempt_status': 'in_progress', 'active_step': 'starting',
+              'finished_at': None, 'metadata_complete': False,
               'routing_status': 'data_unavailable',
               'blockers': ['regional_wind_not_imported', 'marine_model_issue_time_unverified',
                            'cross_product_model_run_compatibility_unverified']}
+    write_report(output, report)
     for filename, url in MET_URLS.items():
+        report['active_step'] = filename
+        write_report(output, report)
         entry = {'filename': filename, 'url': url}
         try:
             data = met_reader(url)
@@ -112,17 +128,28 @@ def probe(output, met_reader=read_met_metadata, marine=None):
             # Type only: do not echo library messages which could include auth/URLs.
             entry.update(status='blocked', error_type=type(error).__name__)
         report['met'].append(entry)
+        write_report(output, report)
+    report['active_step'] = 'copernicus_preflight'
+    write_report(output, report)
+
+    def marine_progress(entries):
+        report['copernicus'] = entries
+        report['active_step'] = 'copernicus:' + entries[-1]['product']
+        write_report(output, report)
+
     try:
         if marine is None:
             import copernicusmarine as marine
-        report['copernicus'] = list_marine_metadata(marine, output)
+        report['copernicus'] = list_marine_metadata(marine, output, progress=marine_progress)
     except Exception as error:
         report['copernicus'] = [{'status': 'blocked', 'error_type': type(error).__name__}]
     report['finished_at'] = datetime.now(timezone.utc).isoformat()
+    report['attempt_status'] = 'finished'
+    report['active_step'] = None
     report['metadata_complete'] = (all(x['status'] == 'metadata_received' for x in report['met'])
                                    and len(report['copernicus']) == 2
                                    and all(x['status'] == 'file_list_only' for x in report['copernicus']))
-    (output / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
+    write_report(output, report)
     return report
 
 
