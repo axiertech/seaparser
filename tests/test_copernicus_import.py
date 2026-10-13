@@ -108,6 +108,48 @@ class NetCDFAuditTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'hash mismatch'):
             audit(self.directory)
 
+    def test_cf_model_reference_time_does_not_certify_issuance(self):
+        import numpy as np
+        import xarray as xr
+        from scripts.audit_copernicus import audit
+        for label in ('waves', 'current'):
+            path = self.directory / f'{label}.nc'
+            with xr.open_dataset(path) as ds:
+                product = ds.load()
+            product['model_reference'] = xr.DataArray(np.datetime64('2026-10-13T06:00:00'),
+                attrs={'standard_name': 'forecast_reference_time'})
+            product.attrs['creation_date'] = '2026-10-13T07:00:00Z'
+            product.to_netcdf(path)
+        self.refresh_manifest()
+        report = audit(self.directory)
+        for label in ('waves', 'current'):
+            self.assertEqual(report[label]['forecast_reference_time'], '2026-10-13T06:00:00Z')
+            self.assertIsNone(report[label]['issued_at'])
+            self.assertIn(f'{label}_model_issue_time_missing', report['blockers'])
+        self.assertIn('cross_product_model_run_compatibility_not_verified', report['blockers'])
+        self.assertEqual(report['status'], 'regional_routing_unavailable')
+
+    def test_ambiguous_or_undecoded_model_reference_stays_unknown(self):
+        import numpy as np
+        import xarray as xr
+        from scripts.audit_copernicus import audit
+        path = self.directory / 'waves.nc'
+        with xr.open_dataset(path) as ds:
+            original = ds.load()
+        for ambiguous in (False, True):
+            with self.subTest(ambiguous=ambiguous):
+                product = original.copy(deep=True)
+                value = np.datetime64('2026-10-13T06:00:00') if ambiguous else 123.0
+                product['reference_a'] = xr.DataArray(value, attrs={'standard_name': 'forecast_reference_time'})
+                if ambiguous:
+                    product['reference_b'] = product['reference_a'].copy()
+                product.to_netcdf(path)
+                self.refresh_manifest()
+                report = audit(self.directory)
+                self.assertIsNone(report['waves']['forecast_reference_time'])
+                self.assertIsNone(report['waves']['issued_at'])
+                self.assertIn('waves_model_issue_time_missing', report['blockers'])
+
     def test_static_mask_cannot_be_regridded_implicitly(self):
         import xarray as xr
         from scripts.audit_copernicus import audit

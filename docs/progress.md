@@ -1484,3 +1484,24 @@ pip check och domängränser. Frontend run check passerar. Logg:
 autonomy/logs/metadata-budget-check-20261013T2156Z.log.
 Nästa oberoende del: auditens dokumenterade modellreferens/issued_at-semantik,
 med konservativ avvisning och syntetiska CF-regressioner före framtida certifiering.
+
+## 2026-10-13: CF-modellreferens skiljs från utfärdandetid
+
+scripts.audit_copernicus placerar inte längre forecast_reference_time i issued_at.
+Dekodat scalar-värde redovisas i separat forecast_reference_time för granskning;
+issued_at förblir null tills källspecifikt utfärdandebevis verifierats. Rapportens
+schema 1 får ett additivt diagnostikfält; fryst adapterpayload ändras inte.
+Tvetydiga/odekodade referenser förblir okända. Ingen run-certifiering införs.
+
+Tio Copernicus-importtester passerar. Nya syntetiska NetCDF-fall visar att även
+lika modellreferenstid plus creation_date för ström/vågor behåller båda
+utfärdandespärrarna och run-förenlighetsspärren. Dubbla referenser/numeriskt
+odekodat värde ger ingen referenstid. Befintliga råfiler regenererar exakt
+samma reference.json-innehåll. Inga marina data hämtade eller befintliga filer
+ändrade; publik demonstration och databas är orörda.
+
+Full scripts/check.py passerar: 158+105=263 Python-tester, syntax, låsfiler,
+pip check och domängränser. Frontend run check passerar. Logg:
+autonomy/logs/reference-time-check-20261013T2158Z.log.
+Nästa oberoende granskning: CF-giltighetens precision/kalender före
+normalisering till sekunder; kontrollera att verkliga tidsluckor inte döljs.

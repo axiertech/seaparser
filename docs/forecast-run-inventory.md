@@ -59,9 +59,9 @@ befintliga dynamiska produkterna och alla planning_blockers kvarstår.
 
 ## Identifierad framtida semantikfråga
 
-scripts/audit_copernicus.py letar efter standard_name=forecast_reference_time
-och skulle lägga ett ensamt dekodat värde i rapportens issued_at.
-scripts/freeze_copernicus_reference.py för vidare detta fält. Nuvarande fixtures
+Vid inventeringen lade scripts/audit_copernicus.py ett ensamt dekodat
+standard_name=forecast_reference_time i rapportens issued_at, vilket
+scripts/freeze_copernicus_reference.py förde vidare. Nuvarande fixtures
 har inget sådant fält, så resultatet är null och denna inventering ändrar inga
 filer med vädervärden eller adapterbeteenden.
 
@@ -70,3 +70,12 @@ från produktens publicering/utfärdande enligt
 [forecast-run-provenance.md](forecast-run-provenance.md). Ett positivt syntetiskt
 CF-test av dekodning skulle inte ensamt verifiera producentens betydelse.
 Detta är ett dokumenterat kodgranskningsfynd, inte en verifierad källuppgift.
+
+## Konservativ rättning efter inventeringen
+
+Auditen redovisar nu ett ensamt dekodat CF-modellreferensvärde separat som
+forecast_reference_time. issued_at förblir null, även när referenstid finns.
+Tvetydiga eller odekodade referensvärden förblir okända. Detta är metadata för
+granskning, inte verifierad run-identitet eller publicerings-/utfärdandetid.
+Syntetiska CF-regressioner kontrollerar att referenstid/creation_date inte häver
+utfärdandespärren. Nuvarande verkliga fixtures och reference.json är oförändrade.

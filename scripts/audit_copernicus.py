@@ -39,7 +39,7 @@ def inspect_file(path, fields, np, xr):
                 raise ValueError('Insufficient/unsupported native geographic axis')
         dimensions = [lat.name, lon.name]
         result = {'longitude': lon.values.tolist(), 'latitude': lat.values.tolist(),
-                  'variables': {}, 'issued_at': None}
+                  'variables': {}, 'issued_at': None, 'forecast_reference_time': None}
         if fields != MASK_FIELDS:
             time = coordinate(ds, 'time')
             times = time.values.astype('datetime64[s]')
@@ -55,7 +55,9 @@ def inspect_file(path, fields, np, xr):
             if len(run) == 1 and run[0].size == 1:
                 value = np.asarray(run[0].values).reshape(-1)[0]
                 if np.issubdtype(type(value), np.datetime64) and not np.isnat(value):
-                    result['issued_at'] = str(value.astype('datetime64[s]')) + 'Z'
+                    # CF model reference time is not evidence of publication/issuance.
+                    # Preserve it for review without clearing the issuance blocker.
+                    result['forecast_reference_time'] = str(value.astype('datetime64[s]')) + 'Z'
         depth_name = None
         if fields == CURRENT_FIELDS:
             depth = coordinate(ds, 'depth')
