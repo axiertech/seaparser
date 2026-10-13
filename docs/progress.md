@@ -1735,3 +1735,18 @@ Frontend run check passerar. Åtta tidigare källhashar verifierade oförändrad
 Loggar autonomy/logs/met-wind-sample-{check,frontend}-20261013T2247Z.log.
 Nästa oberoende del: offline fel-/nodbudgeter och verifiering av källstöd
 eller dokumenterad referensram/normalisering, utan att kvalificera routing.
+
+## 2026-10-13 22:50 UTC – MET-auditens fel-/läsgränser
+
+Befintlig offlineaudit avvisar ogiltiga läsgränser, manifeststrukturer och
+tal innan fortsatt bearbetning. CLI ger data_unavailable/exit 1 med endast
+felklass och utan rådata/filvägar. Sju nya negativa tester inkluderar faktisk
+128000/128001-bytegräns, falskt höjd manifestbudget, NaN/Infinity/extremexponent,
+saknad subset och saknad källa via verkligt subprocess-anrop. Alla 25 riktade
+MET-tester passerar. Inga källanrop eller adapter-/runtimeändringar; spärrar kvar.
+Full scripts/check.py passerar: 160+136=296 Python-tester, syntax, låsfiler,
+pip check och domängränser. Frontend run check passerar. Giltig vind-review
+reproduceras oförändrad; nio källhashar verifierade. Loggar autonomy/logs/
+met-audit-failures-{check,frontend}-20261013T2250Z.log. Nästa oberoende del:
+referensrams-/normaliseringsdiagnostik på sparade vindvärden, med fortsatt
+separata beviskrav för geometri, maskstöd, utfärdandetid och run-förenlighet.

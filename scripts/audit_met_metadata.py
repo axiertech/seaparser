@@ -1,6 +1,6 @@
 """Offline audit of the reviewed frozen MET DAP metadata, never a wind adapter."""
 import argparse
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from hashlib import sha256
 import json
 from math import isfinite
@@ -46,6 +46,8 @@ def time_metadata(dds, das, ascii_text):
 
 
 def bounded_read(directory, filename, *, limit=MAX_BYTES):
+    if type(limit) is not int or not 0 < limit <= MAX_BYTES:
+        raise ValueError('Positive bounded read limit required')
     path = directory / filename
     with path.open('rb') as handle:
         data = handle.read(limit + 1)
@@ -55,9 +57,18 @@ def bounded_read(directory, filename, *, limit=MAX_BYTES):
 
 
 def numbers(line, count):
-    values = tuple(Decimal(value.strip()) for value in line.split(','))
+    tokens = tuple(value.strip() for value in line.split(','))
+    if len(tokens) != count or any(not value or len(value) > 64 for value in tokens):
+        raise ValueError('Numeric token budget and exact dimensions required')
+    try:
+        values = tuple(Decimal(value) for value in tokens)
+    except InvalidOperation:
+        raise ValueError('Invalid numeric source token') from None
     if len(values) != count or not all(value.is_finite() for value in values):
         raise ValueError('Finite coordinate values and exact dimensions required')
+    # Parsing/work budget, not a meteorological tolerance or physical bound.
+    if any(abs(value.as_tuple().exponent) > 64 for value in values):
+        raise ValueError('Numeric exponent budget exceeded')
     return values
 
 
@@ -85,8 +96,15 @@ def matrix(text, name, rows, columns):
 def audit(directory):
     directory = Path(directory)
     manifest = json.loads(bounded_read(directory, 'manifest.json'))
+    if type(manifest) is not dict:
+        raise ValueError('Metadata manifest object required')
     entries = manifest.get('files', [])
-    if (manifest.get('schema') != 1 or len(entries) != len(SOURCE_FILES)
+    if (type(manifest.get('schema')) is not int or manifest['schema'] != 1
+            or type(entries) is not list or len(entries) != len(SOURCE_FILES)
+            or any(type(entry) is not dict or type(entry.get('filename')) is not str
+                   or type(entry.get('bytes')) is not int or not 0 <= entry['bytes'] <= MAX_BYTES
+                   or type(entry.get('sha256')) is not str
+                   or not re.fullmatch(r'[0-9a-f]{64}', entry['sha256']) for entry in entries)
             or {entry['filename'] for entry in entries} != SOURCE_FILES):
         raise ValueError('Complete reviewed five-file metadata manifest required')
     texts, hashes = {}, {}
@@ -110,7 +128,9 @@ def audit(directory):
     if (times[0] != 1791849600 or times[-1] != 1792058400
             or any(b - a != 3600 for a, b in zip(times, times[1:]))):
         raise ValueError('Reviewed exact hourly validity required')
-    subset = manifest['coordinate_subset']
+    subset = manifest.get('coordinate_subset')
+    if type(subset) is not dict or not all(key in subset for key in ('x_first', 'x_last', 'y_first', 'y_last')):
+        raise ValueError('Complete coordinate subset required')
     indices = [subset[key] for key in ('x_first', 'x_last', 'y_first', 'y_last')]
     if any(type(value) is not int for value in indices):
         raise ValueError('Integer source indices required')
@@ -169,6 +189,9 @@ def audit_wind_sample(directory, metadata_directory):
     metadata = audit(metadata_directory)
     directory, metadata_directory = Path(directory), Path(metadata_directory)
     manifest = json.loads(bounded_read(directory, 'manifest.json'))
+    if (type(manifest) is not dict or type(manifest.get('schema')) is not int
+            or manifest['schema'] != 1 or manifest.get('filename') != 'native-wind-land.txt'):
+        raise ValueError('Reviewed wind sample manifest required')
     data = bounded_read(directory, 'native-wind-land.txt', limit=128_000)
     digest = sha256(data).hexdigest()
     if len(data) > 128_000 or manifest.get('sha256') != digest or manifest.get('bytes') != len(data):
@@ -220,9 +243,14 @@ def main():
     parser.add_argument('directory', type=Path)
     parser.add_argument('--wind-sample', type=Path, help='Audit the frozen native sample; never qualify routing')
     args = parser.parse_args()
-    report = audit(args.directory)
-    if args.wind_sample:
-        report['wind_sample'] = audit_wind_sample(args.wind_sample, args.directory)
+    try:
+        report = audit(args.directory)
+        if args.wind_sample:
+            report['wind_sample'] = audit_wind_sample(args.wind_sample, args.directory)
+    except (OSError, UnicodeError, ValueError) as error:
+        print(json.dumps({'schema': 1, 'scope': 'offline_audit_failed', 'routing_status': 'data_unavailable',
+                          'issued_at': None, 'error_kind': type(error).__name__}))
+        raise SystemExit(1) from None
     print(json.dumps(report, indent=2))
 
 

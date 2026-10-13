@@ -188,3 +188,19 @@ Reproducerbar offlinekontroll:
 
 review.json återger diagnostiken. issued_at=null, data_unavailable och samtliga
 planeringsspärrar kvarstår, även om manifestet förses med datum eller flaggor.
+
+## Felgränser i offlineverktyget
+
+Läsgränsen måste vara ett positivt heltal högst 512000 byte. Vindråsvaret
+läser högst 128001 byte och avvisar den extra byten; manifestet kan inte öka
+budgeten. Metadata-/vindmanifest måste ha granskad struktur, källfilernas
+byteantal/hash och komplett koordinatsubset. Felaktiga tal, NaN/Infinity,
+token längre än 64 tecken och absoluta Decimal-exponenter över 64 avvisas.
+Dessa talgränser är bearbetningsbudgeter för det frysta formatet, inte
+meteorologiska toleranser, avrundning eller nya giltighetsantaganden.
+
+Vid fil-, teckenkodnings- eller valideringsfel skriver CLI ett JSON-svar med
+scope=offline_audit_failed, routing_status=data_unavailable, issued_at=null
+och endast felklass, och avslutar med exit 1. Rådata och filvägar återges inte
+i felrapporten. Inget partiellt lyckat svar skrivs. Giltig fixturediagnostik
+är oförändrad och kvalificerar fortfarande ingen routing.
