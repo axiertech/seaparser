@@ -23,6 +23,21 @@ class MetadataProbeTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     read_met_metadata(next(iter(MET_URLS.values())))
 
+    def test_met_response_type_matches_requested_endpoint(self):
+        # Synthetic DAP envelopes: transport validation, not real source evidence.
+        for filename, url in MET_URLS.items():
+            expected = b'Attributes { }' if filename.endswith('.das') else b'Dataset { } test;'
+            wrong = b'Dataset { } test;' if filename.endswith('.das') else b'Attributes { }'
+            for content, accepted in ((expected, True), (wrong, False)):
+                with self.subTest(filename=filename, accepted=accepted):
+                    with patch('scripts.probe_forecast_metadata.urlopen') as opener:
+                        opener.return_value.__enter__.return_value.read.return_value = content
+                        if accepted:
+                            self.assertEqual(read_met_metadata(url), content)
+                        else:
+                            with self.assertRaises(ValueError):
+                                read_met_metadata(url)
+
     def test_marine_get_is_strictly_listing_and_dry_run(self):
         calls = []
         def get(**kwargs):

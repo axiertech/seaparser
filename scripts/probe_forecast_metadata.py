@@ -36,8 +36,9 @@ def read_met_metadata(url):
     if len(data) > MAX_METADATA_BYTES:
         raise ValueError('Metadata response size budget exceeded')
     text = data.decode('utf-8')
-    if not text.lstrip().startswith(('Dataset {', 'Attributes {')):
-        raise ValueError('Response is not DAP metadata')
+    expected = 'Attributes {' if url == MET_URLS['met-forecast.das'] else 'Dataset {'
+    if not text.lstrip().startswith(expected):
+        raise ValueError('Response does not match the requested DAP metadata type')
     return data
 
 

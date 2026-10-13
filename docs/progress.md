@@ -1358,3 +1358,32 @@ Nästa oberoende del: granskningskontrakt för faktisk källbunden run-provenien
 eller offline metadataanalys, medan åtkomst till regional vind/marina
 originalmetadata fortfarande är blockerad. Kontrollera denna commits push/CI
 före nästa kodleverans. Hämta inte befintliga marina fixtures igen.
+
+## 2026-10-13 21:41 UTC: MET-metadataformat och nytt källförsök
+
+Aktivt auktoriserat pass, arbetsrot /tmp/seaparser-real-map-data på
+ development/real-map-data. Metadataförsök 21:41:51–21:41:52 UTC gav exit 2:
+MET tre URLError, Copernicus preflight gaierror. Rapport finns i
+/home/web/seaparser/autonomy/forecast-metadata-20261013T2143Z/report.json.
+Ingen ny marin data hämtades och feltyperna bevisar inte att data saknas.
+
+Oberoende förbättring: MET DAS kräver Attributes-envelope; DDS och tids-ASCII
+kräver Dataset-envelope. Fel sorts DAP-svar avvisas. Detta är en begränsad
+transportkontroll, inte en fullständig DAP-parser eller run-verifiering.
+Antagande: befintliga granskade endpoints behåller respektive DAP-envelope.
+Åtta probetester passerar, inklusive båda felriktningarna och kvarvarande spärrar.
+Full scripts/check.py passerar: 158+99 Python-tester, syntax, beroendelåsning,
+pip check och domängränser. Frontend run check passerar. Alla tre frysta marina
+hashar matchar manifestet; adapter_sample_checks=passed och routing unavailable.
+
+Git ls-remote misslyckades med exit 128: Bad owner or permissions on
+/etc/ssh/ssh_config.d/20-systemd-ssh-proxy.conf. Systemfilen är orörd.
+GitHub-connectorns repo/CI-anrop ger Unknown tool; ny CI är overifierad.
+Nästa uppgift: källbundet offlinekontrakt för modellrun-proveniens eller faktisk
+metadataåtkomst när miljön medger det. Samma marina fixtures återanvänds och
+alla planning_blockers kvarstår. Publik demonstration är orörd.
+
+Frontend test: första körning exit 1; socket.socket() gav PermissionError i
+sandboxen. Godkänt sandboxundantag för befintliga lokala tester gav exit 0,
+sex frontendtester passerar inklusive syntetisk och Vinga API/karta/GPX.
+Loggar: autonomy/logs/met-envelope-{check,frontend,frontend-recheck,fixture}-20261013T2143Z.*.
