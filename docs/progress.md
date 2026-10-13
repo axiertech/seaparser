@@ -1147,3 +1147,33 @@ och 6 frontendtester passerade, inklusive bägge lokala kartflöden och vågdata
 Ny processs release-cwd verifieras även efter rootaktivering. Bashsyntax, Python-
 syntax och riktade rollbacktester passerar. Rootaktivering är inte utförd;
 publik HTTPS-Vinga kan verifieras först efter det förberedda rootkommandot.
+
+## 2026-10-13: Vinga-aktivering verifierad, prognosblockerare omprövade
+
+Arbete återupptaget i `/tmp/seaparser-real-map-data` efter kontroll av
+AGENTS.md, status och commit. Branch `development/real-map-data`, commit
+`5aa34e1e374ecae5f1fdc601a551c38feaa8546d`; arbetskatalogen var ren.
+
+Den tidigare Vinga-noteringen ovan ersätts av aktiveringskvittot
+`/home/web/seaparser/backups/vinga-5aa34e1e374ecae5f1fdc601a551c38feaa8546d/activation-success.json`:
+`https_flow: passed`, commit `5aa34e1`, URL `https://seaparser.com/`.
+Kvittot skrevs 2026-10-13 00:10:56 CEST. Förberett publiceringspaket passerar
+`prepare_vinga --verify`; tidigare slutkontroll 226 Python- och 6 frontendtester
+är dokumenterad som godkänd. Aktuell systemd-/publik DNS-verifiering kunde inte
+göras från denna körmiljö (system-bus nekas, DNS-upplösning misslyckas), och
+GitHub CLI saknas; inget nytt rootsteg eller nytt testpaket kördes.
+
+Prognoskällorna granskades mot aktuell officiell dokumentation. Copernicus Marine
+anger kostnadsfri åtkomst även för kommersiella ändamål, med attribution/citering
+och produkt-DOI; nedladdning kräver autentisering. Inget konto eller dataset
+skapades/hämtades. MET:s officiella Oceanforecast-dokumentation anger råa
+NetCDF/OPeNDAP-modeller på THREDDS, men länkad katalogsökväg ger 404. THREDDS-
+översikten anger att arkivet innehåller historiska och aktuella ocean-/isdata;
+åtkomligt Vinga-dataset, mask och metadata återstår. Regional verklig planering
+är fortsatt `data_unavailable`: punktreferenserna saknar regional täckning,
+marin utfärdandetid och Tm02. Ingen osäker extrapolation aktiveras.
+
+Uppdaterat `docs/forecast-sources.md` med dessa källvillkor och kvarstående steg.
+Nästa konkreta steg: verifiera ett åtkomligt native forecast-grid med giltig
+köridentitet, wet mask, wave period och strömdjup; därefter mappa till befintlig
+ForecastDataset och låta befintlig täcknings-/vädercertifiering avvisa luckor.

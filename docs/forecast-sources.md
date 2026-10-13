@@ -8,7 +8,7 @@ nya beroenden, databasskrivningar eller publika ändringar ingår.
 | SMHI SNOW1gv1, vind | Sveriges punkt-/gridprognos. Vinga-anropet returnerade 11.609723°E 57.6395°N, utanför testboxen. 86 giltighetstider, 12 okt 22Z–23 okt 00Z, varierande tidssteg. Exakt native upplösning och uppdateringstakt kunde inte verifieras i tillgänglig SNOW-dokumentation; anta inte äldre PMP-/MEPS-värden | Öppet utan konto/kostnad; CC BY 4.0 enligt SMHI, kommersiellt tillåtet med attribution/ändringsangivelse. Fryst punktreferens importerad; ej regionalt rutnät |
 | MET Norway Locationforecast, vind | Norden: MEPS 2.5 km/0–60 h, uppdatering varje timme; medium range ECMWF cirka 9 km/2–10 dygn, två gånger per dygn | Öppet CC BY 4.0/NLOD, identifierad UA/cachning, ingen SLA. Alternativ; inget ytterligare prognossvar hämtat |
 | MET Norway Oceanforecast, vågor/ström | Nordvästeuropa. Regionala vågor 4 km/4 uppdateringar per dygn, kustmodell 800 m/2 per dygn där täckt. Vinga svaret flyttas till 11.5955°E 57.626°N; inte bevis för modellstöd i rutten. 208 timsteg, 12 okt 21Z–21 okt 12Z | Öppet CC BY 4.0/NLOD utan konto/kostnad. Svar har Hs, från-riktning och ström mot-riktning/fart, men **ingen vågperiod**, okänt strömdjup och ingen separat modellutfärdandetid. Fryst ofullständig referens, ingen regional extrapolation |
-| Copernicus Baltic PHY/WAV | Vinga inom angiven region 9–30°E/53–66°N, cirka 1 nautisk mil/2 km. PHY har bl.a. 15-min surface currents och djupnivåer; WAV har timvis Hs/Tm02/riktning. 00Z-produktion upp till 10 dygn, WAV 12Z 6 dygn, publicering 10/22 UTC | Data är kostnadsfria. Nedladdning kräver inloggning enligt officiell åtkomstdokumentation. Inga konton skapas. Licenslänken gav 403; fullständiga återdistributions-/kommersiella villkor måste läsas före import, inget dataset hämtat |
+| Copernicus Baltic PHY/WAV | Vinga inom angiven region 9–30°E/53–66°N, cirka 1 nautisk mil/2 km. PHY har bl.a. 15-min surface currents och djupnivåer; WAV har timvis Hs/Tm02/riktning. 00Z-produktion upp till 10 dygn, WAV 12Z 6 dygn, publicering 10/22 UTC | Officiell hjälp säger att åtkomst är kostnadsfri även kommersiellt, med korrekt acknowledgment/citation/credit och relevanta produkt-DOI:n. Nedladdning/processning kräver inloggning (Copernicus Marine eller CDSE). Ingen inloggning eller nedladdning har gjorts. Kontrollera aktuell produkts licens och metadata före import |
 | Open-Meteo Marine | Globala/regionala alternativ, EWAM cirka 5 km/timvis/8 dygn/12 h uppdatering; globala strömmar cirka 8 km/timvis/10 dygn/24 h. Leverantören varnar för kustnavigation | Data CC BY 4.0, men hosted gratis-API är endast icke-kommersiellt. SeaParser-produktutveckling antas kommersiell; inget anrop, konto eller abonnemang. Data/licens ger inte fri rätt till hosted kommersiell trafik |
 
 Officiella källor:
@@ -24,6 +24,9 @@ Officiella källor:
 [Copernicus PHY-manual](https://documentation.marine.copernicus.eu/PUM/CMEMS-BAL-PUM-003-006-007.pdf),
 [Copernicus WAV](https://data.marine.copernicus.eu/product/BALTICSEA_ANALYSISFORECAST_WAV_003_010/description),
 [Copernicus åtkomst](https://help.marine.copernicus.eu/en/articles/4220332-how-to-register-for-copernicus-marine-service),
+[Copernicus citering och attribution](https://help.marine.copernicus.eu/en/articles/4444611-citing-copernicus-marine-products-and-services),
+[MET THREDDS-katalogöversikt](https://api.met.no/product/THREDDS),
+[MET Oceanforecast-dokumentation](https://api.met.no/weatherapi/oceanforecast/2.0/documentation),
 [Open-Meteo modelltabell](https://open-meteo.com/en/docs/marine-weather-api),
 [Open-Meteo tjänstevillkor](https://open-meteo.com/en/terms).
 Copernicus PHY-manualen innehåller även äldre 9-dygnstabell; faktisk run/version
@@ -59,8 +62,18 @@ utfärdandetid saknas. Ingen snabbaste/bekvämaste verklig rutt eller GPX utses.
 Det är ett verifierat avvisande **före** motorn, inte en genomförd verklig färd.
 Den tidigare syntetiska API/kart/GPX-fixturen och dess motortester bevaras.
 Nästa steg är native griddat underlag med mask, utfärdande, Tm02 och strömdjup,
-inte att sprida närmaste punkt över området. MET:s dokumenterade THREDDS-länk
-kunde inte läsas med webverktyget; rågridåtkomst är inte verifierad i leveransen.
+inte att sprida närmaste punkt över området. MET:s officiella Oceanforecast-
+dokumentation hänvisar råa modeller till NetCDF/OPeNDAP på THREDDS, men den
+länkade katalogsökvägen gav HTTP 404 vid kontroll 2026-10-13. Den officiella
+THREDDS-översikten beskriver arkivdata för aktuella/historiska ocean- och
+isprognoser. Rätt Vinga-dataset, körmetadata, variabler och native mask har ännu
+inte verifierats mot en åtkomlig katalog/fil.
+
+Copernicus Marine uppger numera att dataåtkomst är kostnadsfri även för
+kommersiella syften, med korrekt attribution och produkt-DOI. Nedladdning kräver
+inloggning. Ingen Copernicus/CDSE-inloggning eller nedladdning har gjorts;
+produktens aktuella licens, dataset och metadata behöver fortfarande granskas
+före import.
 
 ## Kandidatbegränsning
 
