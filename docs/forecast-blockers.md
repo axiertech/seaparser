@@ -316,3 +316,19 @@ Frontend run check passerar. Logg autonomy/logs/independent-marine-check-2026101
 Alla planning_blockers/data_unavailable kvarstår; marina fixtures och publik demo orörda.
 Nästa oberoende diagnostik: isolera bibliotekets skrivskyddade konfigurations-/
 katalogdelsteg med en egen liten tidsbudget; återupprepa inte hela listan utan ny evidens.
+
+## 2026-10-13: isolerade Copernicus konfigurations-/katalog-/authsteg
+
+Avgränsade steg med auto-review: versionskonfiguration exit 0 (~0.12 s),
+vågkatalogmetadata exit 0 (~0.32 s, låst 202311 finns), ordinarie saved-auth-
+validering exit 124 efter 25 s. Inga authvärden, privata URL:er eller fulla
+felmeddelanden loggade; inga authfiler ändrade. Inga väderfiler eller listningar.
+Dokumenterad kodordning gör authvalidering till konkret kandidat för tidigare
+get-fördröjning, inte verifierad root cause eller bevis på ogiltiga uppgifter.
+Detaljer/rapporter: [copernicus-metadata-diagnostics.md](copernicus-metadata-diagnostics.md). Alla planning_blockers
+kvarstår, ingen katalogversion eller timeout används som run-bevis.
+Nästa oberoende del: faktisk officiell MET-höjd-/medelperiodsemantik.
+
+Sexton metadata-probetester passerar; diff check passerar. Ingen kod ändrad i
+leveransen; föregående 02ff72a har 269 Python-tester/frontend check godkända.
+Logg autonomy/logs/marine-stage-tests-20261013T2223Z.log.
