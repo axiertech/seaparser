@@ -129,6 +129,44 @@ class NetCDFAuditTests(unittest.TestCase):
         self.assertIn('cross_product_model_run_compatibility_not_verified', report['blockers'])
         self.assertEqual(report['status'], 'regional_routing_unavailable')
 
+    def test_subsecond_validity_shift_cannot_be_hidden_by_truncation(self):
+        import numpy as np
+        import xarray as xr
+        from scripts.audit_copernicus import audit
+        path = self.directory / 'waves.nc'
+        with xr.open_dataset(path) as ds:
+            original = ds.load()
+        for all_times in (False, True):
+            with self.subTest(all_times=all_times):
+                product = original.copy(deep=True)
+                shifted = product.time.values.copy()
+                if all_times:
+                    shifted += np.timedelta64(250, 'ms')
+                else:
+                    shifted[2] += np.timedelta64(250, 'ms')
+                product = product.assign_coords(time=xr.DataArray(shifted, dims=['time'],
+                    attrs={'standard_name': 'time'}))
+                product.to_netcdf(path)
+                self.refresh_manifest()
+                with self.assertRaisesRegex(ValueError, 'exact five hourly validity'):
+                    audit(self.directory)
+
+    def test_model_reference_precision_is_preserved_for_review(self):
+        import numpy as np
+        import xarray as xr
+        from scripts.audit_copernicus import audit
+        path = self.directory / 'waves.nc'
+        with xr.open_dataset(path) as ds:
+            product = ds.load()
+        product['model_reference'] = xr.DataArray(np.datetime64('2026-10-13T06:00:00.250'),
+            attrs={'standard_name': 'forecast_reference_time'})
+        product.to_netcdf(path)
+        self.refresh_manifest()
+        report = audit(self.directory)
+        self.assertEqual(report['waves']['forecast_reference_time'], '2026-10-13T06:00:00.250Z')
+        self.assertIsNone(report['waves']['issued_at'])
+        self.assertIn('waves_model_issue_time_missing', report['blockers'])
+
     def test_ambiguous_or_undecoded_model_reference_stays_unknown(self):
         import numpy as np
         import xarray as xr

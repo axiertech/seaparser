@@ -42,9 +42,13 @@ def inspect_file(path, fields, np, xr):
                   'variables': {}, 'issued_at': None, 'forecast_reference_time': None}
         if fields != MASK_FIELDS:
             time = coordinate(ds, 'time')
-            times = time.values.astype('datetime64[s]')
+            raw_times = time.values
+            if not np.issubdtype(raw_times.dtype, np.datetime64):
+                raise ValueError('Decoded Gregorian datetime validity required')
+            times = raw_times.astype('datetime64[s]')
             if (time.encoding.get('calendar', 'standard') not in ('standard', 'gregorian', 'proleptic_gregorian')
                     or np.isnat(times).any() or len(times) != 5
+                    or not np.array_equal(raw_times, times)
                     or not (np.diff(times) == np.timedelta64(1, 'h')).all()
                     or times[0] != np.datetime64('2026-10-13T12:00:00')
                     or times[-1] != np.datetime64('2026-10-13T16:00:00')):
@@ -57,7 +61,8 @@ def inspect_file(path, fields, np, xr):
                 if np.issubdtype(type(value), np.datetime64) and not np.isnat(value):
                     # CF model reference time is not evidence of publication/issuance.
                     # Preserve it for review without clearing the issuance blocker.
-                    result['forecast_reference_time'] = str(value.astype('datetime64[s]')) + 'Z'
+                    unit = 's' if value == value.astype('datetime64[s]') else 'auto'
+                    result['forecast_reference_time'] = np.datetime_as_string(value, unit=unit) + 'Z'
         depth_name = None
         if fields == CURRENT_FIELDS:
             depth = coordinate(ds, 'depth')

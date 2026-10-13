@@ -199,3 +199,28 @@ pip check och domängränser. Frontend run check passerar. Logg:
 autonomy/logs/reference-time-check-20261013T2158Z.log.
 Nästa oberoende granskning: CF-giltighetens precision/kalender före
 normalisering till sekunder; kontrollera att verkliga tidsluckor inte döljs.
+
+## 2026-10-13: CF-giltighet utan dold sekundtrunkering
+
+Auditens exakta timsteg kontrolleras nu mot ursprungliga dekodade datetime-värden
+innan normalisering till sekunder godkänns. Icke-datetime-giltighet avvisas;
+subsekundförskjutning får inte bli ett till synes korrekt timsteg. Ingen
+tidsmässig tolerans antas. Modellreferensdiagnostik bevarar delsekunder, medan
+hela sekunder behåller tidigare format. Utfärdandetid/run förblir overifierade.
+
+Tolv importtester passerar, inklusive förskjutning av en inre tid och av alla
+tider med 250 ms samt bevarad .250-sekundprecision i syntetisk modellreferens.
+Första riktade körningen fann en formateringsregression (auto gav minutformat);
+formatet korrigerades och slutkörningen passerar. Befintliga verkliga marina
+tider kontrollerade utan nätverk: alla fem ligger exakt på hela sekunder i
+båda dynamiska produkter. Befintlig reference regenereras identiskt.
+Inga nya marina filer, adaptrar, beroenden, databasoperationer eller publik ändring.
+Logg autonomy/logs/cf-precision-targeted-20261013T2200Z.log.
+
+Full scripts/check.py passerar: 158+107=265 Python-tester, syntax, låsfiler,
+pip check och domängränser. Frontend run check passerar. Logg:
+autonomy/logs/cf-precision-check-20261013T2200Z.log.
+Nästa oberoende möjlighet: ett avgränsat metadata-only åtkomstförsök med
+sandboxundantag prövat av auto-review, eftersom tidigare fel var från den
+begränsade nätverksmiljön; ingen ny marin väderfil får hämtas. Vid avslag eller
+fortsatt källfel: dokumentera exakt resultat och fortsätt offlinegranskning.
