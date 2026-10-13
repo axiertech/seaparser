@@ -1,5 +1,6 @@
 """Root-flow primitives checked in temp directories; no system/public mutations."""
 from pathlib import Path
+import os
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 import unittest
@@ -9,6 +10,10 @@ from deployment.prepare_vinga import digest
 
 class PublicationTests(unittest.TestCase):
     def setUp(self):
+        # Tests exercise preservation of 0644 files, independent of the runner's
+        # private-log umask. Never change production permissions to satisfy tests.
+        previous_umask=os.umask(0o022)
+        self.addCleanup(os.umask,previous_umask)
         role=patch('deployment.vinga_upgrade.os.geteuid',return_value=1000)
         role.start();self.addCleanup(role.stop)
 

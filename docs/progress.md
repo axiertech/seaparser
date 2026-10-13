@@ -1326,3 +1326,35 @@ exakt SSH-terminalkommando dokumenteras i docs/forecast-blockers.md.
 Slutlig överlämning i autonomy/HANDOFF.md anger exakt slutcommit, arbetskatalog,
 lokala ändringar och nästa begränsade uppgift. Ingen publik drift ändrad och
 ingen ny eller parallell Codex-utvecklingskörning startad.
+
+
+## 2026-10-13: Begränsat autonomt delpass – robust metadataprobe
+
+Startade på rent bd5600c, development/real-map-data, som seaparser.
+Metadataförsök 07:15:54–07:15:56 UTC gav exit 2: MET URLError (tre anrop),
+Copernicus gaierror. Inga nya marina data eller vindvärden hämtades.
+Rapport: autonomy/forecast-metadata-20261013T0717Z/report.json.
+
+Proben fortsätter nu med nästa marina produkt efter ett produktfel och behåller
+lyckad transportproveniens. Tom/ogiltig CSV får inte metadata_complete=true.
+Sju probetester verifierar detta samt att komplett transport behåller
+planeringsblockerarna. Ingen run-identitet eller utfärdandetid antas.
+
+Samlade Pythonkontroller: 158+98=256 tester passerar, inklusive befintliga
+Copernicus- och planeringsspärrstester. Syntax, domängränser, låsningar och
+pip check passerar. Publiceringstesterna gör nu sin 022-umask explicit och
+återställer tidigare umask; produktion och publik demonstration är orörda.
+Första samlade körningen upptäckte tre befintliga umaskberoende testfel under
+passets privata 077-umask; den korrigerade samlade körningen passerar.
+
+Alla tre frysta marina SHA-256 matchar manifestet; adapter_sample_checks=passed.
+Auditen lämnar regional_routing_unavailable. Frontend run check passerar;
+frontend test passerar land-review men kartintegration kan inte starta lokal
+API-process. Separat socketprov ger PermissionError, Operation not permitted
+redan vid socket.socket(). CI måste verifiera full integration för exakt commit.
+Ingen testspärr tas bort. Loggar: autonomy/logs/metadata-probe-*20261013*.
+
+Nästa oberoende del: granskningskontrakt för faktisk källbunden run-proveniens
+eller offline metadataanalys, medan åtkomst till regional vind/marina
+originalmetadata fortfarande är blockerad. Kontrollera denna commits push/CI
+före nästa kodleverans. Hämta inte befintliga marina fixtures igen.

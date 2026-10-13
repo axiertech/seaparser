@@ -27,7 +27,8 @@ class MetadataProbeTests(unittest.TestCase):
         calls = []
         def get(**kwargs):
             calls.append(kwargs)
-            (kwargs['output_directory'] / kwargs['create_file_list']).write_text('filename,size,last_modified_datetime,etag\n')
+            (kwargs['output_directory'] / kwargs['create_file_list']).write_text(
+                'filename,size,last_modified_datetime,etag\nforecast.nc,123,2026-10-13T00:00:00Z,hash\n')
             return SimpleNamespace(files=[], number_of_files_to_download=0)
         marine = SimpleNamespace(__version__='2.5.0', get=get)
         with tempfile.TemporaryDirectory() as directory, patch('scripts.probe_forecast_metadata.socket.getaddrinfo'):
@@ -36,6 +37,58 @@ class MetadataProbeTests(unittest.TestCase):
         self.assertTrue(all(k['dry_run'] and k['create_file_list'].endswith('.csv') for k in calls))
         self.assertTrue(all('username' not in k and 'password' not in k for k in calls))
         self.assertTrue(all(x['model_issue_time'] is None for x in entries))
+        self.assertTrue(all(x['file_count'] == 1 and x['status'] == 'file_list_only' for x in entries))
+
+    def test_marine_failure_preserves_other_product_and_redacts_error(self):
+        for failed_product in ('waves', 'current'):
+            calls = []
+            def get(**kwargs):
+                calls.append(kwargs['dataset_id'])
+                if kwargs['create_file_list'].startswith(failed_product):
+                    raise OSError('private credential must not be logged')
+                (kwargs['output_directory'] / kwargs['create_file_list']).write_text(
+                    'filename,size,last_modified_datetime,etag\nforecast.nc,123,date,hash\n')
+                return SimpleNamespace(files=[], number_of_files_to_download=0)
+            marine = SimpleNamespace(__version__='2.5.0', get=get)
+            with tempfile.TemporaryDirectory() as directory, patch('scripts.probe_forecast_metadata.socket.getaddrinfo'):
+                entries = list_marine_metadata(marine, Path(directory))
+            self.assertEqual(len(calls), 2)
+            self.assertEqual([x['status'] for x in entries],
+                             ['blocked', 'file_list_only'] if failed_product == 'waves'
+                             else ['file_list_only', 'blocked'])
+            self.assertNotIn('private credential', str(entries))
+            self.assertTrue(all(x['model_issue_time'] is None for x in entries))
+
+    def test_empty_and_invalid_marine_lists_are_not_complete(self):
+        for content, expected in (
+            ('filename,size,last_modified_datetime,etag\n', 'no_matching_files'),
+            ('<html>not a file list</html>', 'blocked'),
+            ('filename,size,last_modified_datetime,etag\nfile.nc,unknown,date,hash\n', 'blocked'),
+            ('filename,size,last_modified_datetime,etag\nfile.nc,123,date\n', 'blocked'),
+            ('X' * (MAX_METADATA_BYTES + 1), 'blocked'),
+        ):
+            def get(**kwargs):
+                (kwargs['output_directory'] / kwargs['create_file_list']).write_text(content)
+                return SimpleNamespace(files=[], number_of_files_to_download=0)
+            marine = SimpleNamespace(__version__='2.5.0', get=get)
+            with tempfile.TemporaryDirectory() as directory, patch('scripts.probe_forecast_metadata.socket.getaddrinfo'):
+                report = probe(Path(directory)/'probe', met_reader=lambda url: b'Dataset { } test;', marine=marine)
+            self.assertFalse(report['metadata_complete'])
+            self.assertTrue(all(x['status'] == expected for x in report['copernicus']))
+            self.assertEqual(report['routing_status'], 'data_unavailable')
+
+    def test_complete_transport_never_removes_planning_blockers(self):
+        def get(**kwargs):
+            (kwargs['output_directory'] / kwargs['create_file_list']).write_text(
+                'filename,size,last_modified_datetime,etag\nforecast.nc,123,date,hash\n')
+            return SimpleNamespace(files=[], number_of_files_to_download=0)
+        marine = SimpleNamespace(__version__='2.5.0', get=get)
+        with tempfile.TemporaryDirectory() as directory, patch('scripts.probe_forecast_metadata.socket.getaddrinfo'):
+            report = probe(Path(directory)/'probe', met_reader=lambda url: b'Dataset { } test;', marine=marine)
+        self.assertTrue(report['metadata_complete'])
+        self.assertEqual(report['routing_status'], 'data_unavailable')
+        self.assertEqual(len(report['blockers']), 3)
+        self.assertTrue(all(x['model_issue_time'] is None for x in report['copernicus']))
 
     def test_partial_blocker_does_not_skip_independent_metadata(self):
         calls = []

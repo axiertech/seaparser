@@ -80,3 +80,20 @@ ett MET-anrop misslyckas; fortsatt blockerad åtkomst kräver vanlig terminal.
 Inför autonom överlämning: kontrollera git status och HEAD mot kvittot i
 `/home/web/seaparser/autonomy/HANDOFF.md`. Inget bakgrundspass förutsätts vara
 startat. Worktree-, data-, branch- och mandatgränser följer AGENTS.md.
+
+## Aktivt delpass 2026-10-13, 07:15 UTC
+
+Metadataförsöket 07:15:54–07:15:56 UTC gav exit 2: tre MET-anrop med
+`URLError`, Copernicus katalog-DNS med `gaierror`. Faktisk rapport:
+`/home/web/seaparser/autonomy/forecast-metadata-20261013T0717Z/report.json`.
+Inga nya subset eller originalväderfiler hämtades. SSH-provet är enligt
+användarens aktuella instruktion verifierat; nätverksåtkomst i agentmiljön
+är ändå inte verifierad. Feltyperna bevisar inte att källorna saknar data.
+
+Oberoende offlinearbete förbättrar metadata-proben: fel för en marin produkt
+bevarar den andra produktens resultat och försök. CSV-header, radstruktur,
+filstorleksfält och metadatabudget kontrolleras. Tom fillista ger
+`no_matching_files`, aldrig komplett metadataåtkomst. Antal listade filer
+och SHA-256 är transportproveniens, inte modellkörningsbevis. Även komplett
+transport lämnar alla tre planeringsblockerare och `data_unavailable`.
+Inga modellutfärdanden härleds från namn, datumkolumn eller etag.

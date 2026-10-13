@@ -5,6 +5,7 @@ Copernicus: original-file listing with create_file_list AND dry_run enabled.
 Neither a file modification date nor a filename is accepted as model issuance.
 """
 import argparse
+import csv
 from datetime import datetime, timezone
 from hashlib import sha256
 import json
@@ -48,18 +49,30 @@ def list_marine_metadata(marine, output):
     entries = []
     for label, dataset_id, version in MARINE_LISTS:
         filename = f'{label}-original-files.csv'
-        response = marine.get(dataset_id=dataset_id, dataset_version=version,
-                              filter='*20261013*', create_file_list=filename,
-                              output_directory=output, dry_run=True,
-                              disable_progress_bar=True, max_concurrent_requests=1)
-        if response.files or response.number_of_files_to_download != 0:
-            raise ValueError('Metadata-only operation must not download original files')
-        path = output / filename
-        if not path.is_file() or path.stat().st_size > MAX_METADATA_BYTES:
-            raise ValueError('File-list metadata missing or exceeds budget')
-        entries.append({'product': label, 'dataset_id': dataset_id, 'version': version,
-                        'filename': filename, 'sha256': sha256(path.read_bytes()).hexdigest(),
-                        'status': 'file_list_only', 'model_issue_time': None})
+        entry = {'product': label, 'dataset_id': dataset_id, 'version': version,
+                 'filename': filename, 'model_issue_time': None}
+        try:
+            response = marine.get(dataset_id=dataset_id, dataset_version=version,
+                                  filter='*20261013*', create_file_list=filename,
+                                  output_directory=output, dry_run=True,
+                                  disable_progress_bar=True, max_concurrent_requests=1)
+            if response.files or response.number_of_files_to_download != 0:
+                raise ValueError('Metadata-only operation must not download original files')
+            path = output / filename
+            if not path.is_file() or path.stat().st_size > MAX_METADATA_BYTES:
+                raise ValueError('File-list metadata missing or exceeds budget')
+            data = path.read_bytes()
+            rows = list(csv.reader(data.decode('utf-8').splitlines(), strict=True))
+            if not rows or rows[0] != ['filename', 'size', 'last_modified_datetime', 'etag']:
+                raise ValueError('Unexpected file-list columns')
+            if any(len(row) != 4 or not row[0] or not row[1].isdigit() for row in rows[1:]):
+                raise ValueError('Invalid file-list row')
+            entry.update(sha256=sha256(data).hexdigest(), file_count=len(rows) - 1,
+                         status='file_list_only' if len(rows) > 1 else 'no_matching_files')
+        except Exception as error:
+            # Preserve other products' evidence without disclosing library messages.
+            entry.update(status='blocked', error_type=type(error).__name__)
+        entries.append(entry)
     return entries
 
 
