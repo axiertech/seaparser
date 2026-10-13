@@ -1750,3 +1750,19 @@ reproduceras oförändrad; nio källhashar verifierade. Loggar autonomy/logs/
 met-audit-failures-{check,frontend}-20261013T2250Z.log. Nästa oberoende del:
 referensrams-/normaliseringsdiagnostik på sparade vindvärden, med fortsatt
 separata beviskrav för geometri, maskstöd, utfärdandetid och run-förenlighet.
+
+## 2026-10-13 22:53 UTC – vindreferensram och native konvergens
+
+NERC:s smala CF-post stöder FRÅN-/jordrelativ dokumentation; full CF-tabell
+överskred webbverktygets svarsstorleksgräns. Ingen full producent-/målram
+certifieras. Befintlig offlineaudit redovisar native LCC-meridiankonvergens
+över 56 faktiskt sparade noder: -3.066815 till -2.971995 grader, med varierande
+rotation. En oberoende tangent-kon-referens verifierar numeriken; ingen
+vind roteras/importeras. 26 riktade MET-tester passerar; spärrar kvarstår.
+Se met-wind-frame-review.md för källor, derivation, tolerans och avgränsning.
+Full scripts/check.py passerar: 160+137=297 Python-tester, syntax, låsfiler,
+pip check och domängränser. Frontend run check passerar. Alla nio källhashar
+och sparad vind-review oförändrade. Loggar autonomy/logs/met-frame-
+{targeted-20261013T2253Z,check-20261013T2254Z,frontend-20261013T2254Z}.log.
+Nästa oberoende del: granska/regressionstesta run-spärrarnas motstånd mot
+ifyllda datum och payloadflaggor i befintlig marin adapter; återanvänd fixtures.

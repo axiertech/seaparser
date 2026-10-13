@@ -7,7 +7,7 @@ from math import isfinite
 from pathlib import Path
 import re
 
-from pyproj import CRS, Transformer
+from pyproj import CRS, Proj, Transformer
 
 MAX_BYTES = 512_000
 SOURCE_FILES = {'met-forecast.dds', 'met-forecast.das', 'met-time-coordinates.txt',
@@ -151,6 +151,7 @@ def audit(directory):
     local = CRS.from_proj4('+proj=aeqd +lat_0=57.633 +lon_0=11.605 +ellps=WGS84 +units=m +no_defs')
     local_transform = Transformer.from_crs('EPSG:4326', local, always_xy=True)
     geod, errors, east, north = native.get_geod(), [], [], []
+    native_projection, convergence = Proj(native), []
     for j in range(rows):
         east_row, north_row = [], []
         for i in range(columns):
@@ -159,12 +160,13 @@ def audit(directory):
                 raise ValueError('Geographic coordinate outside bounds')
             plon, plat = inverse.transform(float(axes['x'][xf + i]), float(axes['y'][yf + j]), errcheck=True)
             errors.append(geod.inv(lon, lat, plon, plat)[2])
+            convergence.append(native_projection.get_factors(lon, lat, errcheck=True).meridian_convergence)
             e, n = local_transform.transform(lon, lat, errcheck=True)
             east_row.append(e); north_row.append(n)
         east.append(east_row); north.append(north_row)
     east_spread = max(max(row[i] for row in east) - min(row[i] for row in east) for i in range(columns))
     north_spread = max(max(row) - min(row) for row in north)
-    if not all(isfinite(value) for value in errors + [east_spread, north_spread]):
+    if not all(isfinite(value) for value in errors + convergence + [east_spread, north_spread]):
         raise ValueError('Nonfinite geometry diagnostic')
     return {'schema': 1, 'scope': 'offline_coordinate_diagnostic_not_routing_qualification',
             'source_hashes': hashes, 'source_node_count': rows * columns,
@@ -179,6 +181,9 @@ def audit(directory):
             'east_variation_across_rows_m': east_spread, 'north_variation_across_columns_m': north_spread,
             'separable_axis_max_error_lower_bound_m': max(east_spread, north_spread) / 2,
             'local_axis_diagnostic': 'Existing WGS84 AEQD; datum equivalence not certified',
+            'native_meridian_convergence': {'min_degrees': min(convergence),
+                                           'max_degrees': max(convergence), 'node_count': len(convergence),
+                                           'scope': 'native_grid_orientation_diagnostic_not_wind_normalization'},
             'issued_at': None, 'routing_status': 'data_unavailable',
             'blockers': ['regional_wind_not_imported', 'native_grid_to_local_geometry_unqualified',
                          'model_issue_time_unverified', 'cross_product_model_run_compatibility_unverified']}

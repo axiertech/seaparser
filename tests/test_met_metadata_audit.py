@@ -1,12 +1,13 @@
 from hashlib import sha256
 from decimal import Decimal
+from math import radians, sin
 import json
 from pathlib import Path
 import shutil
 import tempfile
 import unittest
 
-from scripts.audit_met_metadata import audit
+from scripts.audit_met_metadata import audit, matrix
 
 
 FIXTURE = Path(__file__).resolve().parents[1] / 'fixtures/met-nordic-metadata'
@@ -82,6 +83,21 @@ class METMetadataAuditTests(unittest.TestCase):
         self.change_source('native-axes.txt', '-896442.2', '-896441.2')
         with self.assertRaisesRegex(ValueError, 'hash or byte count'):
             audit(self.directory)
+
+    def test_native_convergence_matches_independent_tangent_cone_reference(self):
+        # Tangent spherical LCC at 63 degrees: gamma = sin(63)*(longitude-15).
+        # 1e-6 degree compares numerical factors only, never a routing tolerance.
+        longitude = matrix((self.directory / 'vinga-latlon.txt').read_text(), 'longitude', 8, 7)
+        expected = [sin(radians(63)) * (float(lon) - 15) for row in longitude for lon in row]
+        report = audit(self.directory)
+        convergence = report['native_meridian_convergence']
+        self.assertEqual(convergence['node_count'], 56)
+        self.assertAlmostEqual(convergence['min_degrees'], min(expected), delta=1e-6)
+        self.assertAlmostEqual(convergence['max_degrees'], max(expected), delta=1e-6)
+        self.assertGreater(max(expected) - min(expected), .09)
+        self.assertLess(max(expected), -2.9)
+        self.assertEqual(report['routing_status'], 'data_unavailable')
+        self.assertIsNone(report['issued_at'])
 
     def test_updated_hash_cannot_hide_wrong_axis_spacing(self):
         self.change_source('native-axes.txt', '-896442.2', '-896441.2', refresh_hash=True)
