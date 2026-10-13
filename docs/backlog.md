@@ -37,3 +37,5 @@ Inga konton, token eller betalda tjänster skapas innan särskilt beslut.
 Aktuell källgranskning och datagränser: [forecast-sources.md](forecast-sources.md).
 
 Run-proveniens: [granskningskontrakt](forecast-run-provenance.md) dokumenterat offline. Källbunden evidens, historisk ARCO-bindning och förenlighetsregel återstår; designen certifierar inga befintliga prognoser.
+
+Regional vind: [acceptanskontrakt för grid/stöd](regional-wind-acceptance.md) klart som design. Native projektion/rotation, masksemantik och eventuell regridding måste verifieras före implementation; befintliga syntetiska tester kvalificerar inte MET.

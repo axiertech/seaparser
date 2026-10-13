@@ -1422,3 +1422,19 @@ Inventerings-JSON/länkar och diff check kontrollerade. Inga nya beroenden,
 väderuttag, adapterspår, databasoperationer eller publika ändringar.
 Nästa oberoende del: precisera regional vinds rumsliga/maskade interpolationsstöd
 innan framtida MET-import; källmetadata och push/CI fortfarande blockerade.
+
+## 2026-10-13: regionalt vindstöd – begränsat acceptanskontrakt
+
+regional-wind-acceptance.md beskriver befintligt 2×2×2-komponentstöd, stängda
+maskgränser, segmentkontroll och separat hårdgränscertifiering. Native CRS,
+rotation och lokal gridseparerbarhet måste verifieras före import. Copernicus
+1 m nodtolerans överförs inte till MET eller hela-cell-bevis. Regriddingmetod
+eller tolerans beslutas inte utan källmetadata/referenser. Vindmaskens betydelse
+hålls separat från hav/landmask och navigerbarhet. Ingen ny adapter/kod/transport.
+
+36 prognosdata-/kvalitets-/segmenttester och 11 hårdvädersegmenttester passerar;
+dokumentlänkar och namngivna regressionstester verifierade. Logg:
+autonomy/logs/wind-contract-tests-20261013T2152Z.log. Diff check passerar.
+Källåtkomst och push/CI fortfarande blockerade; planning_blockers oförändrade.
+Nästa oberoende uppgift: granska konkret provensbudget och säker avvisning i
+befintlig metadata-probe (inklusive felrespons/redirect), utan nya datakällor.
