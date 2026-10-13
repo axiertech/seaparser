@@ -285,3 +285,27 @@ Regional vindprognos är fortfarande en separat blockerare.
 Officiell implementation/kontrakt:
 [Toolbox Python interface](https://toolbox-docs.marine.copernicus.eu/en/stable/python-interface.html),
 [WAV-manual, variabler och static-mask](https://documentation.marine.copernicus.eu/PUM/CMEMS-BAL-PUM-003-010.pdf).
+
+## Adaptergranskning och obligatorisk planeringsspärr 2026-10-13
+
+Den lokala leveransen återfanns som commit `c4e8f7f` efter `d0bd906`; inget
+andra adapterspår skapas. Alla tre befintliga filer/manifest samt regenererad
+reference.json har återkontrollerats utan nätverk eller nytt uttag.
+
+Copernicus-importen bär explicita, frysta `planning_blockers` i produktmetadata:
+`cross_product_model_run_compatibility_unverified` och, när utfärdandetid saknas,
+`model_issue_time_unverified`. Samma fem giltighetstider krävs för vågor/ström;
+gemensamt tidsstöd är inte bevis för förenliga prognoskörningar. Ett booleskt
+payloadpåstående eller manuellt ifyllda datum tar inte bort kompatibilitetsspärren.
+
+Både färdberäkning och segmentkontroll avvisar dessa blockerare även utan
+valbar ForecastPolicy. Separat provtagning/interpolation för källgranskning
+förblir möjlig. ForecastPolicy avvisar fortsatt saknad vind/utfärdandetid och
+kontrollerar även blockerarna när samtliga datum finns. Tester fyller i marina
+datum och lägger till syntetisk testvind: planeringen måste fortfarande ge
+`data_unavailable`, utan snabbaste/bekvämaste rutt. Granskad run-proveniens och
+förenlighetsregler måste implementeras innan spärren kan hävas.
+
+Obligatoriska valid_from/valid_until valideras alltid som tidszonsmedvetna tider;
+bara issued_at/retrieved_at får vara okända. Befintlig publik demonstration
+publiceras eller ändras inte av denna leverans.

@@ -1,4 +1,5 @@
 import copy
+from dataclasses import replace
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -7,8 +8,9 @@ import unittest
 
 from infrastructure.copernicus_adapter import CopernicusMarineAdapter
 from prototype.forecast import FixedClock, ForecastPolicy
-from prototype.forecast_data import DataUnavailable
-from prototype.model import Vector
+from prototype.forecast_data import DataUnavailable, ForecastDataset, GridProduct
+from prototype.calculation import evaluate_conditions
+from prototype.model import ConstantBoat, Vector
 from prototype.routes import RouteCandidate, compare_routes
 
 
@@ -109,6 +111,51 @@ class CopernicusAdapterTests(unittest.TestCase):
         self.payload['products']['current']['data']['uo'][0][0][0] = 99
         self.payload['products']['static']['data']['mask'][0][0] = 0
         self.assertEqual(self.snapshot.products[0].values[0][0][0], before)
+
+    def test_dates_and_payload_flags_do_not_certify_run_compatibility(self):
+        for name in ('current', 'waves'):
+            self.payload['products'][name]['issued_at'] = '2026-10-13T11:00:00Z'
+        self.payload['run_compatibility_verified'] = True
+        self.payload['planning_blockers'] = []
+        snapshot = CopernicusMarineAdapter().normalize(self.payload)
+        current, waves = snapshot.products
+        # Add test wind to isolate the compatibility gate from the missing-wind gate.
+        wm = replace(current.metadata, product='wind', dataset_id='test-wind', planning_blockers=())
+        values = tuple(tuple(tuple((0., 5.) for _ in current.east_m)
+                             for _ in current.north_m) for _ in current.times)
+        wind = GridProduct(wm, current.east_m, current.north_m, current.times, values)
+        snapshot = ForecastDataset('test-combined', '1', (wind, current, waves))
+        time = current.times[0]
+        position = Vector(sum(current.east_m)/2, sum(current.north_m)/2)
+        weather = snapshot.evaluate(position, time)
+        self.assertIsNotNone(weather.wind)
+        for policy in (None, ForecastPolicy(7200)):
+            result = compare_routes(snapshot, time, position + Vector(10, 0), [RouteCandidate('direct')],
+                                    position=position, forecast_policy=policy,
+                                    clock=FixedClock(time), step_seconds=1, max_seconds=30)
+            self.assertIsNone(result.fastest)
+            self.assertEqual(result.candidates[0].status, 'data_unavailable')
+            self.assertIn('cross_product_model_run_compatibility_unverified', result.candidates[0].reason)
+        with self.assertRaisesRegex(ValueError, 'compatibility_unverified'):
+            ForecastPolicy(7200).check(weather, time)
+        with self.assertRaisesRegex(ValueError, 'compatibility_unverified'):
+            evaluate_conditions(ConstantBoat(1), weather, position, time)
+        with self.assertRaisesRegex(DataUnavailable, 'compatibility_unverified'):
+            current.validate_segment(position, time, position, current.times[1])
+
+    def test_wave_current_validity_must_match(self):
+        self.payload['products']['waves']['times'][-1] = '2026-10-13T17:00:00Z'
+        with self.assertRaisesRegex(ValueError, 'validity differs'):
+            CopernicusMarineAdapter().normalize(self.payload)
+
+    def test_required_validity_times_cannot_be_unknown(self):
+        metadata = self.snapshot.products[0].metadata
+        for field in ('valid_from', 'valid_until'):
+            with self.assertRaises(ValueError):
+                replace(metadata, **{field: None})
+        for blockers in ('unknown', ('',), (False,)):
+            with self.assertRaises(ValueError):
+                replace(metadata, planning_blockers=blockers)
 
 
 if __name__ == '__main__':

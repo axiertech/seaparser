@@ -34,6 +34,16 @@ def capture_planning_time(clock, policy):
     return utc_time(clock.now(), 'Planeringstid')
 
 
+def check_planning_metadata(weather):
+    """Import audits may retain samples while explicitly withholding planning."""
+    for name, metadata in (('Vind', weather.wind_metadata),
+                           ('Ström', weather.current_metadata),
+                           ('Vågor', weather.waves_metadata)):
+        if metadata is not None and metadata.planning_blockers:
+            raise ValueError(f'{name}: ej verifierat prognosunderlag: ' +
+                             ', '.join(metadata.planning_blockers))
+
+
 @dataclass(frozen=True)
 class ForecastPolicy:
     max_age_seconds: float
@@ -63,3 +73,4 @@ class ForecastPolicy:
                 raise ValueError(f'{name}: prognosen är utfärdad efter planeringstidpunkten')
             if age > self.max_age_seconds:
                 raise ValueError(f'{name}: prognosen är för gammal vid planeringen')
+        check_planning_metadata(weather)

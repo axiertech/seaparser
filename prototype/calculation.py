@@ -5,7 +5,7 @@ from math import isfinite
 
 from .model import BoatModel, BoatPerformance, ConstantBoat, Vector, CourseUnavailable, CROSS_TRACK_TOLERANCE
 from .environment import Environment, WaveData, Conditions
-from .forecast import ForecastPolicy, Clock, capture_planning_time
+from .forecast import ForecastPolicy, Clock, capture_planning_time, check_planning_metadata
 from .forecast_metadata import ProductMetadata
 from .segment_weather import WeatherSegmentCheck, SegmentWeatherExceeded, SegmentWeatherUnverified, SCOPE as SEGMENT_WEATHER_SCOPE
 from .weather import WeatherPolicy, WeatherLimitExceeded, synthetic_comfort_rate, COMFORT_MODEL, WEATHER_VERIFICATION_SCOPE
@@ -56,6 +56,7 @@ def evaluate(boat: BoatModel, environment: Environment, position, time, allow_mi
 
 
 def evaluate_conditions(boat, weather, position, time, allow_missing_current=False, weather_policy=None, forecast_policy=None, planning_time=None):
+    check_planning_metadata(weather)
     if forecast_policy is not None:
         forecast_policy.check(weather, planning_time)
     if weather_policy is not None:
@@ -200,6 +201,7 @@ class Voyage:
 def compensated_evaluation(boat: BoatPerformance, direction, environment, position, time,
                            min_progress_m_s, weather_policy=None, forecast_policy=None, planning_time=None):
     weather = environment.evaluate(position, time)
+    check_planning_metadata(weather)
     if forecast_policy is not None:
         forecast_policy.check(weather, planning_time)
     if weather_policy is not None:

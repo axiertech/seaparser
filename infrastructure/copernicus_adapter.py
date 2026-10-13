@@ -66,8 +66,9 @@ def _local_axes(latitude, longitude):
 class CopernicusMarineAdapter:
     """Normalize only the reviewed Baltic wave/current fixture schema.
 
-    Missing forecast issuance is preserved as None. Such a snapshot cannot pass
-    ForecastPolicy and is not a routable forecast. Land/depth are not route
+    Missing forecast issuance is preserved as None. Every imported product also
+    withholds planning until cross-run compatibility is actually certified.
+    Supplied dates or a payload flag cannot clear that gate. Land/depth are not route
     obstacles; the static mask is used only to preserve missing wave cells.
     """
 
@@ -80,6 +81,8 @@ class CopernicusMarineAdapter:
             static = payload['products']['static']
             wave_product = self._waves(wave, static)
             current_product = self._current(current)
+            if wave_product.times != current_product.times:
+                raise ValueError('Wave/current validity differs; common support must be explicit')
             if (wave_product.metadata.coverage.origin_latitude,
                     wave_product.metadata.coverage.origin_longitude) != VINGA_ORIGIN:
                 raise ValueError('Unexpected projection origin')
@@ -145,10 +148,12 @@ class CopernicusMarineAdapter:
             raise ValueError('At least a 2×2 native grid is required')
         metadata = ProductMetadata(
             product=name, dataset_id=raw['dataset_id'], version=raw['version'],
-            source=raw['source'], issued_at=raw.get('issued_at'),
+            source=raw['source'], issued_at=_time(raw['issued_at']) if raw.get('issued_at') is not None else None,
             valid_from=times[0], valid_until=times[-1],
             coverage=Coverage(east[0], north[0], east[-1], north[-1], *VINGA_ORIGIN),
             units=units, reference_frame=reference_frame,
             retrieved_at=_time(raw['retrieved_at']), source_url=raw['source_url'],
-            license_url=raw['license_url'], source_sha256=raw['source_sha256'])
+            license_url=raw['license_url'], source_sha256=raw['source_sha256'],
+            planning_blockers=('cross_product_model_run_compatibility_unverified',) +
+                (('model_issue_time_unverified',) if raw.get('issued_at') is None else ()))
         return GridProduct(metadata, east, north, times, values)

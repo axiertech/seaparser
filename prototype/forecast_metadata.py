@@ -46,6 +46,7 @@ class ProductMetadata:
     source_url: str | None = None
     license_url: str | None = None
     source_sha256: str | None = None
+    planning_blockers: tuple[str, ...] = ()
 
     def __post_init__(self):
         specs = {'wind': (('m/s', 'm/s'), 'ground-to-true-east-north'),
@@ -58,10 +59,18 @@ class ProductMetadata:
         object.__setattr__(self, 'units', tuple(self.units))
         if (self.units, self.reference_frame) != specs[self.product]:
             raise ValueError('Produkten måste vara normaliserad till kända enheter och referensramar')
-        for name in ('issued_at', 'retrieved_at', 'valid_from', 'valid_until'):
+        for name in ('valid_from', 'valid_until'):
+            object.__setattr__(self, name, utc_time(getattr(self, name), name))
+        for name in ('issued_at', 'retrieved_at'):
             value = getattr(self, name)
             if value is not None:
                 object.__setattr__(self, name, utc_time(value, name))
+        if not isinstance(self.planning_blockers, (tuple, list)):
+            raise ValueError('Planeringsblockerare kräver en lista av explicita orsaker')
+        blockers = tuple(self.planning_blockers)
+        if any(not isinstance(value, str) or not value.strip() for value in blockers):
+            raise ValueError('Planeringsblockerare kräver explicita orsaker')
+        object.__setattr__(self, 'planning_blockers', blockers)
         for name in ('source_url', 'license_url', 'source_sha256'):
             value = getattr(self, name)
             if value is not None and (not isinstance(value, str) or not value.strip()):

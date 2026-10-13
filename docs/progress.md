@@ -1273,3 +1273,32 @@ Verifiering 2026-10-13: fryst audit och byte-identisk regenerering passerar;
 utan den tillåtelsen nekades lokal API-bindning och testet kunde inte starta.
 Nästa steg: verifiera prognosens officiella utfärdandetid och hitta ett
 regionalt vindunderlag innan någon verklig regional väderrutt kan godkännas.
+
+## 2026-10-13: Gemensam adapter granskad och run-spärr förstärkt
+
+Utgångspunkt autonomy/CURRENT-STATUS.md. Vid start var worktreet rent på
+`c4e8f7f629b70438f1c19612552f68c2b99f07e8`, som redan hade sammanfört de
+lokala ändringarna efter `d0bd906`. CI 38350537720 verifierades success för
+exakt c4e8f7f. Inga nya Copernicus-uttag eller dubbla adaptrar skapades.
+Alla tre frysta filhashar och byte-identisk JSON-regenerering passerar.
+
+Granskningen fann att kompatibilitet mellan prognoskörningar endast fanns i
+auditrapporten. ProductMetadata bär nu frysta planning_blockers; Copernicus
+sätter explicit oförenlighets-/utfärdandespärr som inte går att häva genom ett
+payloadflag eller manuella datum. Färd- och segmentberäkning avvisar detta även
+utan valbar freshness-policy. Direkt offlineprovtagning bevaras för granskning.
+Gemensamma giltighetstider krävs och obligatoriska giltighetsdatum kan inte vara
+None. Ingen verklig väderrutt eller publik ändring följer av detta.
+
+Samlade kontroller: 158 prototyp- och 91 övriga Python-tester passerar (249 totalt),
+inklusive 51 riktade import/adapter/domäntester. Syntax, domängränser, låsningar
+samt pip check passerar. Full make check når frontendintegration men lokal
+API-bindning nekas av sandboxen. Ingen testkontroll har tagits bort; exakt nya
+committens fulla frontendkontroll verifieras med CI före fortsatt leverans.
+Logg: /home/web/seaparser/autonomy/logs/adapter-review-check.log.
+
+Nästa begränsade uppgift efter godkänd CI: metadata för original Copernicus-
+prognosfiler och dokumenterat MET Nordic forecast-grid. Behåll de befintliga
+marina filerna; hämta inte samma subset igen. Regional vind, utfärdandetid,
+run-förenlighet och strömmask är separata blockerare. Överlämningskvittot i
+/home/web/seaparser/autonomy/ anger slutcommit, lokala ändringar och nästa steg.

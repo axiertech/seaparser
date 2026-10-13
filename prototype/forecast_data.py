@@ -183,6 +183,9 @@ class GridProduct:
         return tuple(points)
 
     def validate_segment(self, start, start_time, end, end_time, *, max_intervals=MAX_SEGMENT_INTERVALS):
+        if self.metadata.planning_blockers:
+            raise DataUnavailable('Ej verifierat prognosunderlag: ' +
+                                  ', '.join(self.metadata.planning_blockers))
         self.segment_points(start, start_time, end, end_time, max_intervals=max_intervals)
 
     def cell_nodes(self, position, time):
@@ -216,9 +219,11 @@ class ForecastDataset:
     def validate_segment(self, start, start_time, end, end_time, *,
                          required_products=('current', 'wind', 'waves')):
         by_name = {p.metadata.product: p for p in self.products}
+        # Report absent products before inspecting partial products.
         for name in required_products:
             if name not in by_name:
                 raise DataUnavailable(f'{name}: produkt saknas för segmentkontroll')
+        for name in required_products:
             try:
                 by_name[name].validate_segment(start, start_time, end, end_time)
             except DataUnavailable as error:
