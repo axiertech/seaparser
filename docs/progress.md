@@ -1203,3 +1203,47 @@ som seaparser, inloggning i dold interaktiv SSH-prompt och credentials i
 har lästs eller skapats. Sandboxens DNS stoppar PyPI/Copernicus-nedladdning;
 Toolbox 2.5.0 kunde därför inte installeras, och dataset, adapter och rutttester
 kan inte verifieras förrän autentisering och datafiler är åtkomliga.
+
+## 2026-10-13: Avgränsad Copernicus-hämtning och CF/offlineaudit
+
+Worktree `/tmp/seaparser-real-map-data`, branch `development/real-map-data`,
+startcommit `5756c14861be77f9807f9e6cb59b18e8a27f229a`. Användaren har installerat
+Toolbox 2.5.0 och verifierat sparad autentisering; installerad version har
+kontrollerats utan att credentials lästs. Rätt standardkatalog korrigerad i
+forecast-sources.md. Försöket 04:55:17–04:55:19 UTC avvisades av STAC-DNS
+(gaierror, exit 1); inga verkliga filer hämtades eller verifierades.
+
+Förberett exakt `bash /tmp/seaparser-real-map-data/scripts/download-copernicus.sh`
+för vanlig SSH-terminal. Sparad autentisering återanvänds; avgränsad Vinga-box,
+2026-10-13 12–16 UTC, ytligaste katalogdjup, timvågor/ström och separat native
+static-vågmask. Katalogversion/del/service binds och CF-namn/enheter verifieras,
+strict-inside förbjuder tyst boxutvidgning. Preflight begränsar uppskattad
+filstorlek/transfer; lås och timeout begränsar samtidighet/tid. Privata filer,
+SHA-256-manifest, start/avslut/exit och offlineaudit sparas under
+`/home/web/seaparser/autonomy/copernicus/` utanför Git.
+
+Komponentadaptern och offlineaudit kontrollerar Tm02, från-riktning,
+öst/nordström, enheter, masker/luckor, explicit strömdjup, koordinater, exakt
+fem timsteg och filhashar. Tolv nya tester passerar; fyra använder syntetiska
+NetCDF-filer via den lokalt installerade Toolboxmiljön. Dessa fyra hoppar över
+sig när extras saknas i vanlig CI. Inga verkliga filvärden eller native
+geografiska routinggrid påstås verifierade. Okänd modellutfärdandetid förblir
+okänd, inget regionalt ForecastDataset skapas och regional vind kvarstår separat.
+
+Slutlig lokal kontroll: 158 prototyp- och 80 applikations/infrastrukturtester
+passerar, syntax/domängränser/installerade låsningar/pip check godkända.
+Frontend statisk kontroll och urval utan lokalt API passerar. Full `make check`
+blockeras i kartintegration: uvicorn får inte binda 127.0.0.1 i agentmiljön
+(exit 3); inget frontendfel döljs eller test ändras för att kringgå detta.
+Slutlogg `/home/web/seaparser/autonomy/logs/copernicus-python-final.log`.
+GitHub nås via axiertech-connectorn för branchpublicering/CI-verifiering;
+terminalens GitHub-DNS är blockerad. Exakta publicerings-/CI-kvitton lagras
+separat under autonomy/logs efter publiceringen.
+
+Autonom körning: separat underlag i `/home/web/seaparser/autonomy/`, ingen
+startad tmux-server/socket eller andra utvecklingssession. Skrivskyddat
+foreground-statusprov 04:49:45–04:50:05 UTC gav exit 0. Det verifierar inte
+SSH-överlevnad. Exakt terminalstart för endast frånkopplingsprov:
+`bash /home/web/seaparser/autonomy/start-probe.sh`; framtida explicit socket
+`/home/web/seaparser/autonomy/tmux.sock`. Längre bakgrundsarbete aktiveras inte
+före verifierat SSH-prov och avslutad/överlämnad prognossession.

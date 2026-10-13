@@ -132,12 +132,12 @@ cd /tmp/seaparser-real-map-data
 .venv/bin/python -m pip install --index-url https://pypi.org/simple 'copernicusmarine==2.5.0'
 umask 077
 .venv/bin/copernicusmarine login
-chmod 600 /home/web/seaparser/.copernicusmarine-credentials
+chmod 600 /home/web/seaparser/.copernicusmarine/.copernicusmarine-credentials
 ```
 
 Skriv användarnamn/e-post och lösenord endast vid Toolboxens interaktiva
 prompt i den privata SSH-terminalen; lösenordet ekas inte. Det hamnar då i
-`/home/web/seaparser/.copernicusmarine-credentials`, inte i shellhistorik,
+`/home/web/seaparser/.copernicusmarine/.copernicusmarine-credentials`, inte i shellhistorik,
 miljövariabler eller Git. Skicka aldrig värden eller terminaldump hit. Kontrollera
 inloggningen utan att visa konfigurationen:
 
@@ -167,3 +167,67 @@ första två geometriska grafvägarna. Komfort jämförs fortfarande med snabbas
 undersökta rutt för samma avgång, med samma extra restidsgräns och hårda gränser.
 Ingen kandidatkänslighet för verkliga prognoser påstås: de avvisas redan för
 ofullständigt regionalt underlag.
+
+## Avgränsad hämtning och offlineaudit efter installerad Toolbox
+
+Användaren har installerat Toolbox 2.5.0 och verifierat autentisering i worktreets
+`.venv`. Sparad autentisering återanvänds; inga credentials läses av projektkoden
+eller inkluderas i script, Git, argument eller loggar. Toolboxens faktiska
+standardfil ligger under `$HOME/.copernicusmarine/` (sökvägen ovan korrigerad).
+
+Exakt kommando i vanlig SSH-terminal, som `seaparser`:
+
+```bash
+chmod 600 /home/web/seaparser/.copernicusmarine/.copernicusmarine-credentials
+bash /tmp/seaparser-real-map-data/scripts/download-copernicus.sh
+```
+
+Scriptet startar endast datatransport och offlineaudit, aldrig en Codex-session,
+databasoperation eller ruttplanering. Lås hindrar samtidiga nedladdningar.
+Varje försök har starttid, explicit 10-minuters slutgräns (högst 10 s TERM-grace),
+avslut och exitkod i `/home/web/seaparser/autonomy/copernicus/<UTC>-<pid>.log`
+och `.exit`. Data och rapporter ligger i motsvarande katalog. Scriptet använder
+worktreets absoluta `.venv/bin/python` och är oberoende av terminalens cwd.
+
+Tre separata NetCDF-filer: timvågor VHM0/VTM02/VMDR, timström uo/vo på
+katalogens gemensamma ytligaste djupnivå samt **separat statisk vågmask** från
+`cmems_mod_bal_wav_anfc_static`. Den officiella WAV-manualen placerar `mask`
+(sea=1/land=0) i static-datasetet, inte i timdatasetet. Filerna hämtas med
+strict-inside för den tidigare boxen/tiden; boxen utökas inte för att dölja
+saknat gridstöd. Aktuell katalogversion, del och service binds uttryckligen,
+och CF standard_name/uniter kontrolleras före hämtning. Preflight avvisar
+okänd storlek eller uppskattning över 10 MB per fil/100 MB transfer. Samma
+10 MB-gräns kontrolleras efter hämtning. Ingen original helregionsfil laddas ner.
+
+SHA-256, hämttid, dataset/version/del/service, variabler och exakt begäran sparas
+i `manifest.json`; credentialvärden eller auth-URL:er ingår inte. Om ett senare
+steg misslyckas bevaras redan hämtade filer och deras partiella manifest. Nästa
+försök får en ny katalog och skriver inte över tidigare data.
+
+`scripts.audit_copernicus` verifierar filhashar, CF-metadata, fem exakt begärda
+UTC-timsteg, native stigande koordinater, maskens exakta våggrid, komponenternas
+dimensioner, explicit positivt-nedåt ytströmdjup och fill-value/datastöd.
+Vågkomponenterna blir Hs/Tm02 och enhetsvektor för FRÅN-riktning; strömmens
+öst/nord MOT-vektor behålls. Maskerade/icke-finita värden blir explicita luckor.
+Rapporten anger `adapter_sample_checks=passed` endast om faktiska filkontroller
+passerar. `audit.json` ger alltid `regional_routing_unavailable`: inget native
+lon/lat-grid omvandlas till ett lokalt rektangulärt routinggrid. Vind, strömmask,
+run-förenlighet, källkvalitet och geografisk adapter återstår. Saknad CF
+forecast_reference_time förblir okänd; hämttid/skapandetid används inte som
+modellutfärdande. Vågmask överförs aldrig till ett annat strömgrid.
+
+Offlineadapterns komponentkontrakt och NetCDF-verifieraren har tester med
+**syntetiska** små filer, inte påstådda Copernicus-nedladdningar. xarray/numpy
+används endast i hämt-/auditmiljön från den installerade Toolboxen. API,
+ruttmotor, primär beroendelåsning och publik drift ändras inte. Fyra NetCDF-tester
+hoppar över sig i miljöer utan dessa extras; övriga kontrakttester är
+beroendefria och körs i vanlig CI. Toolbox 2.5.0 kontrolleras före hämtning.
+
+Agentförsök 2026-10-13 04:55:17–04:55:19 UTC: exit 1, `gaierror` från
+Copernicus STAC-DNS; inga data hämtades och ingen faktisk marin filadapter
+verifierades. Åtkomst måste prövas med kommandot ovan i vanlig terminal.
+Regional vindprognos är fortfarande en separat blockerare.
+
+Officiell implementation/kontrakt:
+[Toolbox Python interface](https://toolbox-docs.marine.copernicus.eu/en/stable/python-interface.html),
+[WAV-manual, variabler och static-mask](https://documentation.marine.copernicus.eu/PUM/CMEMS-BAL-PUM-003-010.pdf).
