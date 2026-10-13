@@ -130,3 +130,22 @@ källdokumentation och verkliga metadatafixtures. Syntetiska fall måste märkas
 syntetiska och får bara verifiera kontraktets negativa/strukturella beteende.
 Befintliga test_dates_and_payload_flags_do_not_certify_run_compatibility och
 metadata-probens blockerartester förblir regressionsbevis för dagens avvisning.
+
+## Utfärdandespärr i den befintliga marina adaptern
+
+Granskning 2026-10-13 fann att detached issued_at kunde fylla ProductMetadata
+och ta bort model_issue_time_unverified, trots att kompatibilitetsspärren höll
+hela underlaget unroutbart. Detta motsvarade inte kontraktets förtroendegräns.
+CopernicusMarineAdapter sätter nu issued_at=null och behåller båda spärrarna
+oberoende av payloadens datum, run-ID, compatibility-flagga eller blockerlista.
+Adaptern har ännu ingen accepterad källbunden utfärdandeverifierare; därför
+finns ingen väg i detta importformat att kvalificera ett datum. Giltighetstider,
+hämttid och katalogversion behåller sina separata roller och värden.
+
+Negativa referenser prövar manuellt färskt datum, modellreferenslikt datum,
+gammalt skapandedatum, ogiltig datumtext och null tillsammans med påstått
+run-ID/status. Alla normaliseras med okänd utfärdandetid och båda spärrarna.
+Befintligt test med tillagd syntetisk vind verifierar fortfarande att route-,
+segment- och villkorskontroller avvisar run-förenlighet även utan färskhetspolicy.
+Färskhetspolicy avvisar den saknade utfärdandetiden separat. Inga verkliga
+prognosdatum fylls i och inget bevisformat eller ny adapter införs.

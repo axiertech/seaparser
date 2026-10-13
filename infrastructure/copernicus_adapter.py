@@ -148,12 +148,14 @@ class CopernicusMarineAdapter:
             raise ValueError('At least a 2×2 native grid is required')
         metadata = ProductMetadata(
             product=name, dataset_id=raw['dataset_id'], version=raw['version'],
-            source=raw['source'], issued_at=_time(raw['issued_at']) if raw.get('issued_at') is not None else None,
+            # This adapter has no source-bound issuance verifier. A detached
+            # payload date cannot establish issuance, even if it parses as UTC.
+            source=raw['source'], issued_at=None,
             valid_from=times[0], valid_until=times[-1],
             coverage=Coverage(east[0], north[0], east[-1], north[-1], *VINGA_ORIGIN),
             units=units, reference_frame=reference_frame,
             retrieved_at=_time(raw['retrieved_at']), source_url=raw['source_url'],
             license_url=raw['license_url'], source_sha256=raw['source_sha256'],
-            planning_blockers=('cross_product_model_run_compatibility_unverified',) +
-                (('model_issue_time_unverified',) if raw.get('issued_at') is None else ()))
+            planning_blockers=('cross_product_model_run_compatibility_unverified',
+                               'model_issue_time_unverified'))
         return GridProduct(metadata, east, north, times, values)

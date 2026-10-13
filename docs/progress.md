@@ -1766,3 +1766,18 @@ och sparad vind-review oförändrade. Loggar autonomy/logs/met-frame-
 {targeted-20261013T2253Z,check-20261013T2254Z,frontend-20261013T2254Z}.log.
 Nästa oberoende del: granska/regressionstesta run-spärrarnas motstånd mot
 ifyllda datum och payloadflaggor i befintlig marin adapter; återanvänd fixtures.
+
+## 2026-10-13 22:57 UTC – marin utfärdandespärr
+
+Rättat befintlig CopernicusMarineAdapter: detached issued_at kunde tidigare
+fyllas och häva sin egen blockerare, medan run-spärren alltjämt hindrade routing.
+Nu blir issued_at alltid null och både utfärdande-/run-spärr kvarstår tills
+källbunden verifierare är implementerad. Ny negativ matris med fem datumfall
+och run-/statusflaggor; tio riktade adaptertester passerar. Ingen marin
+återhämtning, ny adapter eller förändring av giltighet/hämttid/katalogversion.
+Full scripts/check.py passerar: 160+138=298 Python-tester, syntax, låsfiler,
+pip check och domängränser. Frontend run check passerar; nio källhashar
+verifierade oförändrade. Loggar autonomy/logs/marine-issuance-gate-
+{check,frontend}-20261013T2257Z.log. Nästa oberoende del: verifiera att
+båda ruttmål och alla avgångar håller samma proveniensspärr efter import,
+med syntetisk vind enbart i negativa tester för att isolera marin proveniens.

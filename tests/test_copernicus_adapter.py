@@ -119,6 +119,9 @@ class CopernicusAdapterTests(unittest.TestCase):
         self.payload['planning_blockers'] = []
         snapshot = CopernicusMarineAdapter().normalize(self.payload)
         current, waves = snapshot.products
+        for product in (current, waves):
+            self.assertIsNone(product.metadata.issued_at)
+            self.assertIn('model_issue_time_unverified', product.metadata.planning_blockers)
         # Add test wind to isolate the compatibility gate from the missing-wind gate.
         wm = replace(current.metadata, product='wind', dataset_id='test-wind', planning_blockers=())
         values = tuple(tuple(tuple((0., 5.) for _ in current.east_m)
@@ -136,12 +139,33 @@ class CopernicusAdapterTests(unittest.TestCase):
             self.assertIsNone(result.fastest)
             self.assertEqual(result.candidates[0].status, 'data_unavailable')
             self.assertIn('cross_product_model_run_compatibility_unverified', result.candidates[0].reason)
-        with self.assertRaisesRegex(ValueError, 'compatibility_unverified'):
+        with self.assertRaisesRegex(ValueError, 'utfärdandetid saknas'):
             ForecastPolicy(7200).check(weather, time)
         with self.assertRaisesRegex(ValueError, 'compatibility_unverified'):
             evaluate_conditions(ConstantBoat(1), weather, position, time)
         with self.assertRaisesRegex(DataUnavailable, 'compatibility_unverified'):
             current.validate_segment(position, time, position, current.times[1])
+
+    def test_detached_dates_and_run_claims_never_establish_issuance(self):
+        for claimed_date in ('2026-10-13T11:00:00Z', '2026-10-13T00:00:00Z',
+                             '2024-11-25T00:00:00Z', 'not-a-date', None):
+            with self.subTest(claimed_date=claimed_date):
+                payload = copy.deepcopy(FIXTURE)
+                for name in ('current', 'waves'):
+                    raw = payload['products'][name]
+                    raw.update(issued_at=claimed_date, model_issue_time=claimed_date,
+                               forecast_reference_time=claimed_date, creation_date=claimed_date,
+                               last_modified=claimed_date, run_id='claimed-run',
+                               run_compatibility_verified=True, planning_blockers=[])
+                payload.update(run_compatibility_verified=True, planning_blockers=[])
+                snapshot = CopernicusMarineAdapter().normalize(payload)
+                for product in snapshot.products:
+                    self.assertIsNone(product.metadata.issued_at)
+                    self.assertIn('model_issue_time_unverified', product.metadata.planning_blockers)
+                    self.assertIn('cross_product_model_run_compatibility_unverified',
+                                  product.metadata.planning_blockers)
+                    self.assertEqual(product.metadata.version,
+                                     FIXTURE['products'][product.metadata.product]['version'])
 
     def test_wave_current_validity_must_match(self):
         self.payload['products']['waves']['times'][-1] = '2026-10-13T17:00:00Z'
