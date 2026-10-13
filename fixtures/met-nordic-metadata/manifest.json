@@ -21,6 +21,20 @@
       "url": "https://thredds.met.no/thredds/dodsC/metpparchive/2026/10/13/met_forecast_1_0km_nordic_20261013T00Z.nc.ascii?forecast_reference_time,time",
       "bytes": 990,
       "sha256": "8814dac572cc1b4b3218bf490db6ffee0f7e639d3c8b8baabae037a039d4302f"
+    },
+    {
+      "filename": "native-axes.txt",
+      "url": "https://thredds.met.no/thredds/dodsC/metpparchive/2026/10/13/met_forecast_1_0km_nordic_20261013T00Z.nc.ascii?x,y",
+      "bytes": 43241,
+      "sha256": "4dd5aba4db24e4534dcc548f29eebba2dc91414d46db87fda06b486ccd76e041",
+      "observed_at": "2026-10-13T22:06:49.887433+00:00"
+    },
+    {
+      "filename": "vinga-latlon.txt",
+      "url": "https://thredds.met.no/thredds/dodsC/metpparchive/2026/10/13/met_forecast_1_0km_nordic_20261013T00Z.nc.ascii?latitude%5B509%3A1%3A516%5D%5B692%3A1%3A698%5D,longitude%5B509%3A1%3A516%5D%5B692%3A1%3A698%5D",
+      "bytes": 2120,
+      "sha256": "60e6a0fab997c372f7366c493c725f488d7df1f1ae0ddb96e1572c005bc4d9f4",
+      "observed_at": "2026-10-13T22:08:03.191258+00:00"
     }
   ],
   "forecast_reference_time": "2026-10-13T00:00:00Z",
@@ -39,5 +53,17 @@
     "cross_product_model_run_compatibility_unverified"
   ],
   "attribution": "Norwegian Meteorological Institute, met.no",
-  "license_url": "https://www.met.no/en/free-meteorological-data/Licensing-and-crediting"
+  "license_url": "https://www.met.no/en/free-meteorological-data/Licensing-and-crediting",
+  "coordinate_subset": {
+    "x_first": 692,
+    "x_last": 698,
+    "y_first": 509,
+    "y_last": 516,
+    "node_count": 56
+  },
+  "coordinate_review": {
+    "filename": "geometry-review.json",
+    "sha256": "e133b64ad1fada1ebb1cf252eed7c9f9d9094c4d403eba7516ec23c4450d7a55",
+    "status": "diagnostic_only_not_routing_qualified"
+  }
 }

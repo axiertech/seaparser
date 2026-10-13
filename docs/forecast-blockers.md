@@ -242,3 +242,23 @@ Partiell arbetsrapport autonomy/met-source-partial-result-20261013T2205Z.json.
 Tolv metadata-probetester passerar; lokala dokumentlänkar kontrollerade.
 Tidigare kodcommit 080483b har 265 Python-tester och frontend check godkända.
 Ingen kod ändras i denna metadata-/dokumentationsleverans.
+
+## 2026-10-13: verkliga MET-koordinater och lokalt representationshinder
+
+Auto-review-godkända koordinatanrop gav native x/y (43241 bytes) och ett
+8×7 lat/lon-subset (2120 bytes). URL-kodning rättade ett första HTTPError.
+Svar/hashmanifest och geometry-review.json återanvänds i MET-metadatafixturen.
+Decimal-axlar har exakt 1000 m intervall. 56 källreferensnoder jämfördes med
+sfärisk LCC: maxavvikelse 0.249077 m. Lokal AEQD-diagnostik visar minst
+184.738574 m maxfel för varje separerbar östaxel över detta subset; direkt
+lokal gridrepresentation är blockerad. Datumekvivalens/routingstöd certifieras inte.
+Ingen vinddata/adapter eller ny marin data. Alla planning_blockers kvarstår.
+Nästa oberoende förbättring: checkpoint av metadata-probens delrapport före
+potentiellt långsamma anrop, så timeout inte tappar lyckad proveniens.
+
+Verifiering: fem MET-källhashar/byteantal, geometrierapportens hash, 56 nodreferenser,
+rapportens nedre felgräns och dokumentlänkar kontrollerade. Tolv befintliga
+metadata-probetester passerar. Logg autonomy/logs/met-coordinate-tests-20261013T2211Z.log;
+verifieringskvitto autonomy/met-coordinate-verification-20261013T2211Z.json.
+Ingen applikationskod ändrad; tidigare 080483b har 265 Python-tester och
+frontend check godkända. Geometridiagnostiken kvalificerar inte verklig routing.

@@ -57,3 +57,42 @@ Partiell arbetsrapport autonomy/met-source-partial-result-20261013T2205Z.json.
 Tolv metadata-probetester passerar; lokala dokumentlänkar kontrollerade.
 Tidigare kodcommit 080483b har 265 Python-tester och frontend check godkända.
 Ingen kod ändras i denna metadata-/dokumentationsleverans.
+
+## Native koordinatgranskning efter första metadataåtkomsten
+
+Två nya, avgränsade koordinatanrop godkändes av auto-review. Native x/y ASCII
+är 43241 bytes och lat/lon för y=509..516, x=692..698 är 2120 bytes (56 noder).
+Inga vindvärden ingår. Första lat/lon-anropet med okodade hakparenteser gav
+HTTPError; URL-kodad begäran lyckades. Ingen felkod härleds från det första felet.
+Svarens exakta adresser/hashar finns i metadatafixturens manifest.
+
+x har 1796 värden från -897442.2 till 897557.8 m; y har 2321 värden från
+-1104322 till 1215678 m. Decimal-läsning verifierar exakt 1000 m mellan varje
+tryckt koordinat. En första kontroll med binära floats gav en falsk avvikelse
+på cirka 6e-11 m; den ersattes med exakt jämförelse av ASCII-decimalerna.
+
+Kandidatindex valdes genom den dokumenterade sfäriska LCC-projektionen av
+Vinga-boxens fyra hörn, med grannnoder runt kandidatområdet. Det är urval för
+granskning, inte fullständig kvalificering av hela boxens cell-/maskstöd.
+Källans subset-x/y matchar samma index i de fulla axlarna.
+
+[geometry-review.json](../fixtures/met-nordic-metadata/geometry-review.json)
+redovisar den numeriska granskningen. För alla 56 noder jämfördes källans
+lat/lon med invers av faktisk LCC och källans sfärradie. Maximal geodetisk
+avvikelse på den sfären är 0.249077 m. Detta är jämförelse mot producentens
+separata koordinatfält, inte endast roundtrip genom samma bibliotek. Ingen
+ny accepterad projektionstolerans eller datumtransformation beslutas här.
+
+Som separat diagnostik tolkades producentens vinklar i den befintliga lokala
+WGS84 AEQD-modellen vid 57.633°N, 11.605°E. Datumekvivalens är inte certifierad.
+Samma kolumn varierar upp till 369.477149 m i lokal östposition mellan rader;
+samma rad varierar upp till 315.963130 m i nordposition mellan kolumner.
+Varje enskild separerbar östaxel måste därför i denna diagnostik ha maximalt
+nodfel minst halva kolumnvariationen: 184.738574 m. Värdena får inte passeras
+som befintlig Copernicus-adapters 1 m-nodrepresentation.
+
+Det konkreta representationshindret kvarstår: native LCC-grid kan inte direkt
+behandlas som motorns separerbara lokala grid. En framtida granskad native-grid-
+eller regriddingmetod krävs, med datastöd och konservativa hårdgränser bevarade.
+Ingen sådan metod implementeras nu. Höjd/medelperiod, vindmask, utfärdande,
+marina run och förenlighetsregel kvarstår också. data_unavailable oförändrat.

@@ -1,0 +1,16 @@
+{
+  "scope": "coordinate_metadata_review_not_routing_qualification",
+  "source_node_count": 56,
+  "grid_spacing_m": 1000,
+  "source_projection_vs_provider_latlon_max_spherical_distance_m": 0.24907657108681355,
+  "local_axis_diagnostic": "provider angular lat/lon evaluated in existing WGS84 AEQD; datum equivalence not certified",
+  "east_variation_across_rows_m": 369.477148872666,
+  "north_variation_across_columns_m": 315.96312987369856,
+  "separable_axis_max_error_lower_bound_m": 184.738574436333,
+  "routing_status": "data_unavailable",
+  "issued_at": null,
+  "source_hashes": {
+    "native-axes.txt": "4dd5aba4db24e4534dcc548f29eebba2dc91414d46db87fda06b486ccd76e041",
+    "vinga-latlon.txt": "60e6a0fab997c372f7366c493c725f488d7df1f1ae0ddb96e1572c005bc4d9f4"
+  }
+}

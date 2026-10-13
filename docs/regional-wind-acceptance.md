@@ -2,7 +2,8 @@
 
 Status 2026-10-13: offline design inför framtida MET-kandidatgranskning.
 Ingen vindadapter, vindhämtning eller godkänd prognos införs. Faktiska
-MET-metadata är fortfarande oåtkomliga i det senaste försöket. Den tidigare
+MET DDS/DAS/tid och ett begränsat koordinatuttag är nu nådda; faktisk
+vindimport är fortfarande okvalificerad. Se met-nordic-metadata-review.md. Den tidigare
 dokumentationsgranskningen finns i [forecast-blockers.md](forecast-blockers.md);
 Lambert-grid, fält och täckning måste verifieras i faktisk källartefakt.
 
