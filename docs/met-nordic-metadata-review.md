@@ -155,3 +155,36 @@ DAP-parser eller bevis att separata nätverkssvar härrör från samma körning.
 Hashar identifierar sparade svar; modellreferensen kvalificerar inte marin
 run-förenlighet. Ändrade tidsenheter, dimensioner, saknad/dubbel referens och
 ändrat referensvärde avvisas även med uppdaterat manifest.
+
+## Separat faktisk native vindsubset
+
+2026-10-13 under aktivt pass nåddes ett nytt budgetbegränsat vind-/landuttag
+från samma fasta MET-fil. Detta är råvärdesgranskning, skild från tidigare
+metadataåtkomst: time-index 12–16 (12–16 UTC), y=509–516 och x=692–698,
+56 noder och fem timmar. Svaret innehåller 280 vindfarter, 280 från-riktningar,
+56 landfraktioner och skalär modellreferens. Befintliga metadata/koordinater
+och marina data återhämtades inte. Fasta URL, byteantal, SHA-256, observationstid,
+subset och attribution finns i fixtures/met-nordic-wind-sample/manifest.json.
+
+Transport: ett av auto-review godkänt läsanrop, 15 s timeout, 128000 byte tak,
+befintlig redirect-spärr och yttre 25 s processgräns. Faktiskt svar 7604 byte,
+SHA-256 52ca1126d058bd98bdee8107b865c2e454fc192e524f41ffa6204c4f5123504d.
+Originala ASCII-svaret sparas och ska återanvändas offline.
+
+Auditens nya --wind-sample-kontroll binder alla produktkartor till sparade
+native axlar och båda vindprodukternas fem tider till sparad giltighet.
+Referensvärdet stämmer med den tidigare modellreferensen; det är fortfarande
+inte utfärdandetid eller bevis för korsprodukt-run-förenlighet. Exakta råtal:
+fart 11.273894–17.250252 m/s, från-riktning 142–160 grader; landfraktion
+0–0.94 med 21 icke-noll noder. Alla 616 värden är finita i detta lilla uttag.
+Ingen vektornormalisering, cellmask, regridding eller regional adapter införs.
+Landfraktion är inte vindgiltighetsmask och bevisar inte navigerbarhet.
+
+Reproducerbar offlinekontroll:
+
+```bash
+.venv/bin/python -B -m scripts.audit_met_metadata fixtures/met-nordic-metadata --wind-sample fixtures/met-nordic-wind-sample
+```
+
+review.json återger diagnostiken. issued_at=null, data_unavailable och samtliga
+planeringsspärrar kvarstår, även om manifestet förses med datum eller flaggor.

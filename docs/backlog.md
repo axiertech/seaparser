@@ -45,3 +45,7 @@ Gridomvandling: [beviskontrakt](forecast-regridding-proof.md) och exakta negativ
 Gridomvandlingens två minimala motexempel är nu körbara mot befintlig
 segmentcertifiering: källans topp/mask avvisas trots att glesare målfält
 certifieras. Detta kvalificerar ingen verklig omvandlingsmetod.
+
+Regional vind: begränsad faktisk MET-native råsubset (56 noder, fem timmar)
+fryst och verifierbar offline. Ingen routingimport; geometri, maskstöd,
+utfärdandetid och run-förenlighet återstår. Se met-nordic-metadata-review.md.

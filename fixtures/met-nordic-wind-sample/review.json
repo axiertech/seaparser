@@ -1,0 +1,40 @@
+{
+  "scope": "raw_native_sample_not_routing_qualified",
+  "sha256": "52ca1126d058bd98bdee8107b865c2e454fc192e524f41ffa6204c4f5123504d",
+  "metadata_source_hashes": {
+    "met-forecast.dds": "0f9def84356801e3578aef42cfb46cbc624de088a8d44951301fd8ca1f986c09",
+    "met-forecast.das": "e5900e5e61f5c6101a7f39b41f6d43c04f3e43a35e5b829a0f95c40ac454a8df",
+    "met-time-coordinates.txt": "8814dac572cc1b4b3218bf490db6ffee0f7e639d3c8b8baabae037a039d4302f",
+    "native-axes.txt": "4dd5aba4db24e4534dcc548f29eebba2dc91414d46db87fda06b486ccd76e041",
+    "vinga-latlon.txt": "60e6a0fab997c372f7366c493c725f488d7df1f1ae0ddb96e1572c005bc4d9f4"
+  },
+  "native_node_count": 56,
+  "time_count": 5,
+  "value_ranges": {
+    "wind_speed_10m": {
+      "count": 280,
+      "min": "11.273894",
+      "max": "17.250252"
+    },
+    "wind_direction_10m": {
+      "count": 280,
+      "min": "142.0",
+      "max": "160.0"
+    },
+    "land_area_fraction": {
+      "count": 56,
+      "min": "0.0",
+      "max": "0.94"
+    }
+  },
+  "land_fraction_nonzero_nodes": 21,
+  "land_fraction_is_validity_mask": false,
+  "issued_at": null,
+  "routing_status": "data_unavailable",
+  "blockers": [
+    "regional_wind_not_imported",
+    "native_grid_to_local_geometry_unqualified",
+    "model_issue_time_unverified",
+    "cross_product_model_run_compatibility_unverified"
+  ]
+}

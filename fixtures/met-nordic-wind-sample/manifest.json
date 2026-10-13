@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "scope": "raw_native_wind_sample_not_routing_qualified",
+  "observed_at": "2026-10-13T22:45:13.691914+00:00",
+  "url": "https://thredds.met.no/thredds/dodsC/metpparchive/2026/10/13/met_forecast_1_0km_nordic_20261013T00Z.nc.ascii?wind_speed_10m%5B12%3A1%3A16%5D%5B509%3A1%3A516%5D%5B692%3A1%3A698%5D,wind_direction_10m%5B12%3A1%3A16%5D%5B509%3A1%3A516%5D%5B692%3A1%3A698%5D,land_area_fraction%5B509%3A1%3A516%5D%5B692%3A1%3A698%5D,forecast_reference_time",
+  "filename": "native-wind-land.txt",
+  "bytes": 7604,
+  "sha256": "52ca1126d058bd98bdee8107b865c2e454fc192e524f41ffa6204c4f5123504d",
+  "budget": {
+    "bytes": 128000,
+    "timeout_seconds": 15,
+    "native_nodes": 56,
+    "time_count": 5,
+    "wind_values": 560,
+    "land_values": 56
+  },
+  "subset": {
+    "time_first": 12,
+    "time_last": 16,
+    "x_first": 692,
+    "x_last": 698,
+    "y_first": 509,
+    "y_last": 516
+  },
+  "attribution": "Norwegian Meteorological Institute, met.no",
+  "license_url": "https://www.met.no/en/free-meteorological-data/Licensing-and-crediting",
+  "issued_at": null,
+  "routing_status": "data_unavailable",
+  "blockers": [
+    "regional_wind_not_imported",
+    "native_grid_to_local_geometry_unqualified",
+    "model_issue_time_unverified",
+    "cross_product_model_run_compatibility_unverified"
+  ]
+}

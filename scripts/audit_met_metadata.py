@@ -45,11 +45,11 @@ def time_metadata(dds, das, ascii_text):
     return reference
 
 
-def bounded_read(directory, filename):
+def bounded_read(directory, filename, *, limit=MAX_BYTES):
     path = directory / filename
     with path.open('rb') as handle:
-        data = handle.read(MAX_BYTES + 1)
-    if len(data) > MAX_BYTES:
+        data = handle.read(limit + 1)
+    if len(data) > limit:
         raise ValueError('Metadata byte budget exceeded')
     return data
 
@@ -164,11 +164,66 @@ def audit(directory):
                          'model_issue_time_unverified', 'cross_product_model_run_compatibility_unverified']}
 
 
+def audit_wind_sample(directory, metadata_directory):
+    """Describe frozen raw values; no normalization, masks or routing import."""
+    metadata = audit(metadata_directory)
+    directory, metadata_directory = Path(directory), Path(metadata_directory)
+    manifest = json.loads(bounded_read(directory, 'manifest.json'))
+    data = bounded_read(directory, 'native-wind-land.txt', limit=128_000)
+    digest = sha256(data).hexdigest()
+    if len(data) > 128_000 or manifest.get('sha256') != digest or manifest.get('bytes') != len(data):
+        raise ValueError('Wind sample hash, byte count or budget mismatch')
+    text = data.decode('utf-8')
+    references = re.findall(r'^forecast_reference_time, ([^\n]+)$', text, re.M)
+    if len(references) != 1 or numbers(references[0], 1)[0] != Decimal(metadata['model_reference']['epoch_seconds']):
+        raise ValueError('Wind sample model reference differs from frozen metadata')
+    native_axes = bounded_read(metadata_directory, 'native-axes.txt').decode('utf-8')
+    expected_axes = {'x': axis(native_axes, 'x', 1796)[692:699],
+                     'y': axis(native_axes, 'y', 2321)[509:517]}
+    expected_times = axis(bounded_read(metadata_directory, 'met-time-coordinates.txt').decode('utf-8'),
+                          'time', 59)[12:17]
+    values = {}
+    for name in ('wind_speed_10m', 'wind_direction_10m', 'land_area_fraction'):
+        for coordinate, expected in expected_axes.items():
+            if axis(text, name + '.' + coordinate, len(expected)) != expected:
+                raise ValueError('Wind sample maps differ from frozen native axes')
+        if name == 'land_area_fraction':
+            values[name] = tuple(value for row in matrix(text, name, 8, 7) for value in row)
+            continue
+        if axis(text, name + '.time', 5) != expected_times:
+            raise ValueError('Wind sample times differ from frozen validity')
+        blocks = re.findall(r'^' + name + r'\.' + name + r'\[5\]\[8\]\[7\]\n(.*?)\n\n', text, re.M | re.S)
+        if len(blocks) != 1 or len(blocks[0].splitlines()) != 40:
+            raise ValueError('Reviewed five-plane wind sample required')
+        nodes = []
+        for index, line in enumerate(blocks[0].splitlines()):
+            label, separator, row = line.partition(',')
+            if not separator or label != f'[{index // 8}][{index % 8}]':
+                raise ValueError('Ordered wind sample rows required')
+            nodes.extend(numbers(row, 7))
+        values[name] = tuple(nodes)
+    if (min(values['wind_speed_10m']) < 0 or min(values['wind_direction_10m']) < 0
+            or max(values['wind_direction_10m']) > 360 or min(values['land_area_fraction']) < 0
+            or max(values['land_area_fraction']) > 1):
+        raise ValueError('Raw wind or land fraction outside physical bounds')
+    return {'scope': 'raw_native_sample_not_routing_qualified', 'sha256': digest,
+            'metadata_source_hashes': metadata['source_hashes'], 'native_node_count': 56,
+            'time_count': 5, 'value_ranges': {name: {'count': len(nodes), 'min': str(min(nodes)),
+                                                   'max': str(max(nodes))} for name, nodes in values.items()},
+            'land_fraction_nonzero_nodes': sum(value != 0 for value in values['land_area_fraction']),
+            'land_fraction_is_validity_mask': False, 'issued_at': None,
+            'routing_status': 'data_unavailable', 'blockers': metadata['blockers']}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('directory', type=Path)
+    parser.add_argument('--wind-sample', type=Path, help='Audit the frozen native sample; never qualify routing')
     args = parser.parse_args()
-    print(json.dumps(audit(args.directory), indent=2))
+    report = audit(args.directory)
+    if args.wind_sample:
+        report['wind_sample'] = audit_wind_sample(args.wind_sample, args.directory)
+    print(json.dumps(report, indent=2))
 
 
 if __name__ == '__main__':

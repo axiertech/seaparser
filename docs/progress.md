@@ -1719,3 +1719,19 @@ autonomy/logs/regridding-reference-{check,frontend}-20261013T2243Z.log.
 Nästa avgränsade källdel: en liten MET-native vind-/landfraktionssubset för
 källgranskning, med explicita budgetar och fortsatt data_unavailable; ingen
 marin återhämtning eller automatisk routingskvalificering.
+
+## 2026-10-13 – faktisk begränsad MET-vindsubset
+
+Frysning av 56 native noder, fem timmar 12–16 UTC och två vindvariabler samt
+landfraktion/modellreferens lyckades: 7604 byte under 128 KB-budget. Råvärden,
+manifest och offline-review sparade separat. Befintlig MET-audit kontrollerar
+ordnade fält, dimensioner, koordinat-/tidskartor, finita värden, fysiska gränser
+och källhash. Ingen marin återhämtning eller parallell adapter. Fart 11.273894–
+17.250252 m/s; landfraktion inte giltighetsmask. Samtliga planning_blockers
+kvarstår; utfärdandetid/run-förenlighet fortfarande okända.
+Verifiering: åtta nya riktade tester och full scripts/check.py passerar
+(160+129=289 Python-tester, syntax, pip check, låsfiler och domängränser).
+Frontend run check passerar. Åtta tidigare källhashar verifierade oförändrade.
+Loggar autonomy/logs/met-wind-sample-{check,frontend}-20261013T2247Z.log.
+Nästa oberoende del: offline fel-/nodbudgeter och verifiering av källstöd
+eller dokumenterad referensram/normalisering, utan att kvalificera routing.
