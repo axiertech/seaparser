@@ -1825,3 +1825,36 @@ Loggar autonomy/logs/coordinate-extents-{check,frontend}-20261013T2307Z.log
 och coordinate-extents-audit-20261013T2307Z.json. Nästa oberoende del:
 precisera dokumenterade marine run-/utfärdandebegrepp från officiella
 produktmanualer, utan att intyga bindning till det historiska ARCO-uttaget.
+
+## 2026-10-14 – rättning av CI för 6a13485 / 38507580572
+
+Kontrollerat först att femtimmarspasset är avslutat: finished_with_blocker,
+ingen tmux-server och inget aktivt run-/launch-lås. Äldre interaktiva Codex-
+sessioner och en kvarhängande testprocess från 12 oktober observerades; inget
+aktivt utvecklingspass identifierades. Inga andra processer stoppades.
+
+Användarens CI-fel reproducerades i ny CPython 3.14.4-venv med enbart tidigare
+requirements.lock: två koordinattester gav ModuleNotFoundError för numpy.
+Den vanliga utvecklingsmiljön hade extra Toolbox-beroenden som dolde felet.
+Auditberoenden numpy 2.5.4, xarray 2026.9.0, h5netcdf 1.8.1 och h5py 3.16.0
+deklareras nu som testberoenden; dessa och packaging/pandas/python-dateutil/six
+hashlåses från officiella PyPI-wheels. Alla åtta releaseversioner verifierades
+på PyPI. Befintliga låsta paketversioner och hashvärden är oförändrade.
+Audit och fixture-export väljer explicit HDF5-dekodern h5netcdf. Två äldre
+beroendevillkorade NetCDF-skips är borttagna. CI:s befintliga installation av
+hela låsfilen och scripts.check-discovery kör båda integrationsmodulerna.
+Karttesternas Pythonval accepterar PYTHON så även deras API körs i ren venv.
+
+Verifiering: den rena miljön innehåller exakt 26 låsta paket samt venvs pip,
+include-system-site-packages=false; ingen Toolbox eller extra NetCDF-backend.
+Fyra koordinattester och tolv Copernicus-tester passerar utan skips.
+Samlade make check med PYTHON=/tmp/seaparser-ci-clean/bin/python passerar:
+160+146=306 Python-tester, syntax, låsningar, pip check, domängränser,
+frontendkontroll och sex frontendtester, inga skips. Frontend installerades
+med npm ci --ignore-scripts. Första frontendkörningen i sandboxen fallerade;
+hela sviten passerade utanför sandboxen med lokalt loopback-API.
+Loggar /tmp/seaparser-ci-{missing-deps,clean-install-fixed,clean-check-final}.log.
+Diff granskad; ingen ny funktion, råfixture, routingkvalificering, publicering
+eller databasändring. Nästa steg: push och kontrollera Actions för exakt ny
+commit. GitHub-anslutningens läsverktyg svarar Unknown tool och oautentiserad
+Actions-API ger 404 för privat repository; godkänd CI får inte antas.

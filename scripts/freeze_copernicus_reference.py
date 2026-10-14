@@ -46,7 +46,7 @@ def freeze(directory):
         if entry is None:
             raise ValueError('Static wet mask is required')
         path = directory / entry['filename']
-        with xr.open_dataset(path, decode_cf=True, mask_and_scale=True) as ds:
+        with xr.open_dataset(path, engine='h5netcdf', decode_cf=True, mask_and_scale=True) as ds:
             metadata = {
                 'dataset_id': entry['dataset_id'], 'version': entry['version'],
                 'source': 'Copernicus Marine Baltic forecast, product version pinned in manifest',

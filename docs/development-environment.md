@@ -1,5 +1,31 @@
 # Kontrollerad utvecklingsmiljö – förslag 2026-10-12
 
+## Uppdaterad test-/auditinstallation 2026-10-14
+
+Nedan finns den ursprungliga miljöbeskrivningen. Aktuella runtimeberoenden och
+testberoenden anges i `pyproject.toml`; `requirements.lock` innehåller båda med
+exakta versioner och wheel-hashar för CPython 3.14/Linux x86_64.
+Installera hela låsfilen i en venv utan system-site-packages:
+
+```sh
+python3 -m venv /tmp/seaparser-ci-clean
+/tmp/seaparser-ci-clean/bin/python -m pip install --index-url https://pypi.org/simple --require-hashes --only-binary=:all: -r requirements.lock
+npm --prefix frontend ci --ignore-scripts
+make check PYTHON=/tmp/seaparser-ci-clean/bin/python
+```
+
+Offline NetCDF-audit kräver numpy, xarray, h5netcdf och h5py samt låsta transitiva
+beroenden packaging, pandas, python-dateutil och six. Audit och fixture-export
+väljer explicit h5netcdf för HDF5/NetCDF-filerna. Toolbox, nätverkshämtning och
+databas krävs inte för testerna. Paketversionerna verifierades mot officiella
+PyPI-releaseposter före installation; inga befintliga låsta paket uppgraderades.
+
+CI installerar samma hela låsfil och kör `scripts.check`, vars unittest-discovery
+kör både `test_forecast_coordinate_extents.py` och `test_copernicus_import.py`.
+NetCDF-integrationstesterna har inga beroendevillkorade skips: saknade paket ska
+fälla kontrollen. En utvecklingsmiljö med extra Toolbox-paket räcker därför inte
+som verifiering av CI-installationen.
+
 ## Omfattning och antaganden
 
 Pythonprototypen använder endast standardbiblioteket. Ingen frontend, API eller

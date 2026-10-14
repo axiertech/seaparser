@@ -1,6 +1,6 @@
 """Read downloaded NetCDFs offline; audit CF fields, native grids and sample gaps.
 
-Uses xarray/numpy from the Toolbox environment only, not the routing runtime.
+Uses the project's locked test/audit dependencies, not the routing runtime.
 No file data is extrapolated or turned into a ForecastDataset here.
 """
 import argparse
@@ -26,7 +26,7 @@ def coordinate(dataset, standard):
 def inspect_file(path, fields, np, xr):
     if path.stat().st_size > 10_000_000:
         raise ValueError('NetCDF size budget exceeded')
-    with xr.open_dataset(path, decode_cf=True, mask_and_scale=True) as ds:
+    with xr.open_dataset(path, engine='h5netcdf', decode_cf=True, mask_and_scale=True) as ds:
         if any(v.size > 100_000 for v in ds.variables.values()):
             raise ValueError('Decoded array budget exceeded')
         validate_fields({n: a.attrs for n, a in ds.data_vars.items()}, fields)

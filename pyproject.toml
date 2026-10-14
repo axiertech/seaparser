@@ -5,7 +5,8 @@ requires-python = ">=3.14,<3.15"
 dependencies = ["fastapi==0.143.0", "uvicorn==0.54.0", "pyproj==3.8.0"]
 
 [project.optional-dependencies]
-test = ["httpx==0.28.1"]
+# Offline NetCDF audits are required by the integration suite, including in CI.
+test = ["httpx==0.28.1", "numpy==2.5.4", "xarray==2026.9.0", "h5netcdf==1.8.1", "h5py==3.16.0"]
 
 [tool.seaparser]
 # Standardbiblioteket används även för tester och lokala kodkontroller.

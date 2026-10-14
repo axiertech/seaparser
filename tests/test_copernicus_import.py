@@ -1,6 +1,5 @@
-"""Request selection is dependency-free; NetCDF tests use the Toolbox extras."""
+"""Request selection and required offline NetCDF integration regressions."""
 from hashlib import sha256
-from importlib.util import find_spec
 import json
 from pathlib import Path
 import tempfile
@@ -46,7 +45,6 @@ class RequestSelectionTests(unittest.TestCase):
             selection(self.catalogue(CURRENT_FIELDS), 'test', WAVE_FIELDS)
 
 
-@unittest.skipUnless(find_spec('xarray') and find_spec('numpy'), 'NetCDF extras only in the Toolbox environment')
 class FrozenCopernicusFixtureTests(unittest.TestCase):
     def test_raw_files_recreate_the_checked_provider_payload(self):
         from scripts.freeze_copernicus_reference import freeze
@@ -55,7 +53,6 @@ class FrozenCopernicusFixtureTests(unittest.TestCase):
         self.assertEqual(freeze(directory), expected)
 
 
-@unittest.skipUnless(find_spec('xarray') and find_spec('numpy'), 'NetCDF extras only in the Toolbox environment')
 class NetCDFAuditTests(unittest.TestCase):
     def setUp(self):
         import numpy as np

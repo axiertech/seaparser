@@ -18,7 +18,7 @@ const root = new URL('../../', import.meta.url);
 async function server(profile = 'synthetic') {
   if (process.env.SEAPARSER_DEMO_URL) return { url: process.env.SEAPARSER_DEMO_URL.replace(/\/$/, ''), async close() {} };
   const local = new URL('.venv/bin/python', root);
-  const python = existsSync(local) ? local.pathname : 'python';
+  const python = process.env.PYTHON || (existsSync(local) ? local.pathname : 'python');
   if (profile === 'vinga') {
     const generated = spawnSync(python, ['-B', '-m', 'scripts.land_preview', '--bundle', '--output', 'frontend/land-dist'], { cwd: root, encoding: 'utf8' });
     assert.equal(generated.status, 0, 'Regional bundleexport misslyckades');
