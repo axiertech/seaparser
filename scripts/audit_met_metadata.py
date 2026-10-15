@@ -189,8 +189,8 @@ def audit(directory):
                          'model_issue_time_unverified', 'cross_product_model_run_compatibility_unverified']}
 
 
-def audit_wind_sample(directory, metadata_directory):
-    """Describe frozen raw values; no normalization, masks or routing import."""
+def read_wind_sample(directory, metadata_directory):
+    """Materialize validated native samples without a routing qualification."""
     metadata = audit(metadata_directory)
     directory, metadata_directory = Path(directory), Path(metadata_directory)
     manifest = json.loads(bounded_read(directory, 'manifest.json'))
@@ -234,6 +234,12 @@ def audit_wind_sample(directory, metadata_directory):
             or max(values['wind_direction_10m']) > 360 or min(values['land_area_fraction']) < 0
             or max(values['land_area_fraction']) > 1):
         raise ValueError('Raw wind or land fraction outside physical bounds')
+    return metadata, digest, expected_axes, expected_times, values
+
+
+def audit_wind_sample(directory, metadata_directory):
+    """Describe frozen raw values; no normalization, masks or routing import."""
+    metadata, digest, _, _, values = read_wind_sample(directory, metadata_directory)
     return {'scope': 'raw_native_sample_not_routing_qualified', 'sha256': digest,
             'metadata_source_hashes': metadata['source_hashes'], 'native_node_count': 56,
             'time_count': 5, 'value_ranges': {name: {'count': len(nodes), 'min': str(min(nodes)),

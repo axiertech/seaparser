@@ -1858,3 +1858,46 @@ Diff granskad; ingen ny funktion, råfixture, routingkvalificering, publicering
 eller databasändring. Nästa steg: push och kontrollera Actions för exakt ny
 commit. GitHub-anslutningens läsverktyg svarar Unknown tool och oautentiserad
 Actions-API ger 404 för privat repository; godkänd CI får inte antas.
+
+## 2026-10-15 – regional koppling av fryst native vind och marin data
+
+Användaren verifierade CI completed/success för exakt c5c317c947fbaecf19a69b889013219e2b8aae72,
+körning https://github.com/axiertech/seaparser/actions/runs/38532032973.
+Process-/låskontroll före ändringar visade inget annat aktivt utvecklingspass;
+äldre interaktiva sessioner och kvarhängande gammalt test observerades, inga
+processer stoppades. Publik demonstration lämnas oförändrad.
+
+Implementerat scripts.regional_forecast som läser befintliga hashkontrollerade
+MET-/Copernicus-källor till RegionalForecastInputs i applikationslagret.
+Vindens 5×8×7 hastigheter/riktningar, native x/y, UTC-tider och landfraktion
+materialiseras som frysta tupler med ursprungliga Decimal-värden; ingen
+regridding, vektorrotation eller antagen WGS84-likvärdighet. Befintlig
+MET-parser återanvänds; tidigare auditrapport är oförändrad. Marina värden
+normaliseras med befintlig adapter direkt från NetCDF, inte detached reference.json.
+Alla nio källhashar binds tillsammans med faktiska värden i ett deterministiskt
+indatafingeravtryck. Samma instans kan användas i nästa integrationssteg.
+
+Gemensamt tidsstöd är 2026-10-13 12:00–16:00 UTC med exkluderad sluttid;
+det är inte ett rumsligt täcknings- eller run-förenlighetsbevis. Källbunden
+MET-modellreferens är 00:00 UTC; marina CF-modellreferenser/run-identiteter
+och samtliga utfärdandetider förblir okända. Båda ruttval förblir null och
+status data_unavailable. Spärrar för native vindgeometri/vektorram, marin
+körförenlighet/utfärdande och strömmask kvarstår. Ingen regional rutt beräknas.
+
+Kör: /tmp/seaparser-ci-clean/bin/python -B -m scripts.regional_forecast
+--departure 2026-10-13T12:00:00Z. Rapport /tmp/seaparser-regional-inputs.json.
+Åtta nya tester verifierar verkliga hörnvärden/ordning, oföränderlighet,
+sluttidsavvisning, källbytesfel, ignorerade detached datum/flaggor,
+reproducerbar CLI och fingeravtryck som även omfattar vindvärden.
+Verifiering i ren låst miljö: full scripts.check passerar 160+154=314
+Python-tester, syntax, pip check, låsningar och domängränser. Samlade make check
+passerade före sista tillagda fingerprinttestet, inklusive sex frontendtester
+utan skips; Pythonkontrollen kördes om efter tillägget. Loggar
+/tmp/seaparser-regional-{check,python-final}.log. Diff granskad; inga nya
+beroenden, databasändringar, externa hämtningar eller publicerade ändringar.
+
+Nästa steg efter push och godkänd CI: verifiera källgridets faktiska
+geometriska/vektoriella koppling till lokala ruttsegment; använd det nya
+indataobjektet. Marin historisk run-bindning behöver producentunderlag;
+gemensamma tider eller katalogversioner får inte ersätta det. GitHub-verktyget
+svarar fortfarande Unknown tool vid läsförsök; ny commits CI får inte antas.
