@@ -2,6 +2,7 @@
 import argparse
 from datetime import datetime
 from decimal import Decimal
+from hashlib import sha256
 import json
 from pathlib import Path
 
@@ -14,6 +15,12 @@ from scripts.regional_forecast import load_native_wind
 
 def read_segment(path):
     """Read one bounded, unambiguous mathematical review path, without weather I/O."""
+    segment,_=read_segment_snapshot(path)
+    return segment
+
+
+def read_segment_snapshot(path):
+    """Return the path and digest of the SAME bounded input bytes."""
     def unique(pairs):
         result={}
         for key,value in pairs:
@@ -34,7 +41,7 @@ def read_segment(path):
         raise ValueError('Explicit source-sphere segment fields required')
     for key in ('start_time','end_time'):
         raw[key]=datetime.fromisoformat(raw[key].replace('Z','+00:00'))
-    return (SourceLocalSegment if local else SourceSphereSegment)(**raw)
+    return (SourceLocalSegment if local else SourceSphereSegment)(**raw),sha256(data).hexdigest()
 
 
 def inspect_file(fixtures, path, max_cells=512):

@@ -1,7 +1,8 @@
 {
   "artifact": "index.html",
-  "sha256": "abe6fedf3b351cc937afaba69f2da28f8a6b99ac5fafc01587990c102e948410",
-  "data_sha256": "0ab65b34dcd9b0ab1b609c93ed48ba57c19c935afe4085bf9ad7aacfc4ee21c9",
+  "sha256": "62f62a90a863273e0514b609f2460173fd4eee9fc4e1cff24ed1591479d64ff1",
+  "data_sha256": "017a3c4ce1444b9932393133a4f5e0316e5b2406279036709eeb9057a7fa78fc",
+  "segment_source_sha256": "f5f5945edbd7fa12820cdba5a205d9bc1d779bae7de87d383fbc6ec9579e4e78",
   "build_command": "python -B -m scripts.export_frozen_forecast --output artifacts/vinga-frozen-review/index.html",
   "published": false
 }

@@ -105,3 +105,29 @@ Regressioner verifierar överlagringens tids-/produktseparation, punktmedlemskap
 avvisning av blandade källhashar/kvalificeringsflaggor, faktiskt råvärdesinnehåll,
 samt att segmentrapporten fortfarande kan byggas när de redan infångade
 vindfilerna tas bort. Byggkommando och kvitto ovan gäller även denna version.
+
+## Valbar provbana och ofullständigt stöd
+
+Bygget accepterar `--segment FIL.json` med något av de två befintliga,
+uttryckliga matematiska källsfärsformaten. WGS84 är inte ett godkänt format.
+Den valda filen läses en gång; dess exakta bytehash följer både HTML och
+byggkvittot. `--segment-max-cells` begränsar inventeringen (1–512).
+Kvittots byggkommando bevarar även valda argument och citerar sökvägar.
+
+Ett separat negativt exempel byggs från repositoryts rot med låst Pythonmiljö:
+
+```sh
+python -B -m scripts.export_frozen_forecast --segment fixtures/met-source-segment-outside.json --output artifacts/vinga-outside-review/index.html
+```
+
+Öppna `artifacts/vinga-outside-review/index.html` lokalt. Banan lämnar både
+sparade koordinatgränser och tider. Vid aktiverad överlagring visas hela höljet,
+utökade axlar och en grå ram för de faktiskt sparade nodgränserna. Inga positiva
+stödmarkeringar visas, inte heller vid en överlappande tid eller punkt.
+Arbetsgräns och saknade värden förklaras på samma sätt som ofullständigt stöd.
+Den vanliga råprovvisningen är fortfarande tillgänglig på respektive eget grid.
+Detta är en matematisk frågefixture, inga nya väderdata eller kvalificerade rutter.
+
+Varje artefakts aktuella SHA-256 finns i dess `index.receipt.json`; kontrollera
+filhashen mot detta före senare godkänd publicering. Båda byggena är fristående
+och förblir opublicerade. Manuell visuell browsergranskning återstår.

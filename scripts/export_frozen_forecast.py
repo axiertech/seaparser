@@ -5,18 +5,19 @@ from decimal import Decimal
 from hashlib import sha256
 import json
 from pathlib import Path
+from shlex import join as shell_join
 
-from application.native_wind_support import inspect_source_local_segment
+from application.native_wind_support import SourceLocalSegment, inspect_native_segment, inspect_source_local_segment
 from presentation.frozen_forecast_html import render_frozen_forecast
 from scripts.audit_met_metadata import PROJ4, read_wind_sample
 from scripts.freeze_copernicus_reference import freeze_with_audit
-from scripts.native_wind_segment import read_segment
+from scripts.native_wind_segment import read_segment_snapshot
 from scripts.regional_forecast import native_wind_from_snapshot
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def build_review(fixtures):
+def build_review(fixtures, segment_path=None, *, max_cells=512):
     fixtures = Path(fixtures)
     snapshot = read_wind_sample(
         fixtures / 'met-nordic-wind-sample', fixtures / 'met-nordic-metadata')
@@ -100,24 +101,37 @@ def build_review(fixtures):
                            'DOI: 10.48670/moi-00010, 10.48670/moi-00011',
             'source_url': raw['source_url'], 'license_url': raw['license_url'],
         })
-    segment_review = inspect_source_local_segment(native_wind_from_snapshot(snapshot),
-        read_segment(ROOT / 'fixtures/met-source-local-segment.json'))
+    segment,segment_hash = read_segment_snapshot(
+        Path(segment_path) if segment_path is not None else ROOT / 'fixtures/met-source-local-segment.json')
+    inspect = inspect_source_local_segment if isinstance(segment,SourceLocalSegment) else inspect_native_segment
+    segment_review = inspect(native_wind_from_snapshot(snapshot),segment,max_cells=max_cells)
     return {'schema': 1, 'historical': True, 'routing_qualified': False,
-            'products': products, 'run_compatibility': None, 'segment_review': segment_review}
+            'products': products, 'run_compatibility': None, 'segment_review': segment_review,
+            'segment_source_sha256':segment_hash}
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--fixtures', type=Path, default=ROOT / 'fixtures')
     parser.add_argument('--output', required=True, type=Path)
+    parser.add_argument('--segment', type=Path, help='Explicit mathematical source-sphere segment JSON')
+    parser.add_argument('--segment-max-cells', type=int, default=512)
     args = parser.parse_args()
-    review = build_review(args.fixtures)
+    review = build_review(args.fixtures,args.segment,max_cells=args.segment_max_cells)
     page = render_frozen_forecast(review)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(page, encoding='utf-8')
+    command=['python','-B','-m','scripts.export_frozen_forecast','--output',str(args.output)]
+    if args.segment is not None:
+        command.extend(['--segment',str(args.segment)])
+    if args.segment_max_cells != 512:
+        command.extend(['--segment-max-cells',str(args.segment_max_cells)])
+    if args.fixtures != ROOT / 'fixtures':
+        command.extend(['--fixtures',str(args.fixtures)])
     receipt = {'artifact': args.output.name, 'sha256': sha256(page.encode()).hexdigest(),
                'data_sha256': sha256(json.dumps(review, sort_keys=True).encode()).hexdigest(),
-               'build_command': 'python -B -m scripts.export_frozen_forecast --output ' + str(args.output),
+               'segment_source_sha256':review['segment_source_sha256'],
+               'build_command': shell_join(command),
                'published': False}
     args.output.with_suffix('.receipt.json').write_text(json.dumps(receipt, indent=2) + '\n')
     print(json.dumps(receipt))

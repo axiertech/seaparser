@@ -2487,3 +2487,24 @@ DOM-interaktionstester igen. Frontend check och separat land-DOM-test passerar.
 Befintligt TCP-hinder upprepas inte; ordinarie exakt CI ska verifiera API.
 Nästa mål: bara konkret annan tillåten källmetadata-/proveniensmetod; behåll
 osäkerhetsgrindarna. Manuell visuell browsergranskning återstår.
+
+## 2026-10-16: Valbar grafisk provbana och negativa stödfall
+
+Lokalt HTML-bygge kan välja befintligt källsfärsformat med --segment och en
+begränsad inventeringsbudget. JSON läses en gång och dess exakta bytehash binds
+till rapportvisning och reproducerbart, sökvägsciterat byggkvitto. Okänd WGS84-ram
+avvisas innan befintlig artefakt skrivs över. Presentation och filorkestrering
+behåller sina lager; ingen ny adapter eller väderdatahämtning.
+
+Separat artifacts/vinga-outside-review/index.html visar en matematisk bana som
+lämnar både rumsligt och tidsmässigt stöd. Hela höljet visas med utökade axlar och
+separata sparade koordinatgränser; ingen klippning eller partiell inventering ger
+positiva stödringar. Råprov finns kvar på egna grid. Budget-/luckfel förklaras
+också utan positivt stöd. Inga kvalificeringsgrindar ändras och inget publiceras.
+Riktat verifierat: 32 Python-tester och 8 DOM-interaktionstester passerar.
+Samlade låsta kontroller och exakt commit/CI dokumenteras vid leverans.
+Nästa funktionssteg kräver fortsatt konkret källstöd för verklig ruttbindning;
+matematisk källsfärsgranskning ersätter inte saknad datum-/ram-/masksemantik.
+Verifierat vid leverans: låsta scripts.check passerar 160 domän- och 238
+integrationstester; frontend check passerar. De åtta riktade DOM-testerna är gröna.
+Lokal TCP-bindning provas inte om; API-integration verifieras i ordinarie CI.

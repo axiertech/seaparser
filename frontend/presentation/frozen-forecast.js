@@ -11,13 +11,24 @@
   const svgElement = (tag, attrs, value) => { const e = document.createElementNS('http://www.w3.org/2000/svg', tag); for (const [k,v] of Object.entries(attrs)) e.setAttribute(k, v); if (value !== undefined) e.textContent = value; return e; };
   const pair = (parent, label, value) => parent.append(element('dt', label), element('dd', value));
   const segment = data.segment_review, wind = data.products.find(p => p.id === 'wind');
-  const segmentAvailable = segment?.raw_inventory_complete === true &&
-    segment.routing_status === 'data_unavailable' && segment.physical_source_support_qualified === false &&
-    segment.local_route_geometry_binding_verified === false &&
+  const mathematicalFrame = segment?.segment?.coordinate_frame === 'met-source-sphere-angular-linear-v1' &&
+    segment.method === 'met-spherical-lcc-rational-box-v1' ||
+    segment?.segment?.coordinate_frame === 'met-source-sphere-aeqd-affine-v1' &&
+    segment.method === 'met-source-sphere-aeqd-disk-lcc-v1' &&
     segment.source_local_geometry?.local_to_source_sphere_enclosure_verified === true &&
-    segment.source_local_geometry.wgs84_route_binding_verified === false &&
+    segment.source_local_geometry.wgs84_route_binding_verified === false;
+  const segmentAvailable = mathematicalFrame && segment.routing_status === 'data_unavailable' && segment.physical_source_support_qualified === false &&
+    segment.local_route_geometry_binding_verified === false &&
     Object.keys(wind.source_hashes).length === Object.keys(segment.source_hashes).length &&
     Object.entries(wind.source_hashes).every(([name,hash]) => segment.source_hashes[name] === hash);
+  const failureLabels = {
+    projected_box_outside_serialized_native_grid: 'Det omslutande området lämnar vindprovets sparade koordinatgränser.',
+    segment_outside_nominal_time_support: 'Provsegmentets tidsintervall lämnar de sparade vindtiderna.',
+    source_cell_budget_exceeded: 'Kontrollens arbetsgräns nåddes innan ett fullständigt underlag kunde redovisas.',
+    missing_or_nonfinite_raw_node: 'Ett nödvändigt sparat värde saknas eller är inte ett ändligt tal.'
+  };
+  const failureText = () => (segment.inventory_failures ?? []).map(code => failureLabels[code] ?? 'Underlaget kunde inte verifieras som fullständigt.').join(' ');
+  const coordinateLabel = token => { const [a,b='1'] = String(token).split('/'); return String(Number(a)/Number(b)); };
   function options(select, entries) { select.replaceChildren(); for (const [value,label] of entries) { const o = element('option', label); o.value = value; select.append(o); } }
   function safeLink(id, url) { const link = $(id); link.removeAttribute('href'); if (typeof url === 'string' && url.startsWith('https://')) link.href = url; }
   function selectProduct(p) {
@@ -42,8 +53,14 @@
       const s = segment.segment;
       const places = new Set(segment.raw_nodes.map(n => n.index.slice(1).join(','))).size;
       const instants = new Set(segment.raw_nodes.map(n => n.index[0])).size;
-      text('segment-summary', `Provbana (${s.start_east_m}, ${s.start_north_m}) till (${s.end_east_m}, ${s.end_north_m}) meter. Passage ${date(s.start_time)} – ${date(s.end_time)}. Underlag: ${places} platser vid ${instants} sparade tider, sammanlagt ${segment.raw_nodes.length} prov.`);
+      const local = segment.segment_coordinate_encoding === 'exact rational metres';
+      const coordinates = local ? [s.start_east_m,s.start_north_m,s.end_east_m,s.end_north_m] : [s.start_latitude,s.start_longitude,s.end_latitude,s.end_longitude];
+      const [a,b,c,d] = coordinates.map(coordinateLabel);
+      const supportSummary = segment.raw_inventory_complete ? `Underlag: ${places} platser vid ${instants} sparade tider, sammanlagt ${segment.raw_nodes.length} prov.` : 'Fullständigt sparat stöd saknas.';
+      text('segment-summary', `Provbana (${a}, ${b}) till (${c}, ${d}) ${local ? 'meter' : 'grader latitud/longitud på modellens sfär'}. Passage ${date(s.start_time)} – ${date(s.end_time)}. ${supportSummary}`);
+      text('segment-outcome', segment.raw_inventory_complete ? 'Råinventeringen är komplett. Giltighet och verklig ruttberäkning är fortfarande inte godkända.' : failureText() + ' Ett överlappande delområde eller delintervall räcker inte; inga stödmarkeringar visas.');
       $('segment-hashes').replaceChildren();
+      if (data.segment_source_sha256) pair($('segment-hashes'), 'Provbanans JSON SHA-256', data.segment_source_sha256);
       pair($('segment-hashes'), 'Granskningsrapport SHA-256', segment.report_sha256);
       pair($('segment-hashes'), 'Fryst vindunderlag SHA-256', segment.source_input_sha256);
     }
@@ -55,18 +72,23 @@
     const j = Math.floor(nodeIndex/cols), i = nodeIndex%cols;
     const all = f.values.flat(2).filter(Number.isFinite), lo = all.length ? Math.min(...all) : 0, hi = all.length ? Math.max(...all) : 0;
     const color = v => Number.isFinite(v) ? `hsl(${210 - 175 * (hi === lo ? .5 : (v-lo)/(hi-lo))}, 65%, 43%)` : '#ffffff';
-    const x = v => 80 + (v-p.x[0])/(p.x.at(-1)-p.x[0])*585;
-    const y = v => 350 - (v-p.y[0])/(p.y.at(-1)-p.y[0])*300;
-    const grid = $('grid'); grid.replaceChildren();
     const showSegment = p.id === 'wind' && segmentAvailable && $('segment-toggle').checked;
-    const supportNodes = new Set(showSegment ? segment.raw_nodes.filter(n => n.index[0] === timeIndex).map(n => n.index[1]*cols+n.index[2]) : []);
+    const supportComplete = showSegment && segment.raw_inventory_complete === true;
+    const supportNodes = new Set(supportComplete ? segment.raw_nodes.filter(n => n.index[0] === timeIndex).map(n => n.index[1]*cols+n.index[2]) : []);
+    const box = showSegment ? segment.projected_enclosure_m : null;
+    const west = box ? Math.min(p.x[0],Number(box.x[0])) : p.x[0], east = box ? Math.max(p.x.at(-1),Number(box.x[1])) : p.x.at(-1);
+    const south = box ? Math.min(p.y[0],Number(box.y[0])) : p.y[0], north = box ? Math.max(p.y.at(-1),Number(box.y[1])) : p.y.at(-1);
+    const x = v => 80 + (v-west)/(east-west)*585;
+    const y = v => 350 - (v-south)/(north-south)*300;
+    const grid = $('grid'); grid.replaceChildren();
     if (showSegment) {
-      const box = segment.projected_enclosure_m, [west,east] = box.x.map(Number), [south,north] = box.y.map(Number);
-      grid.append(svgElement('rect',{x:x(west),y:y(north),width:x(east)-x(west),height:y(south)-y(north),fill:'#704ba0','fill-opacity':'.08',stroke:'#704ba0','stroke-width':2,'stroke-dasharray':'8 4','data-segment-envelope':'true'}));
+      const [w,e] = box.x.map(Number), [s,n] = box.y.map(Number), shade = supportComplete ? '#704ba0' : '#99530c';
+      grid.append(svgElement('rect',{x:x(w),y:y(n),width:x(e)-x(w),height:y(s)-y(n),fill:shade,'fill-opacity':'.08',stroke:shade,'stroke-width':2,'stroke-dasharray':'8 4','data-segment-envelope':'true'}));
+      grid.append(svgElement('rect',{x:x(p.x[0]),y:y(p.y.at(-1)),width:x(p.x.at(-1))-x(p.x[0]),height:y(p.y[0])-y(p.y.at(-1)),fill:'none',stroke:'#536b75','stroke-width':2,'data-source-coverage':'true'}));
     }
     grid.append(svgElement('line',{x1:80,y1:350,x2:665,y2:350,class:'grid-axis'}), svgElement('line',{x1:80,y1:50,x2:80,y2:350,class:'grid-axis'}));
-    grid.append(svgElement('text',{x:80,y:385},String(p.x[0])),svgElement('text',{x:665,y:385,'text-anchor':'end'},String(p.x.at(-1))),svgElement('text',{x:80,y:417},p.axis_labels[0]),svgElement('text',{x:12,y:24},p.axis_labels[1]));
-    grid.append(svgElement('text',{x:8,y:350},String(p.y[0])),svgElement('text',{x:8,y:55},String(p.y.at(-1))));
+    grid.append(svgElement('text',{x:80,y:385},String(west)),svgElement('text',{x:665,y:385,'text-anchor':'end'},String(east)),svgElement('text',{x:80,y:417},p.axis_labels[0]),svgElement('text',{x:12,y:24},p.axis_labels[1]));
+    grid.append(svgElement('text',{x:8,y:350},String(south)),svgElement('text',{x:8,y:55},String(north)));
     let missing = 0, excluded = 0, unknownMask = 0;
     p.y.forEach((north,row) => p.x.forEach((east,col) => {
       const value = f.values[timeIndex][row][col], mask = p.mask?.[row][col];
@@ -88,8 +110,8 @@
     text('legend', `${lo} – ${hi} ${f.unit} · blå = lägre, orange = högre · ${missing} saknade prov av ${cols*p.y.length}` + (p.mask ? ` · ${excluded} punkter utan havsmask, varav ${unknownMask} okända (× land, ? okänt)` : ' · giltighetsmask saknas'));
     $('segment-status').hidden = !showSegment; $('segment-node').hidden = !showSegment;
     if (showSegment) {
-      text('segment-status', `${supportNodes.size} punkter i provsegmentets underlag vid vald sparad tid. Även grannpunkter och tider utanför själva passagen ingår i granskningen. Det streckade området omsluter hela banan och visar inte banans form. Giltighetsmask och beräkning mellan punkterna saknar verifiering. En verklig rutt kan ännu inte kopplas säkert till underlaget.`);
-      text('segment-node', supportNodes.has(nodeIndex) ? 'Vald punkt ingår i provsegmentets råunderlag vid denna tid. Det bevisar inte att provet är giltigt för ruttberäkning.' : 'Vald punkt ingår inte i provsegmentets råunderlag vid denna tid.');
+      text('segment-status', (supportComplete ? '' : failureText() + ' Inget fullständigt stöd kan markeras. ') + `${supportNodes.size} punkter i provsegmentets underlag vid vald sparad tid. Även grannpunkter och tider utanför själva passagen ingår i granskningen. Det streckade området omsluter hela banan och visar inte banans form. Grå ram visar de sparade nodgränserna; diagrammets axlar kan utökas för att visa hela höljet. Giltighetsmask och beräkning mellan punkterna saknar verifiering. En verklig rutt kan ännu inte kopplas säkert till underlaget.`);
+      text('segment-node', !supportComplete ? 'Provsegmentets underlag är ofullständigt. Vald punkt får inte användas som ett klippt positivt stöd.' : supportNodes.has(nodeIndex) ? 'Vald punkt ingår i provsegmentets råunderlag vid denna tid. Det bevisar inte att provet är giltigt för ruttberäkning.' : 'Vald punkt ingår inte i provsegmentets råunderlag vid denna tid.');
     }
     const latitudes = p.latitude.flat(), longitudes = p.longitude.flat();
     text('extent', `Sparade nodgränser: ${p.axis_labels[0]} ${p.x[0]} till ${p.x.at(-1)}; ${p.axis_labels[1]} ${p.y[0]} till ${p.y.at(-1)}. ${cols} × ${p.y.length} punkter. Källans latitudgränser ${Math.min(...latitudes)} till ${Math.max(...latitudes)}°; longitudgränser ${Math.min(...longitudes)} till ${Math.max(...longitudes)}°. Gränserna bevisar inte täckning mellan punkterna eller utanför dem.`);

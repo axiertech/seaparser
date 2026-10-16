@@ -130,3 +130,51 @@ test('mixed source identity or a qualification flag cannot enable segment overla
     dom.window.close();
   }
 });
+
+test('real negative artifact shows full space/time failure without clipped support', () => {
+  const outside=readFileSync(new URL('../../artifacts/vinga-outside-review/index.html',import.meta.url),'utf8');
+  const {dom,d,change}=review(outside);
+  assert.equal(d.getElementById('segment-review').hidden,false);
+  assert.match(d.getElementById('segment-summary').textContent,/grader latitud\/longitud/);
+  assert.match(d.getElementById('segment-outcome').textContent,/sparade koordinatgränser/);
+  assert.match(d.getElementById('segment-outcome').textContent,/tidsintervall lämnar/);
+  const toggle=d.getElementById('segment-toggle'); toggle.checked=true;
+  toggle.dispatchEvent(new dom.window.Event('change'));
+  const envelope=d.querySelector('[data-segment-envelope]'), coverage=d.querySelector('[data-source-coverage]');
+  assert.ok(envelope && coverage);
+  assert.equal(d.querySelectorAll('[data-segment-support]').length,0);
+  assert.equal(d.querySelectorAll('#grid circle[role="button"]').length,56);
+  // The entire un-clipped enclosure fits inside plotting coordinates after axis expansion.
+  assert.ok(Number(envelope.getAttribute('x'))>=80-1e-9);
+  assert.ok(Number(envelope.getAttribute('x'))+Number(envelope.getAttribute('width'))<=665+1e-9);
+  assert.ok(Number(envelope.getAttribute('y'))>=50-1e-9);
+  assert.ok(Number(envelope.getAttribute('y'))+Number(envelope.getAttribute('height'))<=350+1e-9);
+  assert.ok(Number(coverage.getAttribute('width'))<585 || Number(coverage.getAttribute('height'))<300);
+  change('time','2');
+  assert.equal(d.querySelectorAll('[data-segment-support]').length,0);
+  assert.match(d.getElementById('segment-node').textContent,/ofullständigt/);
+  assert.match(d.getElementById('extent').textContent,/-205442.2 till -199442.2/);
+  d.querySelector('[data-product="current"]').click();
+  assert.equal(d.getElementById('segment-review').hidden,true);
+  assert.equal(d.querySelectorAll('[data-segment-envelope]').length,0);
+  dom.window.close();
+});
+
+test('budget and missing-corner failures stay visible but never mark partial nodes', () => {
+  for (const reason of ['source_cell_budget_exceeded','missing_or_nonfinite_raw_node']) {
+    const raw=JSON.parse(page.match(/<script id="review-data" type="application\/json">(.*?)<\/script>/s)[1]);
+    raw.segment_review.raw_inventory_complete=false;
+    raw.segment_review.inventory_failures=[reason];
+    // Retain all raw nodes deliberately: partial evidence must not be green-lit.
+    const altered=page.replace(/(<script id="review-data" type="application\/json">).*?(<\/script>)/s,(_,a,b)=>a+JSON.stringify(raw)+b);
+    const {dom,d}=review(altered);
+    assert.equal(d.getElementById('segment-review').hidden,false);
+    assert.match(d.getElementById('segment-summary').textContent,/Fullständigt sparat stöd saknas/);
+    d.getElementById('segment-toggle').checked=true;
+    d.getElementById('segment-toggle').dispatchEvent(new dom.window.Event('change'));
+    assert.equal(d.querySelectorAll('[data-segment-envelope]').length,1);
+    assert.equal(d.querySelectorAll('[data-segment-support]').length,0);
+    assert.match(d.getElementById('segment-status').textContent,/Inget fullständigt stöd/);
+    dom.window.close();
+  }
+});

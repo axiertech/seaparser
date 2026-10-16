@@ -1,0 +1,8 @@
+{
+  "artifact": "index.html",
+  "sha256": "b2ac49c196c767e3df0c3f060dcf5d31210d7989ed2699cacb0d6e7593b6f578",
+  "data_sha256": "64e6984670818be2156fe7fd90783d8ba77c625c7bd99e8e4108993572719608",
+  "segment_source_sha256": "18e4eb76651fb66788d321028b80b323cfb5640832bcc7d9d2ff75ba7810ab6d",
+  "build_command": "python -B -m scripts.export_frozen_forecast --output artifacts/vinga-outside-review/index.html --segment fixtures/met-source-segment-outside.json",
+  "published": false
+}

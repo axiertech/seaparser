@@ -5,6 +5,9 @@ import json
 from pathlib import Path
 import re
 import shutil
+import shlex
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -127,3 +130,80 @@ class FrozenForecastReviewTests(unittest.TestCase):
         receipt = json.loads(path.with_suffix('.receipt.json').read_text())
         self.assertEqual(receipt['sha256'], sha256(page.encode()).hexdigest())
         self.assertFalse(receipt['published'])
+
+    def test_chosen_segment_failures_never_expose_clipped_positive_support(self):
+        local=json.loads((ROOT/'fixtures/met-source-local-segment.json').read_text())
+        outside=json.loads((ROOT/'fixtures/met-source-segment-outside.json').read_text())
+        cases=[(dict(local,end_time='2026-10-13T17:00:00Z'),512,'segment_outside_nominal_time_support'),
+               (dict(outside,end_time='2026-10-13T14:40:00Z'),512,'projected_box_outside_serialized_native_grid'),
+               (outside,512,'projected_box_outside_serialized_native_grid'),
+               (local,1,'source_cell_budget_exceeded')]
+        with tempfile.TemporaryDirectory() as temporary:
+            path=Path(temporary)/'segment.json'
+            for source,budget,reason in cases:
+                path.write_text(json.dumps(source))
+                review=build_review(ROOT/'fixtures',path,max_cells=budget)
+                report=review['segment_review']
+                self.assertFalse(report['raw_inventory_complete'])
+                self.assertIn(reason,report['inventory_failures'])
+                self.assertEqual(report['raw_nodes'],[])
+                self.assertEqual(report['adjacent_node_boxes'],[])
+                self.assertEqual(report['source_hashes'],review['products'][0]['source_hashes'])
+                self.assertEqual(review['segment_source_sha256'],sha256(path.read_bytes()).hexdigest())
+                self.assertIsNone(report['fastest_candidate'])
+                self.assertFalse(review['routing_qualified'])
+
+    def test_chosen_segment_hash_and_path_use_one_captured_read(self):
+        from scripts.native_wind_segment import read_segment_snapshot
+        with tempfile.TemporaryDirectory() as temporary:
+            path=Path(temporary)/'segment.json'
+            original=(ROOT/'fixtures/met-source-local-segment.json').read_bytes()
+            path.write_bytes(original)
+            def replace_after_read(selected):
+                captured=read_segment_snapshot(selected)
+                path.write_text('{}')
+                return captured
+            with patch('scripts.export_frozen_forecast.read_segment_snapshot',side_effect=replace_after_read):
+                review=build_review(ROOT/'fixtures',path)
+            self.assertEqual(review['segment_source_sha256'],sha256(original).hexdigest())
+            self.assertEqual(review['segment_review'],self.review['segment_review'])
+
+    def test_cli_receipt_preserves_custom_path_and_budget_with_shell_quoting(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            output=Path(temporary)/"outside review's page.html"
+            segment=ROOT/'fixtures/met-source-segment-outside.json'
+            result=subprocess.run([sys.executable,'-B','-m','scripts.export_frozen_forecast',
+                '--output',str(output),'--segment',str(segment),'--segment-max-cells','1',
+                '--fixtures','fixtures'],cwd=ROOT,capture_output=True,text=True)
+            self.assertEqual(result.returncode,0,result.stderr)
+            receipt=json.loads(output.with_suffix('.receipt.json').read_text())
+            command=shlex.split(receipt['build_command'])
+            for option,value in [('--output',str(output)),('--segment',str(segment)),
+                                 ('--segment-max-cells','1'),('--fixtures','fixtures')]:
+                self.assertEqual(command[command.index(option)+1],value)
+            self.assertEqual(receipt['segment_source_sha256'],sha256(segment.read_bytes()).hexdigest())
+            self.assertEqual(receipt['sha256'],sha256(output.read_bytes()).hexdigest())
+            self.assertFalse(receipt['published'])
+
+    def test_unknown_frame_cannot_replace_existing_artifact(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            output=Path(temporary)/'existing.html'
+            output.write_text('prior artifact')
+            source=json.loads((ROOT/'fixtures/met-source-segment-outside.json').read_text())
+            source['coordinate_frame']='EPSG:4326'
+            path=Path(temporary)/'unqualified.json'
+            path.write_text(json.dumps(source))
+            result=subprocess.run([sys.executable,'-B','-m','scripts.export_frozen_forecast',
+                '--output',str(output),'--segment',str(path)],cwd=ROOT,capture_output=True,text=True)
+            self.assertNotEqual(result.returncode,0)
+            self.assertEqual(output.read_text(),'prior artifact')
+            self.assertFalse(output.with_suffix('.receipt.json').exists())
+
+    def test_negative_review_artifact_is_reproducible_and_source_bound(self):
+        review=build_review(ROOT/'fixtures',ROOT/'fixtures/met-source-segment-outside.json')
+        path=ROOT/'artifacts/vinga-outside-review/index.html'
+        self.assertEqual(path.read_text(),render_frozen_forecast(review))
+        self.assertEqual(set(review['segment_review']['inventory_failures']),
+                         {'projected_box_outside_serialized_native_grid','segment_outside_nominal_time_support'})
+        receipt=json.loads(path.with_suffix('.receipt.json').read_text())
+        self.assertEqual(receipt['sha256'],sha256(path.read_bytes()).hexdigest())
