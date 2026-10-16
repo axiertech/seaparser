@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 
 from pyproj import CRS, Proj, Transformer
+from scripts.manifest_json import manifest_json
 
 MAX_BYTES = 512_000
 SOURCE_FILES = {'met-forecast.dds', 'met-forecast.das', 'met-time-coordinates.txt',
@@ -104,15 +105,7 @@ def bounded_read(directory, filename, *, limit=MAX_BYTES):
 
 def read_manifest(directory):
     """Reject ambiguous identities at every JSON object level."""
-    def unique_object(pairs):
-        result = {}
-        for key, value in pairs:
-            if key in result:
-                # Do not echo source keys or values into diagnostics.
-                raise ValueError('Duplicate manifest key')
-            result[key] = value
-        return result
-    return json.loads(bounded_read(directory, 'manifest.json'), object_pairs_hook=unique_object)
+    return manifest_json(bounded_read(directory, 'manifest.json'))
 
 
 def numbers(line, count):

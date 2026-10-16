@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from hashlib import sha256
 from io import BytesIO
 import json
+from scripts.manifest_json import manifest_json
 from pathlib import Path
 import sys
 
@@ -97,7 +98,7 @@ def audit_snapshot(directory):
     import numpy as np
     import xarray as xr
     directory = Path(directory)
-    manifest = json.loads((directory / 'manifest.json').read_text())
+    manifest = manifest_json((directory / 'manifest.json').read_bytes())
     if (manifest.get('schema') != 1 or len(manifest.get('files', [])) != 3
             or {f['filename'] for f in manifest['files']} != {'waves.nc', 'current.nc', 'wave-mask.nc'}):
         raise ValueError('Complete three-file download manifest required')

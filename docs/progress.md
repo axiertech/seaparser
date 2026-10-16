@@ -2299,3 +2299,16 @@ identitetstvetydighet; återanvänd befintlig adapter och samma marina råbytes.
 
 Full scripts.check exit 0: 160+190=350 tester samt syntax, pip check, låsfiler
  och domängränser godkända. Loggar autonomy/logs/met-manifest-{before,targeted,check}-20261016.log.
+
+## 2026-10-16: marina manifest får inte ha tvetydiga nycklar
+
+Reproducerat fyra accepterade dubbletter i marina manifest: schema, filhash,
+produkt och dataset_id. Delat liten JSON-avkodare mellan befintliga auditverktyg;
+MET behåller bounded_read och marin audit behåller samma råbytebilder/freeze.
+Två nya regressioner och sex riktade tester passerar. Ingen adapter, råfixture,
+utfärdandetid, planeringsspärr, databas eller publik demonstration ändrad.
+Nästa begränsade granskning: marina manifestets form/produkt-/filbindning och
+läsbudget före NetCDF-I/O; börja med konkreta negativa offlinefall.
+
+Full scripts.check exit 0: 160+192=352 tester samt samlade kontroller godkända.
+Loggar autonomy/logs/marine-manifest-{before,targeted,check}-20261016.log.

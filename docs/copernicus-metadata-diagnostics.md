@@ -123,3 +123,20 @@ anrop, HEAD eller nytt get/subset gjordes i denna del. Fortsatt arbete kräver
 separat metadataartefakt/tjänst med verifierad semantik eller nytt mandat för
 annan dataåtkomst. Befintliga nio källfiler och dagens CSV återanvänds.
 Alla planning_blockers och data_unavailable kvarstår.
+
+## Entydig marin manifest-JSON 2026-10-16
+
+Fyra negativa offlinefall i kopior av befintligt bundle visade accepterade
+motsägande dubbla JSON-nycklar: schema, filhash, produkt och dataset_id. Sista
+värdet vann i den tidigare standardavkodningen. Audit och freeze använder nu
+gemensamma scripts.manifest_json.manifest_json, som avvisar dubbletter på varje
+objektnivå med fast feldiagnostik. MET använder samma lilla avkodare genom sin
+befintliga begränsade läsning. Ingen marin kod importerar MET-adaptern.
+
+Ingen ny adapter eller schema-/run-certifiering införs. Det är fortfarande den
+befintliga audit_snapshot som binder hashkontrollerade NetCDF-bytes och manifest
+till freeze_with_audit. Dubblettfri JSON bevisar inte producentautenticitet,
+faktisk utfärdandetid eller historisk ARCO-bindning. Samtliga planning_blockers
+kvarstår. Tre marina råfiler och verifierade hashvärden är oförändrade; inga
+nya marina bytes hämtades. Två nya regressioner/fyra subfall fallerade före
+rättning och passerar efteråt; sex riktade marina/MET/snapshot-tester passerar.
