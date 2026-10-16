@@ -88,3 +88,30 @@ Befintliga tester är syntetiska eller avser det frysta marina underlaget.
 De kvalificerar inte verklig MET-routing. Framtida positiva projektionstester
 ska ha oberoende granskade referenskoordinater, rotation och felgränser;
 roundtrip genom samma bibliotek ensamt är otillräckligt.
+
+## Native nodrutor och rumtidsstöd 2026-10-16
+
+Befintlig audit_wind_sample redovisar nu native_cell_inventory från samma
+hashkontrollerade axlar, tider och finita råvärden. Sju x-noder och åtta y-noder
+ger 6×7=42 intilliggande nodrutor. Fem timsteg ger fyra tidsintervall, alltså
+168 rumtidsrutor med åtta hörnnoder vardera. Detta räknar rådatas adjacency,
+inte producentcertifierade cellpolygoner eller vald interpolation.
+
+Inventeringen redovisar första/sista native x/y i meter och tid i epoksekunder.
+Rektangelgränserna följer yttersta noden; inget halvt gridsteg läggs till utanför
+uttaget. Inga WGS84-koordinater eller lokala segment projiceras till området.
+provider_cell_validity_verified, interpolation_rule_verified och
+route_segment_coverage_verified är uttryckligen false. Alla planning_blockers
+kvarstår. Ett ogranskat manifestflag kan inte ändra dessa resultat.
+
+Inför nästa implementation krävs separat beslut/granskning av källans
+interpolationsregel och giltighetsmask, även vid gemensamma cellgränser och
+nollvikter. Landfraktion är inte en vindgiltighetsmask. En lokal rutt måste ha
+verifierad datum-/geometribindning för hela transformerade segmentet innan
+native nodrutorna kan användas som stödbevis. Analytisk LCC-inversion vid noder
+räcker inte till det. Nodrutor får heller inte förlänga tidsstöd efter sista
+prognosnoden eller ge fabrikat av saknade värden.
+
+Två nya regressioner kontrollerar kända 42/168 rutor, exakta tids-/y-gränser och
+fortsatt okvalificerat resultat, samt att NaN i en uppdaterad fixturekopia
+avvisas före komplett inventering. Inga vindvärden normaliseras/importeras.

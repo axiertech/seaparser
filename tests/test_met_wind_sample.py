@@ -46,6 +46,25 @@ class METWindSampleTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'hash, byte count'):
             audit_wind_sample(self.directory, METADATA)
 
+    def test_native_adjacency_inventory_is_not_provider_or_segment_coverage(self):
+        report = audit_wind_sample(self.directory, METADATA)
+        cells = report['native_cell_inventory']
+        self.assertEqual(cells['spatial_cell_count'], 42)  # 6 adjacent columns * 7 adjacent rows.
+        self.assertEqual(cells['space_time_cell_count'], 168)  # Four one-hour intervals.
+        self.assertEqual(cells['raw_nodes_per_space_time_cell'], 8)
+        self.assertEqual(cells['y_bounds_m'], ['-595322.0', '-588322.0'])
+        self.assertEqual(cells['time_bounds_epoch_seconds'], ['1791892800', '1791907200'])
+        for name in ('provider_cell_validity_verified', 'interpolation_rule_verified',
+                     'route_segment_coverage_verified'):
+            self.assertFalse(cells[name])
+        self.assertFalse(report['land_fraction_is_validity_mask'])
+        self.assertEqual(report['routing_status'], 'data_unavailable')
+
+    def test_missing_raw_support_cannot_produce_complete_adjacency_inventory(self):
+        self.change('12.970281', 'NaN')
+        with self.assertRaisesRegex(ValueError, 'Finite coordinate'):
+            audit_wind_sample(self.directory, METADATA)
+
     def test_changed_maps_fail_even_with_new_hash(self):
         self.change('-595322.0', '-595321.0')
         with self.assertRaisesRegex(ValueError, 'native axes'):

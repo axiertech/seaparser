@@ -2122,3 +2122,26 @@ Frontend oförändrad; sex tester/resurskontroll verifierades tidigare i passet.
 Nästa oberoende del: precisera native vindcellernas källstöd och analytiska
 LCC-geometri, utan antagen WGS84-likvärdighet eller dold regridding. Befintliga
 punktreferenser bevisar ännu inte hela celler/segment.
+
+## 2026-10-16 – native vindens nodrutestöd
+
+Befintlig vind-audit får additiv native_cell_inventory med källans x/y/tids-
+gränser och 42 rumsliga/168 rumtidsrutor. Detta är rå nodadjacens, inte
+producerad cellgiltighet, vald interpolation eller verifierat lokalt segmentstöd;
+alla tre verified-fält är false och samtliga prognosspärrar kvarstår.
+Kontraktet skiljer nodrektangel från utökat område och kräver senare mask-/
+interpolations-/datum-/helsegmentsbevis. Ingen adapter/regridding införs.
+Två nya regressioner verifierar kända rutor/gränser och avvisning av saknat
+råstöd även med uppdaterad testhash. Tio riktade vindtester passerar. Första
+körningen fann en ny diagnostikformatskillnad för Decimal-epoker; formatet
+rättades till exakt decimalnotation och slutkörningen passerar.
+Inga nya källhämtningar, marina rådata, beroenden, databas-/publika ändringar.
+
+Slutlig verifiering: full scripts.check exit 0, 160+178=338 Python-tester,
+syntax, pip check, låsfiler/domängränser. Diff granskad, --check godkänd.
+Originalets regionalrapport och nio källhashar exakt oförändrade. Loggar
+autonomy/logs/native-cells-{targeted,check}-20261016.log. Frontend oförändrad;
+sex tester/resurskontroll verifierades tidigare i passet.
+Nästa oberoende del: analytiska kontinuerliga lat/lon-gränser för native
+nodrektanglar på deklarerad sfärisk LCC; kontrollera derivattecken inom
+hela sourceområdet. Ingen WGS84-/rutt-/maskcertifiering får härledas därav.

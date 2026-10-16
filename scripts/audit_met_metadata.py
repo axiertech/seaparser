@@ -294,12 +294,23 @@ def read_wind_sample(directory, metadata_directory):
 
 def audit_wind_sample(directory, metadata_directory):
     """Describe frozen raw values; no normalization, masks or routing import."""
-    metadata, digest, _, _, values = read_wind_sample(directory, metadata_directory)
+    metadata, digest, axes, times, values = read_wind_sample(directory, metadata_directory)
     return {'scope': 'raw_native_sample_not_routing_qualified', 'sha256': digest,
             'metadata_source_hashes': metadata['source_hashes'], 'native_node_count': 56,
             'time_count': 5, 'value_ranges': {name: {'count': len(nodes), 'min': str(min(nodes)),
                                                    'max': str(max(nodes))} for name, nodes in values.items()},
             'land_fraction_nonzero_nodes': sum(value != 0 for value in values['land_area_fraction']),
+            'native_cell_inventory': {
+                'scope': 'raw_node_adjacency_not_provider_cell_or_route_coverage',
+                'x_bounds_m': [str(axes['x'][0]), str(axes['x'][-1])],
+                'y_bounds_m': [str(axes['y'][0]), str(axes['y'][-1])],
+                'time_bounds_epoch_seconds': [format(times[0], 'f'), format(times[-1], 'f')],
+                'spatial_cell_count': (len(axes['x']) - 1) * (len(axes['y']) - 1),
+                'space_time_cell_count': (len(axes['x']) - 1) * (len(axes['y']) - 1) * (len(times) - 1),
+                'raw_nodes_per_space_time_cell': 8,
+                'provider_cell_validity_verified': False,
+                'interpolation_rule_verified': False,
+                'route_segment_coverage_verified': False},
             'land_fraction_is_validity_mask': False, 'issued_at': None,
             'routing_status': 'data_unavailable', 'blockers': metadata['blockers']}
 
