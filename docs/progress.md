@@ -1922,3 +1922,29 @@ undantag: sex frontendtester, inga skips, exit 0.
 Loggar: /home/web/seaparser/autonomy/logs/marine-run-review-*-20261016.*.
 Nästa oberoende arbete: native vindgeometri/vektorram med befintliga frysta
 regionala indata. CI-läsverktyget gav Unknown tool, ingen ny CI påstås här.
+
+## 2026-10-16 – oberoende native vindgeometri
+
+Fyra nya referenstester härleder inversen för den granskade sfäriska
+Lambert-tangentkonen utan PROJ i referensformeln. Alla 56 noder jämförs
+med producentens sparade lat/lon och PROJ-inversen. Origo/symmetri/axelordning
+och sfäriska native axelbäringar kontrolleras separat. RegionalForecastInputs
+binds till exakt samma axlar/projektion/metadatahashar. Detta stärker
+geometriregressionen utan att normalisera vind eller intyga datum/helceller.
+Alla planning_blockers och data_unavailable kvarstår. Inga nya källbytes,
+adaptrar, beroenden, databasoperationer eller publika ändringar.
+
+PROJECT_BLOCKER: direkta USGS PDF-anrop gav HTTP 403; ITC-kopian överskred
+webbverktygets storleksgräns. Fortsatte med självständig analytisk offlinekontroll;
+fulltext påstås inte läst. PROJ:s officiella LCC-sida lästes. Detaljer och
+numeriska regressionstoleranser finns i met-wind-frame-review.md.
+
+Verifiering: fyra riktade tester och slutlig full scripts.check exit 0:
+160+158=318 Python-tester, syntax, pip check, låsfiler och domängränser.
+Alla nio källhashar samt dokumentlänkar kontrollerade, diff check godkänd.
+Frontend är oförändrad; föregående delpass samma dag verifierade sex
+frontendtester utan skips samt frontend resurskontroll. Ingen omkörning krävs
+för denna rena referenstest-/dokumentationsändring. Loggar:
+autonomy/logs/native-cone-{targeted,check-final}-20261016.log.
+Nästa oberoende del: strikt källsemantik för vindens faktiska DAS-fält,
+med negativa ändrade-enheter-/standardnamnfall även vid uppdaterad hash.
