@@ -82,3 +82,16 @@ Kör en offline kontraktsregression på befintlig API-gräns: extra draft-/under
 fält ska avvisas före jobbstart och får inte tyst ignoreras. Kontrollera dessutom
 att båda syntetiska ruttmålen behåller unknown/not_assessed och att GPX inte
 fabricerar höjd/djup. Detta verifierar dagens avgränsning, inte djupkvalificering.
+
+## Verifierad gränsregression 2026-10-16
+
+API-testet test_depth_parameters_cannot_be_silently_ignored prövar båda
+profilerna och fyra extra fält: draft_m, under_keel_margin_m, depth_status och
+vertical_datum. Alla åtta anrop ska ge 422/extra_forbidden vid rätt fält, utan
+allokerat jobb eller task. Fältnamnen är negativa testindata, inte nytt API.
+Befintliga end-to-end-tester kontrollerar att snabbast/bekvämast verkligen finns
+samtidigt som gemensam depth_status är unknown och navigational_safety är
+not_assessed. GPX saknar ele/extensions och behåller begränsningstexten.
+Detta kvalificerar fortfarande varken djupdata eller verklig passage.
+Nästa källnära del: granska officiell MET-dokumentation om 600 s vindmedlets
+tidsplacering och sann/gridrelativ ram. Ingen ny väderhämtning behövs.

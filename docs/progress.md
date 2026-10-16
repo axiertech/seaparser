@@ -2232,3 +2232,16 @@ vertikala datum får inte adderas. Syntetisk arrived/export bevisar ingen
 klarering. Ingen produktionskod, källa, prognosspärr eller publik demo ändrad.
 Nästa del: riktad regression av avvisade extra djupfält före jobbstart samt
 bevarad unknown/not_assessed och frånvaro av fabricerade GPX-höjder.
+
+## 2026-10-16: djupfält får inte tyst ignoreras
+
+Ny negativ API-regression prövar fyra extra djupfält över båda profilerna:
+422 med fältspecifik extra_forbidden och inga skapade jobb/tasks. Utökade
+befintliga end-to-end-tester behåller unknown/not_assessed när snabbast och
+bekvämast finns och kräver GPX utan fabricerade höjder/extensions med kvarvarande
+begränsningstext. 14 riktade tester passerar. Ingen produktionskod, fixture,
+prognosspärr, källa, databas eller publik demo ändrad. Nästa del: källnära
+granskning av MET-vindens tidsmedel/ram i officiell dokumentation, utan datauttag.
+
+Full scripts.check exit 0: 160+184=344 Python-tester, syntax, pip check,
+låsfiler och domängränser. Loggar autonomy/logs/depth-boundary-{targeted,check}-20261016.log.

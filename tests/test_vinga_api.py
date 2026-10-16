@@ -46,6 +46,8 @@ class VingaApiTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(any(p.intersects(start,target) for p in shapes))
         arrived=[r for r in result['alternatives'] if r['status']=='arrived']
         self.assertEqual(len(arrived),4)
+        for objective in ('fastest', 'comfortable'):
+            self.assertTrue(any(r[objective] for r in arrived))
         for route in arrived:
             self.assertEqual(route['weather_segment_status'],'verified')
             self.assertEqual(route['arrival_weather_status'],'passed_at_arrival')
@@ -73,6 +75,9 @@ class VingaApiTests(unittest.IsolatedAsyncioTestCase):
             self.assertAlmostEqual(float(p.attrib['lon']),lon,places=9)
             self.assertAlmostEqual(float(p.attrib['lat']),lat,places=9)
         self.assertFalse(xml.findall('g:trk',ns))
+        self.assertFalse(xml.findall('.//g:ele',ns))
+        self.assertFalse(xml.findall('.//g:extensions',ns))
+        self.assertIn('Ej navigationssäkert', description)
 
     async def test_weather_and_gap_rejections_export_denied(self):
         for scenario,status in (('weather-limit','weather_limit'),('missing-waves','data_unavailable')):

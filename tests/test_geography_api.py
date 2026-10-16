@@ -68,6 +68,10 @@ class ApiTests(unittest.IsolatedAsyncioTestCase):
         key,job=await self.finished(self.payload|{'margin_m':3})
         self.assertEqual(job['status'],'completed',job['reason'])
         result=job['result'];self.assertTrue(result['synthetic'])
+        self.assertEqual(result['depth_status'], 'unknown')
+        self.assertEqual(result['navigational_safety'], 'not_assessed')
+        for objective in ('fastest', 'comfortable'):
+            self.assertTrue(any(r[objective] for r in result['alternatives']))
         self.assertEqual(result['obstacles']['features'][0]['properties']['margin_m'],3)
         arrived=[r for r in result['alternatives'] if r['status']=='arrived']
         self.assertTrue(arrived)
@@ -84,6 +88,9 @@ class ApiTests(unittest.IsolatedAsyncioTestCase):
         points=xml.findall('g:rte/g:rtept',ns)
         self.assertEqual(len(points),len(route['waypoints']))
         self.assertFalse(xml.findall('g:trk',ns))
+        self.assertFalse(xml.findall('.//g:ele',ns))
+        self.assertFalse(xml.findall('.//g:extensions',ns))
+        self.assertIn('ingen garanti för navigerbarhet', xml.find('g:rte/g:desc',ns).text)
         for point,(lon,lat) in zip(points,route['waypoints']):
             self.assertAlmostEqual(float(point.attrib['lat']),lat,places=9)
             self.assertAlmostEqual(float(point.attrib['lon']),lon,places=9)
@@ -97,6 +104,25 @@ class ApiTests(unittest.IsolatedAsyncioTestCase):
         response=await self.client.post('/api/plans',content=b'x'*8193)
         self.assertEqual(response.status_code,413)
         self.assertEqual(self.store.jobs,{})
+
+    async def test_depth_parameters_cannot_be_silently_ignored(self):
+        # No depth-qualified use case exists: reject before allocating a job.
+        for profile in ('synthetic', 'vinga'):
+            source = (await self.client.get('/api/scene', params={'profile': profile})).json()
+            a, b = source['start'], source['target']
+            payload = {'profile': profile,
+                       'start': {'latitude': a[1], 'longitude': a[0]},
+                       'target': {'latitude': b[1], 'longitude': b[0]}}
+            for field, value in (('draft_m', 1.5), ('under_keel_margin_m', 0.5),
+                                 ('depth_status', 'verified'), ('vertical_datum', 'MSL')):
+                with self.subTest(profile=profile, field=field):
+                    response = await self.client.post('/api/plans', json=payload | {field: value})
+                    self.assertEqual(response.status_code, 422)
+                    errors = response.json()['detail']
+                    self.assertTrue(any(e['loc'] == ['body', field]
+                                        and e['type'] == 'extra_forbidden' for e in errors))
+                    self.assertEqual(self.store.jobs, {})
+                    self.assertFalse(self.store.tasks)
 
     async def test_weather_failure_and_no_gpx(self):
         key,job=await self.finished(self.payload|{'scenario':'weather-limit'})
