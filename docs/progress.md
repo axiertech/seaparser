@@ -1948,3 +1948,24 @@ för denna rena referenstest-/dokumentationsändring. Loggar:
 autonomy/logs/native-cone-{targeted,check-final}-20261016.log.
 Nästa oberoende del: strikt källsemantik för vindens faktiska DAS-fält,
 med negativa ändrade-enheter-/standardnamnfall även vid uppdaterad hash.
+
+## 2026-10-16 – strikt källsemantik för native vind
+
+Faktisk granskningslucka rättad i befintlig MET-offlineaudit: ändrade DAS-enheter,
+FRÅN/MOT-standardnamn och andra semantiska attribut kunde accepteras när en
+fixturekopias manifesthash uppdaterades. field_metadata kräver nu exakt de
+granskade tre fältens attribut, utan dubbletter/okända tolkningar. Det fasta
+uttaget granskas, ingen ny allmän DAP-parser eller adapter skapas.
+Fyra nya negativa testmatriser var röda före rättningen och passerar efter den;
+alla 34 riktade MET-tester passerar. Originalets regionalrapport är exakt
+oförändrad mot föregående delpass, med nio hashbindningar och alla spärrar.
+Inga nya källhämtningar, beroenden, databasoperationer eller publika ändringar.
+Detaljer: met-nordic-metadata-review.md. Fortsatt data_unavailable.
+
+Slutlig verifiering: full scripts.check exit 0, 160+162=322 Python-tester,
+syntax, pip check, låsfiler och domängränser. Diff granskad och --check godkänd.
+Loggar autonomy/logs/met-fields-{red,targeted,check}-20261016.log; red-loggen
+visar den tidigare luckan, inte ett kvarvarande testfel. Frontend oförändrad;
+sex frontendtester och resurskontroll passerade tidigare i samma aktiva pass.
+Nästa oberoende del: granska koordinat-/projektionsattributens konsistens,
+särskilt numeriska CF-parametrar kontra proj4, utan datum-/routingcertifiering.

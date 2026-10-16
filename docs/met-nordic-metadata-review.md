@@ -234,3 +234,28 @@ Kör offline:
 ```bash
 .venv/bin/python -B -m scripts.audit_met_metadata fixtures/met-nordic-metadata --wind-sample fixtures/met-nordic-wind-sample --marine-directory fixtures/vinga-copernicus
 ```
+
+## Strikt DAS-fältsemantik 2026-10-16
+
+Befintlig offlineaudit kräver nu exakt de granskade attributuppsättningarna
+för wind_speed_10m, wind_direction_10m och land_area_fraction i faktisk DAS.
+Enheter är m/s, degree respektive 1; standardnamn är wind_speed,
+wind_from_direction respektive land_area_fraction. coordinates måste vara
+longitude latitude och grid_mapping måste vara projection_lcc. Befintliga
+UInt32 _ChunkSizes för vind bevaras som del av den fasta källstrukturen.
+
+Varje block och attribut måste vara entydigt. Ändrad typ, saknad/dubbel
+uppgift eller ytterligare ogranskad semantik avvisas även när testmanifestets
+hash uppdateras. Nya scale_factor, add_offset, _FillValue, missing_value och
+cell_methods får inte tyst ändra hur de sparade ASCII-värdena tolkas.
+Detta är ett snävt kontrakt för vårt frysta uttag, ingen allmän DAP-parser;
+en ändrad producentstruktur kräver ny explicit granskning.
+
+Fyra negativa testmatriser visar avvisning av ändrade enheter, FRÅN/MOT,
+byvind/medelvind, maskbetydelse, CRS-/koordinatlänkar och attributambiguitet.
+Felaktig källsemantik avvisas före läsning av vindvärden. Före rättningen
+accepterades flera sådana ändringar med uppdaterad hash. Samtliga 34 riktade
+MET-tester passerar efter rättningen. Regionalrapporten för originalfixturen
+är exakt oförändrad, inklusive samtliga nio källhashar och planeringsspärrar.
+Ingen höjd, medelfönsterplacering, giltighetsmask, datumekvivalens eller
+utfärdandetid fabriceras. data_unavailable kvarstår.

@@ -16,6 +16,31 @@ PROJ4 = '+proj=lcc +lat_0=63 +lon_0=15 +lat_1=63 +lat_2=63 +no_defs +R=6.371e+06
 TIME_UNITS = 'seconds since 1970-01-01 00:00:00 +00:00'
 
 
+def field_metadata(das):
+    """Accept only the reviewed frozen field semantics, not arbitrary DAP."""
+    for name, standard_name, units in (
+            ('wind_speed_10m', 'wind_speed', 'm/s'),
+            ('wind_direction_10m', 'wind_from_direction', 'degree'),
+            ('land_area_fraction', 'land_area_fraction', '1')):
+        blocks = re.findall(r'^    ' + name + r' \{\n([^{}]*)^    \}', das, re.M)
+        if len(blocks) != 1:
+            raise ValueError('Unambiguous reviewed DAS field attributes required')
+        expected = {'coordinates': ('String', '"longitude latitude"'),
+                    'grid_mapping': ('String', '"projection_lcc"'),
+                    'standard_name': ('String', f'"{standard_name}"'),
+                    'units': ('String', f'"{units}"')}
+        if name != 'land_area_fraction':
+            expected['_ChunkSizes'] = ('UInt32', '1, 2321, 1796')
+        actual = {}
+        for line in blocks[0].splitlines():
+            match = re.fullmatch(r'\s*(String|UInt32) (\w+) ([^;]+);', line)
+            if not match or match[2] in actual:
+                raise ValueError('Unambiguous reviewed DAS field attributes required')
+            actual[match[2]] = (match[1], match[3])
+        if actual != expected:
+            raise ValueError('Reviewed DAS field attributes required')
+
+
 def time_metadata(dds, das, ascii_text):
     """Validate only the frozen DAP layout, not arbitrary DAP datasets."""
     for text in (dds, ascii_text.split('---------------------------------------------')[0]):
@@ -116,6 +141,7 @@ def audit(directory):
         texts[entry['filename']] = data.decode('utf-8')
         hashes[entry['filename']] = digest
     das = texts['met-forecast.das']
+    field_metadata(das)
     reference = time_metadata(texts['met-forecast.dds'], das, texts['met-time-coordinates.txt'])
     if f'String proj4 "{PROJ4}";' not in das:
         raise ValueError('Only the reviewed native spherical LCC is supported')
