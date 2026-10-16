@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="sv">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="$POLICY">
+<title>Vinga · frysta väderprov | SeaParser</title><style>$STYLE</style></head>
+<body><header><span class="eyebrow">SEAPARSER / GRANSKNING</span><h1>Vinga · väder i källans rutnät</h1>
+<p class="intro">Utforska sparade vind-, våg- och strömprov från 13 oktober 2026. Varje källa visas på sitt eget rutnät, med sina egna tider och dataluckor.</p>
+<p class="warning"><strong>Frysta historiska prov – inte aktuell prognos.</strong> Underlaget är inte kvalificerat för ruttberäkning eller navigation. Ingen rutt beräknas här.</p></header>
+<main><section class="guide"><h2>Så granskar du proven</h2><p>Välj källa, storhet och giltighetstid. Klicka på en punkt eller välj den i listan för exakta koordinater och värden. Tidsserien följer samma punkt. Färger visar enbart sparade värden; tomma punkter visar saknade prov. Inga värden beräknas mellan punkterna.</p></section>
+<nav id="products" aria-label="Väderkälla"></nav>
+<section class="workspace" aria-labelledby="product-title"><div class="controls"><h2 id="product-title"></h2>
+<label>Storhet<select id="field"></select></label><label>Giltighetstid (UTC)<select id="time"></select></label>
+<label class="slider-label">Bläddra bland sparade tider<input id="timeline" type="range" min="0" value="0" step="1"></label>
+<p id="validity"></p><p id="semantics"></p></div>
+<div class="plot"><h3 id="plot-title"></h3><svg id="grid" viewBox="0 0 720 440" role="group" aria-label="Provpunkter i källans koordinater"></svg><p id="legend"></p><p id="extent"></p><p class="muted">Axlarna visar källkoordinater. Diagrammet är inte ett sjökort. Skalorna skiljer sig mellan källor och storheter; färgskalan är fast över alla sparade tider för vald storhet.</p></div>
+<aside><h3>Vald provpunkt</h3><label>Punkt<select id="node"></select></label><p id="coordinates"></p><dl id="values" aria-live="polite"></dl><p id="mask"></p><p id="mask-note"></p></aside>
+<div class="series"><h3 id="series-title">Vald punkt över tid</h3><svg id="series" viewBox="0 0 720 210" role="img" aria-label="Sparade värden över tid, utan interpolation"></svg><div class="table-wrap"><table><caption>Alla sparade tider för vald punkt och storhet</caption><thead><tr><th scope="col">Giltighetstid (UTC)</th><th scope="col">Råprov</th></tr></thead><tbody id="series-table"></tbody></table></div></div></section>
+<section class="status"><h2>Vad återstår före ruttberäkning?</h2><p>Utfärdandetid och verifierad köridentitet saknas. Det är inte visat att produkterna kan kombineras från samma eller förenliga modellkörningar. Lika giltighetstider bevisar inte detta.</p><p>Vindens referensram, geodetiska överensstämmelse, giltighetsmask, interpolation och stöd längs hela rutten återstår att kvalificera. Strömmens egen mask saknas. Okända tidsmedel och säkerhetsgränser förblir okända. Djup och navigationssäkerhet är inte bedömda.</p></section>
+<section><h2>Källa och spårbarhet för vald produkt</h2><p id="dataset"></p><dl id="source-times"></dl><p id="projection"></p><p id="attribution"></p><p><a id="source-link" rel="noreferrer">Produktinformation</a> · <a id="license-link" rel="noreferrer">Licens och attribution</a></p><details><summary>Källfiler och SHA-256</summary><p>Hasharna binder visade prov till de sparade källfilerna. De bevisar inte att produkten är lämplig för navigation.</p><dl id="hashes"></dl></details></section></main>
+<footer>SeaParser · lokal granskningsversion · inga nätverksanrop eller aktuella prognoser hämtas. Externa källänkar öppnas endast när du väljer dem.</footer>
+<noscript>Aktivera JavaScript för att granska sparade prov. Denna fil innehåller historiska data och får inte användas som aktuell prognos.</noscript>
+<script id="review-data" type="application/json">$DATA</script><script>$SCRIPT</script></body></html>

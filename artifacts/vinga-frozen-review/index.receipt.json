@@ -1,0 +1,7 @@
+{
+  "artifact": "index.html",
+  "sha256": "dc7a69678a88dff1b7155cec7a21a3b6cfb87df14b76d7c641b25cfa1929a580",
+  "data_sha256": "0a2ea934653033a07d4073df6ce0d2f4d817a8dc6ce0b894c83e826982a04b1c",
+  "build_command": "python -B -m scripts.export_frozen_forecast --output artifacts/vinga-frozen-review/index.html",
+  "published": false
+}

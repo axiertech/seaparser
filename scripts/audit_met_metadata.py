@@ -223,6 +223,9 @@ def _read_metadata_snapshot(directory):
         raise ValueError('Nonfinite geometry diagnostic')
     report = {'schema': 1, 'scope': 'offline_coordinate_diagnostic_not_routing_qualification',
             'source_hashes': hashes, 'source_node_count': rows * columns,
+            # Retain coordinates from the same hashed snapshot as the diagnostics.
+            'source_coordinates': {'latitude': [[str(v) for v in row] for row in latitude],
+                                   'longitude': [[str(v) for v in row] for row in longitude]},
             'native_axes': {name: {'count': len(values), 'first_m': str(values[0]),
                                   'last_m': str(values[-1]), 'step_m': '1000'}
                             for name, values in axes.items()},

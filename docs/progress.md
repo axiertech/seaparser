@@ -2375,3 +2375,26 @@ SSH-åtkomst till development/real-map-data verifierad med projektets befintliga
 nyckel, utan att visa hemligheter. GitHub-anslutningen kan läsa privata
 Actions-resultat; tidigare publickey/Unknown tool är inte aktuella hinder.
 Push och CI-resultat redovisas separat först efter faktisk verifiering.
+
+## 2026-10-16: Separat grafisk granskning av frysta Vinga-prov
+
+Aktiv uppgift: användarens första funktionsmål för det nya passet. Antagande:
+provvisningen använder varje källas egna koordinater och sparade tidpunkter;
+visuell jämförelse innebär ingen datum-, mask- eller ruttkvalificering.
+Infört fristående HTML med källval, tidsreglage, punktval, värdeskalor, tidsserier,
+enheter, koordinatgränser, separata maskstatusar och synliga källhashar.
+Befintliga snapshotläsare återanvänds utan nya uttag eller parallella adaptrar.
+Artefakt och publiceringsunderlag: `artifacts/vinga-frozen-review/` respektive
+`docs/vinga-frozen-review.md`. Ingen publicering. Riktade Python- och DOM-tester
+passerar; samlade leveranskontroller och exakt remote-CI redovisas vid commit.
+Nästa funktionsmål: konservativ native vindgeometri/källstöd för hela segment,
+utan att lösa okända datum, vektorramar, tidsmedel, masker eller run-förenlighet
+med antaganden. Se aktuell gapöversikt; kvalificering förblir blockerad.
+Leveransverifiering: Python 3.14.4, samtliga 26 installerade låsta paket matchar
+requirements.lock; scripts.check passerar 160 domäntester + 204 integrationstester.
+Efter sista proveniensfältet passerar de sex riktade Python-testerna och fyra
+DOM-tester igen. npm ci --ignore-scripts --offline och frontend check passerar.
+PROJECT_BLOCKER: lokal API-testserver kan inte binda TCP 127.0.0.1:0:
+PermissionError errno 1, Operation not permitted. Befintlig frontend map.test.mjs
+faller lokalt; ingen upprepad full körning eller publik demo används. Exakt CI
+ska verifiera API-integrationen. Manuell visuell webbläsargranskning återstår.
