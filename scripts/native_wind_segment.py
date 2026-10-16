@@ -12,7 +12,8 @@ from infrastructure.native_wind_geometry import SOURCE_LOCAL_FRAME
 from scripts.regional_forecast import load_native_wind
 
 
-def inspect_file(fixtures, path, max_cells=512):
+def read_segment(path):
+    """Read one bounded, unambiguous mathematical review path, without weather I/O."""
     def unique(pairs):
         result={}
         for key,value in pairs:
@@ -33,9 +34,13 @@ def inspect_file(fixtures, path, max_cells=512):
         raise ValueError('Explicit source-sphere segment fields required')
     for key in ('start_time','end_time'):
         raw[key]=datetime.fromisoformat(raw[key].replace('Z','+00:00'))
-    segment_type,inspect = ((SourceLocalSegment,inspect_source_local_segment) if local else
-                            (SourceSphereSegment,inspect_native_segment))
-    return inspect(load_native_wind(fixtures),segment_type(**raw),max_cells=max_cells)
+    return (SourceLocalSegment if local else SourceSphereSegment)(**raw)
+
+
+def inspect_file(fixtures, path, max_cells=512):
+    segment=read_segment(path)
+    inspect=(inspect_source_local_segment if isinstance(segment,SourceLocalSegment) else inspect_native_segment)
+    return inspect(load_native_wind(fixtures),segment,max_cells=max_cells)
 
 
 def main():

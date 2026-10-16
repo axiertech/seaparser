@@ -7,9 +7,11 @@ import re
 import shutil
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from presentation.frozen_forecast_html import render_frozen_forecast
 from scripts.export_frozen_forecast import build_review
+from scripts.freeze_copernicus_reference import freeze_with_audit
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -84,6 +86,39 @@ class FrozenForecastReviewTests(unittest.TestCase):
     def test_refuses_claim_of_routing_qualification(self):
         with self.assertRaises(ValueError):
             render_frozen_forecast(dict(self.review, routing_qualified=True))
+
+    def test_marine_time_mean_claims_preserve_the_actual_source_difference(self):
+        _,wave,current=self.review['products']
+        self.assertEqual(wave['source_time_means'],{'VHM0':'time: mean','VTM02':'time: mean','VMDR':'time: mean'})
+        self.assertEqual(current['source_time_means'],{'uo':None,'vo':None})
+        self.assertIn('Källan beskriver inte tidsmedlet',current['semantics'])
+        self.assertNotIn('Källan anger tidsmedel',current['semantics'])
+
+    def test_graphical_segment_is_bound_to_same_wind_snapshot_and_raw_values(self):
+        wind=self.review['products'][0]
+        report=self.review['segment_review']
+        self.assertEqual(report['source_hashes'],wind['source_hashes'])
+        self.assertEqual(report['intersecting_box_count'],12)
+        self.assertEqual(len(report['raw_nodes']),36)
+        self.assertFalse(report['physical_source_support_qualified'])
+        for node in report['raw_nodes']:
+            k,j,i=node['index']
+            self.assertEqual(float(node['speed_m_s']),wind['fields']['speed']['values'][k][j][i])
+            self.assertEqual(float(node['direction_from_degrees']),wind['fields']['direction']['values'][k][j][i])
+
+    def test_segment_materialization_does_not_reopen_already_captured_wind_sources(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            fixtures=Path(temporary)
+            for name in ('met-nordic-metadata','met-nordic-wind-sample','vinga-copernicus'):
+                shutil.copytree(ROOT/'fixtures'/name,fixtures/name)
+            def remove_then_freeze(directory):
+                for name in ('met-nordic-metadata','met-nordic-wind-sample'):
+                    shutil.rmtree(fixtures/name)
+                return freeze_with_audit(directory)
+            with patch('scripts.export_frozen_forecast.freeze_with_audit',side_effect=remove_then_freeze):
+                actual=build_review(fixtures)
+            self.assertEqual(actual['segment_review'],self.review['segment_review'])
+            self.assertEqual(actual['products'][0],self.review['products'][0])
 
     def test_checked_artifact_is_reproducible_from_current_sources(self):
         path = ROOT / 'artifacts/vinga-frozen-review/index.html'

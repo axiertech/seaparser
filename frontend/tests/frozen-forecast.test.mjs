@@ -81,3 +81,52 @@ test('explicit gaps, land, unknown masks and zero values are distinguishable', (
   assert.match(d.getElementById('mask').textContent,/okänd/);
   dom.window.close();
 });
+
+test('whole segment envelope and raw support follow times and stay on wind grid', () => {
+  const {dom,d,change} = review();
+  assert.equal(d.getElementById('segment-review').hidden,false);
+  assert.match(d.getElementById('segment-summary').textContent,/9 platser vid 4 sparade tider, sammanlagt 36 prov/);
+  assert.equal(d.querySelectorAll('[data-segment-envelope]').length,0);
+  const toggle=d.getElementById('segment-toggle'); toggle.checked=true;
+  toggle.dispatchEvent(new dom.window.Event('change'));
+  assert.equal(d.querySelectorAll('[data-segment-envelope]').length,1);
+  assert.equal(d.querySelectorAll('[data-segment-support]').length,9);
+  assert.match(d.getElementById('segment-status').textContent,/9 punkter/);
+  change('node','16'); // row 2, column 2 in source node order.
+  assert.match(d.getElementById('segment-node').textContent,/Vald punkt ingår i/);
+  change('timeline','4','input');
+  assert.equal(d.querySelectorAll('[data-segment-support]').length,0);
+  assert.match(d.getElementById('segment-status').textContent,/0 punkter/);
+  assert.match(d.getElementById('segment-node').textContent,/ingår inte/);
+  change('time','2');
+  assert.equal(d.querySelectorAll('[data-segment-support]').length,9);
+  d.querySelector('[data-product="waves"]').click();
+  assert.equal(d.getElementById('segment-review').hidden,true);
+  assert.equal(d.querySelectorAll('[data-segment-envelope]').length,0);
+  assert.equal(d.querySelectorAll('[data-segment-support]').length,0);
+  d.querySelector('[data-product="current"]').click();
+  assert.equal(d.getElementById('segment-review').hidden,true);
+  assert.equal(d.querySelectorAll('[data-segment-support]').length,0);
+  assert.match(d.getElementById('semantics').textContent,/Källan beskriver inte tidsmedlet/);
+  d.querySelector('[data-product="wind"]').click();
+  assert.equal(d.querySelectorAll('[data-segment-support]').length,9);
+  toggle.checked=false; toggle.dispatchEvent(new dom.window.Event('change'));
+  assert.equal(d.querySelectorAll('[data-segment-envelope]').length,0);
+  dom.window.close();
+});
+
+test('mixed source identity or a qualification flag cannot enable segment overlay', () => {
+  for (const mutate of [raw => { raw.segment_review.source_hashes['native-wind-land.txt']='0'.repeat(64); },
+                         raw => { raw.segment_review.physical_source_support_qualified=true; }]) {
+    const raw=JSON.parse(page.match(/<script id="review-data" type="application\/json">(.*?)<\/script>/s)[1]);
+    mutate(raw);
+    const altered=page.replace(/(<script id="review-data" type="application\/json">).*?(<\/script>)/s,(_,a,b)=>a+JSON.stringify(raw)+b);
+    const {dom,d}=review(altered);
+    assert.equal(d.getElementById('segment-review').hidden,true);
+    d.getElementById('segment-toggle').checked=true;
+    d.getElementById('segment-toggle').dispatchEvent(new dom.window.Event('change'));
+    assert.equal(d.querySelectorAll('[data-segment-envelope]').length,0);
+    assert.equal(d.querySelectorAll('[data-segment-support]').length,0);
+    dom.window.close();
+  }
+});

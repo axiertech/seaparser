@@ -6,17 +6,21 @@ from hashlib import sha256
 import json
 from pathlib import Path
 
+from application.native_wind_support import inspect_source_local_segment
 from presentation.frozen_forecast_html import render_frozen_forecast
 from scripts.audit_met_metadata import PROJ4, read_wind_sample
 from scripts.freeze_copernicus_reference import freeze_with_audit
+from scripts.native_wind_segment import read_segment
+from scripts.regional_forecast import native_wind_from_snapshot
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def build_review(fixtures):
     fixtures = Path(fixtures)
-    metadata, digest, axes, epochs, values = read_wind_sample(
+    snapshot = read_wind_sample(
         fixtures / 'met-nordic-wind-sample', fixtures / 'met-nordic-metadata')
+    metadata, digest, axes, epochs, values = snapshot
     payload, audit = freeze_with_audit(fixtures / 'vinga-copernicus')
     rows, columns = len(axes['y']), len(axes['x'])
     def planes(flat):
@@ -71,6 +75,8 @@ def build_review(fixtures):
             'longitude': [list(lon) for _ in lat],
             'projection': 'Källans latitud/longitud; inget gemensamt rutnät antas.',
             'fields': {key: field(*labels[key], data) for key, data in raw['data'].items()},
+            'source_time_means': {key: audit[name]['variables'][key]['cell_methods']
+                                  for key in raw['data']},
             'mask': payload['products']['static']['data']['mask'] if name == 'waves' else None,
             'land_fraction': None,
             'mask_note': ('Separat vågmask: 1 = hav, 0 = land, okänt = saknat. '
@@ -79,8 +85,9 @@ def build_review(fixtures):
             'semantics': ('Tm02 är spektral vågmedelperiod, inte prognosens tidsmedel. '
                           'Vågriktning är FRÅN sann nord enligt källfältet. Källan anger tidsmedel, '
                           'men dess längd och placering i tiden är okända.' if name == 'waves' else
-                          'CF-komponenter mot öster/norr, markrelativa. Djup: ' + str(raw['depth_m']) +
-                          ' m. Källan anger tidsmedel, men dess längd och placering i tiden är okända. '
+                          'Ström mot öster och norr, relativt marken. Negativa värden betyder väster '
+                          'respektive söder. Djup: ' + str(raw['depth_m']) +
+                          ' m. Källan beskriver inte tidsmedlet; dess längd och placering i tiden är okända. '
                           'Omvandling till ruttens lokala ram är inte kvalificerad.'),
             'model_reference_time': audit[name]['forecast_reference_time'],
             'issued_at': None, 'run_identity': None,
@@ -93,8 +100,10 @@ def build_review(fixtures):
                            'DOI: 10.48670/moi-00010, 10.48670/moi-00011',
             'source_url': raw['source_url'], 'license_url': raw['license_url'],
         })
+    segment_review = inspect_source_local_segment(native_wind_from_snapshot(snapshot),
+        read_segment(ROOT / 'fixtures/met-source-local-segment.json'))
     return {'schema': 1, 'historical': True, 'routing_qualified': False,
-            'products': products, 'run_compatibility': None}
+            'products': products, 'run_compatibility': None, 'segment_review': segment_review}
 
 
 def main():

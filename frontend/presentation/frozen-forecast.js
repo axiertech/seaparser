@@ -10,6 +10,14 @@
   const element = (tag, value) => { const e = document.createElement(tag); if (value !== undefined) e.textContent = value; return e; };
   const svgElement = (tag, attrs, value) => { const e = document.createElementNS('http://www.w3.org/2000/svg', tag); for (const [k,v] of Object.entries(attrs)) e.setAttribute(k, v); if (value !== undefined) e.textContent = value; return e; };
   const pair = (parent, label, value) => parent.append(element('dt', label), element('dd', value));
+  const segment = data.segment_review, wind = data.products.find(p => p.id === 'wind');
+  const segmentAvailable = segment?.raw_inventory_complete === true &&
+    segment.routing_status === 'data_unavailable' && segment.physical_source_support_qualified === false &&
+    segment.local_route_geometry_binding_verified === false &&
+    segment.source_local_geometry?.local_to_source_sphere_enclosure_verified === true &&
+    segment.source_local_geometry.wgs84_route_binding_verified === false &&
+    Object.keys(wind.source_hashes).length === Object.keys(segment.source_hashes).length &&
+    Object.entries(wind.source_hashes).every(([name,hash]) => segment.source_hashes[name] === hash);
   function options(select, entries) { select.replaceChildren(); for (const [value,label] of entries) { const o = element('option', label); o.value = value; select.append(o); } }
   function safeLink(id, url) { const link = $(id); link.removeAttribute('href'); if (typeof url === 'string' && url.startsWith('https://')) link.href = url; }
   function selectProduct(p) {
@@ -29,6 +37,16 @@
     pair($('source-times'), 'Verifierad modellkörning', p.run_identity ?? 'Okänd');
     pair($('source-times'), 'Förenlighet mellan produkterna', 'Inte verifierad');
     pair($('source-times'), 'Separat maskkälla', p.mask_source ?? 'Saknas – ingen annan produkts mask används');
+    $('segment-review').hidden = p.id !== 'wind' || !segmentAvailable;
+    if (segmentAvailable) {
+      const s = segment.segment;
+      const places = new Set(segment.raw_nodes.map(n => n.index.slice(1).join(','))).size;
+      const instants = new Set(segment.raw_nodes.map(n => n.index[0])).size;
+      text('segment-summary', `Provbana (${s.start_east_m}, ${s.start_north_m}) till (${s.end_east_m}, ${s.end_north_m}) meter. Passage ${date(s.start_time)} – ${date(s.end_time)}. Underlag: ${places} platser vid ${instants} sparade tider, sammanlagt ${segment.raw_nodes.length} prov.`);
+      $('segment-hashes').replaceChildren();
+      pair($('segment-hashes'), 'Granskningsrapport SHA-256', segment.report_sha256);
+      pair($('segment-hashes'), 'Fryst vindunderlag SHA-256', segment.source_input_sha256);
+    }
     $('hashes').replaceChildren(); for (const [name, hash] of Object.entries(p.source_hashes)) pair($('hashes'), name, hash);
     draw();
   }
@@ -40,6 +58,12 @@
     const x = v => 80 + (v-p.x[0])/(p.x.at(-1)-p.x[0])*585;
     const y = v => 350 - (v-p.y[0])/(p.y.at(-1)-p.y[0])*300;
     const grid = $('grid'); grid.replaceChildren();
+    const showSegment = p.id === 'wind' && segmentAvailable && $('segment-toggle').checked;
+    const supportNodes = new Set(showSegment ? segment.raw_nodes.filter(n => n.index[0] === timeIndex).map(n => n.index[1]*cols+n.index[2]) : []);
+    if (showSegment) {
+      const box = segment.projected_enclosure_m, [west,east] = box.x.map(Number), [south,north] = box.y.map(Number);
+      grid.append(svgElement('rect',{x:x(west),y:y(north),width:x(east)-x(west),height:y(south)-y(north),fill:'#704ba0','fill-opacity':'.08',stroke:'#704ba0','stroke-width':2,'stroke-dasharray':'8 4','data-segment-envelope':'true'}));
+    }
     grid.append(svgElement('line',{x1:80,y1:350,x2:665,y2:350,class:'grid-axis'}), svgElement('line',{x1:80,y1:50,x2:80,y2:350,class:'grid-axis'}));
     grid.append(svgElement('text',{x:80,y:385},String(p.x[0])),svgElement('text',{x:665,y:385,'text-anchor':'end'},String(p.x.at(-1))),svgElement('text',{x:80,y:417},p.axis_labels[0]),svgElement('text',{x:12,y:24},p.axis_labels[1]));
     grid.append(svgElement('text',{x:8,y:350},String(p.y[0])),svgElement('text',{x:8,y:55},String(p.y.at(-1))));
@@ -50,6 +74,11 @@
       if (p.mask && mask !== 1) { excluded++; if (mask === null) unknownMask++; }
       const index = row*cols+col;
       const c = svgElement('circle',{cx:x(east),cy:y(north),r:index === nodeIndex ? 10 : 7,fill:color(value),stroke:index === nodeIndex ? '#102e3d' : '#536b75','stroke-width':index === nodeIndex ? 3 : 1,tabindex:0,role:'button','aria-label':`Rad ${row+1}, punkt ${col+1}: ${format(value)} ${f.unit}`});
+      if (supportNodes.has(index)) {
+        c.setAttribute('data-segment-support','true');
+        c.setAttribute('aria-label',c.getAttribute('aria-label') + ', ingår i provsegmentets råunderlag');
+        grid.append(svgElement('circle',{cx:x(east),cy:y(north),r:13,fill:'none',stroke:'#704ba0','stroke-width':2,'pointer-events':'none'}));
+      }
       c.append(svgElement('title',{},`${east}, ${north}: ${format(value)} ${f.unit}`));
       const choose = () => { nodeIndex = index; $('node').value = index; draw(); $('node').focus(); };
       c.addEventListener('click',choose); c.addEventListener('keydown',e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(); } }); grid.append(c);
@@ -57,6 +86,11 @@
     }));
     text('plot-title', `${f.label} · ${date(p.times[timeIndex])}`);
     text('legend', `${lo} – ${hi} ${f.unit} · blå = lägre, orange = högre · ${missing} saknade prov av ${cols*p.y.length}` + (p.mask ? ` · ${excluded} punkter utan havsmask, varav ${unknownMask} okända (× land, ? okänt)` : ' · giltighetsmask saknas'));
+    $('segment-status').hidden = !showSegment; $('segment-node').hidden = !showSegment;
+    if (showSegment) {
+      text('segment-status', `${supportNodes.size} punkter i provsegmentets underlag vid vald sparad tid. Även grannpunkter och tider utanför själva passagen ingår i granskningen. Det streckade området omsluter hela banan och visar inte banans form. Giltighetsmask och beräkning mellan punkterna saknar verifiering. En verklig rutt kan ännu inte kopplas säkert till underlaget.`);
+      text('segment-node', supportNodes.has(nodeIndex) ? 'Vald punkt ingår i provsegmentets råunderlag vid denna tid. Det bevisar inte att provet är giltigt för ruttberäkning.' : 'Vald punkt ingår inte i provsegmentets råunderlag vid denna tid.');
+    }
     const latitudes = p.latitude.flat(), longitudes = p.longitude.flat();
     text('extent', `Sparade nodgränser: ${p.axis_labels[0]} ${p.x[0]} till ${p.x.at(-1)}; ${p.axis_labels[1]} ${p.y[0]} till ${p.y.at(-1)}. ${cols} × ${p.y.length} punkter. Källans latitudgränser ${Math.min(...latitudes)} till ${Math.max(...latitudes)}°; longitudgränser ${Math.min(...longitudes)} till ${Math.max(...longitudes)}°. Gränserna bevisar inte täckning mellan punkterna eller utanför dem.`);
     text('coordinates', `Källkoordinater: ${p.x[i]}, ${p.y[j]}. Latitud ${p.latitude[j][i]}°, longitud ${p.longitude[j][i]}°. Ingen datumomvandling till gemensamt kartunderlag antas.`);
@@ -80,5 +114,6 @@
   const setTime = value => { timeIndex=Number(value); $('time').value=timeIndex; $('timeline').value=timeIndex; draw(); };
   $('time').addEventListener('change',()=>setTime($('time').value)); $('timeline').addEventListener('input',()=>setTime($('timeline').value));
   $('node').addEventListener('change',()=>{ nodeIndex=Number($('node').value); draw(); });
+  $('segment-toggle').addEventListener('change',draw);
   selectProduct(product);
 })();

@@ -180,3 +180,25 @@ Testet använder inte WGS84, MET-vindvärden eller accepterade segment, och bind
 inte MET-sfären till motorns WGS84-datum. Positiv differentialreferens kvalificerar
 varken källa, mask, tidsmedel, interpolation, hårdgränsbevis eller run-förenlighet.
 Ingen vektorfunktion införs i produktionskoden. Alla planning_blockers kvarstår.
+
+## Avgränsat källdokumentationsförsök 2026-10-16 20:11 UTC
+
+Den officiella MET Nordic-wikin och THREDDS-användardokumentationen kunde läsas
+i webbverktyget. Ingen ny källbunden uppgift kvalificerade vindram, datum,
+serialiseringsfel, giltighetsmask eller tidsmedlets placering för de redan
+frysta råproven. Den tidigare granskningen av 10 m/600 s och FRÅN-konvention
+ändras inte. Inget nytt DDS/DAS-/vind-/marinuttag gjordes.
+
+PROJECT_BLOCKER: en separat avgränsad råtexthämtning av MET:s offentliga
+https://raw.githubusercontent.com/wiki/metno/NWPdocs/Examples.md gav URLError.
+Operationen hade 15 s-gräns, 131072-bytebudget och avvisade omdirigeringar.
+Ingen råtext sparades eller hash påstods. Samma misslyckade operation upprepades
+inte, ingen sandbox-/autentiserings-/systemändring gjordes. Privat arbetsrapport:
+/home/web/seaparser/autonomy/met-wind-doc-review-20261016T2012Z/review.json.
+Webbåtkomst till annan dokumentationsrepresentation är inte lyckad råhashning
+eller bindning av generella kodexempel till MET Nordic-provets riktning.
+
+Nästa oberoende funktion genomfördes i stället: grafisk inspektion av befintligt
+hashbundet helt-segmenthölje och dess sparade vindstöd, utan kvalificeringslyft.
+Se vinga-frozen-review.md. Återuppta källförsök först med konkret annan tillåten
+metod/evidens; ingen identisk hämtning, omhämtning av marina data eller ny adapter.

@@ -18,7 +18,12 @@ def load_native_wind(root):
     root = Path(root)
     metadata_dir, wind_dir = (root / name for name in
         ('met-nordic-metadata', 'met-nordic-wind-sample'))
-    metadata, digest, axes, epochs, values = read_wind_sample(wind_dir, metadata_dir)
+    return native_wind_from_snapshot(read_wind_sample(wind_dir, metadata_dir))
+
+
+def native_wind_from_snapshot(snapshot):
+    """Materialize the exact already validated snapshot; never reopen source files."""
+    metadata, digest, axes, epochs, values = snapshot
     def planes(flat):
         return tuple(tuple(tuple(flat[k * 56 + j * 7:k * 56 + (j + 1) * 7])
                            for j in range(8)) for k in range(5))

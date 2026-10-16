@@ -46,8 +46,8 @@ vindläsarens granskning; de läses inte om efter granskningen.
 - Utfärdandetider, marina modellreferenser och verifierade run-identiteter är
   uttryckligen okända. Vindens modellreferens visas som referens, inte utfärdande.
   Katalogversion är inte köridentitet. Run-förenlighet är inte verifierad.
-- Vindens dokumenterade 600 s medel har okänd tidsplacering. Marina källor anger
-  tidsmedel men saknar verifierad längd/placering. Tm02 är vågens spektralperiod,
+- Vindens dokumenterade 600 s medel har okänd tidsplacering. Vågor anger
+  tidsmedel men saknar verifierad längd/placering; strömmen saknar sådan uppgift. Tm02 är vågens spektralperiod,
   inte ett sådant tidsmedel. Vindram och omvandling till ruttens ram kvalificeras
   inte; marina CF-komponenter och riktningar märks med sin källsemantik.
 - Layouten är responsiv men introducerar inget val av visuell editor. Det
@@ -70,3 +70,38 @@ kontroll mot kvittots hash, välj en separat granskningsadress, behåll varninge
 om historiska data och gör manuell visuell/tangentbords-/mobilgranskning före
 aktivering. Ingen befintlig demonstrationssida ska ersättas. Leveransen har
 inte ändrat publik webbrot, tjänst, serverkonfiguration eller publiceringsskript.
+
+## Grafisk granskning av provsegmentets underlag
+
+På vindfliken finns nu valet **Visa underlag för provsegmentet**. Den inbäddade
+matematiska källsfärsbanan går från (−300,−200) till (400,300) lokala meter,
+12:20–14:40 UTC den 13 oktober 2026. Ett streckat område visar hela banans
+konservativa inneslutning i vindens egna koordinater. Det är inte banans faktiska
+form eller en verklig WGS84-rutt. Lila ringar markerar de rånoder som ingår i
+inventeringen för vald sparad tid. Punktvalet förklarar om punkten ingår.
+
+Underlaget har 9 platser vid 4 sparade tider, sammanlagt 36 prov, samt de
+12 rumtidsrutor som framgår av den maskinläsbara rapporten. Grannpunkter och
+sparade tider utanför själva passagen behövs för den konservativa granskningen.
+Vid 16 UTC finns inga markerade stödnoder för denna bana; vindens övriga
+prov kan fortfarande granskas. Vid byte till vågor eller ström döljs både
+hölje och markeringar. Ingen annan produkts mask eller koordinater överförs.
+
+Segmentrapporten genereras av samma `inspect_source_local_segment` som CLI,
+från **samma redan infångade hashvaliderade vindsnapshot** som värdevisningen.
+Inga vindfiler öppnas igen efter den inledande läsningen. Rapportens och hela
+vindindatans SHA-256 finns under granskningsbanans spårbarhet. Frontend visar
+bara överlagringen när källhasharna matchar och kvalificeringsgrindarna är
+fortsatt stängda. Detta gör inte stödets producentmask, interpolation,
+datum-/serialiseringsfel, vindram, medelplacering eller säkerhetshölje kända.
+
+Samtidigt rättas en felaktig presentationsfras: vågorna deklarerar tidsmedel,
+men de frysta strömfälten gör det **inte**. Strömmens medelprocess, längd och
+placering är fortsatt okända. Källäst skillnad följer även som
+source_time_means i de frikopplade presentationsdata. Råfixtures är oförändrade.
+Ingen ny kvalificering, rådatahämtning eller publik ändring.
+
+Regressioner verifierar överlagringens tids-/produktseparation, punktmedlemskap,
+avvisning av blandade källhashar/kvalificeringsflaggor, faktiskt råvärdesinnehåll,
+samt att segmentrapporten fortfarande kan byggas när de redan infångade
+vindfilerna tas bort. Byggkommando och kvitto ovan gäller även denna version.

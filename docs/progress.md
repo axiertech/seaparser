@@ -2457,3 +2457,33 @@ scripts.check passerar 160 domäntester + 230 integrationstester. Föregående
 JSON-rapport återges exakt trots gemensam inventeringsrefaktor. Frontend,
 beroenden och grafisk artefakt är oförändrade; känt TCP-hinder upprepas inte.
 Exakt remote-CI verifieras efter push.
+
+## 2026-10-16: Grafisk segmentstödsgranskning och korrigerad strömtidssemantik
+
+Föregående feb67ff är pushad med grön exakt CI 38960005560. Ett begränsat
+MET-dokumentationsförsök gav inte ny källbunden kvalificering; råtexthämtning
+av primär Examples.md gav PROJECT_BLOCKER: URLError (källa/operation/budget
+redovisas i met-wind-frame-review.md). Ingen identisk retry, marin datahämtning,
+sandbox-/systemändring eller adapter. Oberoende funktion valdes inom prioriteten.
+
+Vindfliken i den fristående grafiska artefakten kan nu visa hela provsegmentets
+omslutande område och de sparade stödnoderna vid vald tid. 9 platser × 4 tider
+är 36 prov; 16 UTC ger noll markeringar för denna bana. Byte till vågor/ström
+visar aldrig vindens hölje/stöd. Punktval och käll-/rapporthashar ger granskbar
+bindning. Samma fångade vindsnapshot materialiseras för presentation och
+segmentrapport; ingen omläsning eller parallell adapter. Matematisk bana och
+okvalificerat verkligt ruttstöd förblir åtskilda. Inga positiva ruttkandidater.
+
+En faktisk presentationsbugg rättas: tidigare text sade att strömmen deklarerar
+tidsmedel, trots att dess frysta cell_methods saknas. Nu bevaras detta som okänt,
+medan vågornas deklarerade tidsmedel fortsatt visas utan påhittad längd/placering.
+Råfixtures är orörda. Nya Python-/DOM-regressioner verifierar källbindning,
+ingen omläsning, tids-/produktseparation och bevarade kvalificeringsgrindar.
+Artefakt artifacts/vinga-frozen-review/index.html och kvitto regenererade;
+ingen publicering. Samlade låsta kontroller och exakt commit/CI vid leverans.
+Verifierat: samtliga 26 Python-låspaket matchar; scripts.check passerar 160+233
+tester. Efter sista läsbarhetsfrasen passerar nio riktade Python-tester och sex
+DOM-interaktionstester igen. Frontend check och separat land-DOM-test passerar.
+Befintligt TCP-hinder upprepas inte; ordinarie exakt CI ska verifiera API.
+Nästa mål: bara konkret annan tillåten källmetadata-/proveniensmetod; behåll
+osäkerhetsgrindarna. Manuell visuell browsergranskning återstår.
