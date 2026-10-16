@@ -1901,3 +1901,24 @@ geometriska/vektoriella koppling till lokala ruttsegment; använd det nya
 indataobjektet. Marin historisk run-bindning behöver producentunderlag;
 gemensamma tider eller katalogversioner får inte ersätta det. GitHub-verktyget
 svarar fortfarande Unknown tool vid läsförsök; ny commits CI får inte antas.
+
+## 2026-10-16 – officiella marina körbegrepp
+
+Begränsad dokumentationsleverans: marine-run-source-review.md granskar
+PHY/BGC PUM 1.3 och WAV PUM 2.8 (11/2025), med sektion-/sidreferenser.
+Analyscykel, modelltid och leveransschema hålls separata. Dokumenterad
+överskrivning motiverar fortsatt krav på historisk ARCO-urvalsbindning.
+Ingen faktisk utfärdandetid eller förenlighet för våra fixtures är bevisad;
+alla planning_blockers och data_unavailable kvarstår. Inga nya marina
+väderdata, adaptrar, beroenden, databasoperationer eller publika ändringar.
+
+Verifiering: 8 riktade regionala tester och full scripts.check passerar
+160+154=314 Python-tester, syntax, pip check, låsfiler och domängränser.
+Frontend resurskontroll passerar. Tre marina råhashar och lokala dokumentlänkar
+kontrollerade; regional CLI behåller null för marin run/utfärdande.
+Frontendintegrationens första försök fallerade i sandboxen; separat socketprov
+gav PermissionError errno 1. Befintlig loopbacksvit passerar med godkänt
+undantag: sex frontendtester, inga skips, exit 0.
+Loggar: /home/web/seaparser/autonomy/logs/marine-run-review-*-20261016.*.
+Nästa oberoende arbete: native vindgeometri/vektorram med befintliga frysta
+regionala indata. CI-läsverktyget gav Unknown tool, ingen ny CI påstås här.
