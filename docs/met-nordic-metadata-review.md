@@ -346,3 +346,23 @@ till en avsiktligt saknad vindfil och de senare avvisades inte. Efter rättning
 avvisas alla i tidsgranskningen. Oförändrade råfixtures läses fortsatt korrekt.
 Ingen utfärdandetid fylls i, inga tidsgränser uppfinns och alla planning_blockers
 kvarstår. Ingen ny vind-/marinhämtning, adapter eller publik ändring.
+
+## Manifestidentitet utan dubbla JSON-nycklar 2026-10-16
+
+Fyra negativa offlinefall visade att tidigare json.loads accepterade motsägande
+dubbla nycklar genom att behålla sista värdet. Metadata-manifestets schema och
+en filposts sha256 samt vindmanifestets sha256 och nästlade subset.x_first
+kunde då vara tvetydiga även när sista värdet stämde med råbytes.
+
+Gemensam read_manifest för de två befintliga MET-läsningarna använder nu
+object_pairs_hook och avvisar varje duplicerad nyckel, även i nästlade objekt.
+Felltexten är fast och återger inga källnycklar/värden. Befintlig bytebudget,
+form-/hash-/dimension-/semantikvalidering återanvänds; ingen ny adapter skapas.
+Dubblettfri JSON är inte producentautenticitet eller run-förenlighetsbevis.
+Manifestets ifyllda issued_at/routing_status/blockers ger fortfarande ingen
+kvalificering och får inte ändra data_unavailable. Råfixtures förblir orörda.
+
+Två nya testmetoder med fyra subfall misslyckades före rättning och passerar
+efteråt. 30 riktade manifest-/metadata-/vind-/budgettester passerar.
+Källidentitet/semantik hämtas fortsatt ur samma hashkontrollerade bytebilder;
+inga källdata eller officiella körtider har hämtats eller hittats i denna del.

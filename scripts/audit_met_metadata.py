@@ -102,6 +102,19 @@ def bounded_read(directory, filename, *, limit=MAX_BYTES):
     return data
 
 
+def read_manifest(directory):
+    """Reject ambiguous identities at every JSON object level."""
+    def unique_object(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                # Do not echo source keys or values into diagnostics.
+                raise ValueError('Duplicate manifest key')
+            result[key] = value
+        return result
+    return json.loads(bounded_read(directory, 'manifest.json'), object_pairs_hook=unique_object)
+
+
 def numbers(line, count):
     tokens = tuple(value.strip() for value in line.split(','))
     if len(tokens) != count or any(not value or len(value) > 64 for value in tokens):
@@ -142,7 +155,7 @@ def matrix(text, name, rows, columns):
 def _read_metadata_snapshot(directory):
     """Return diagnostics and the exact bounded, hashed source texts used."""
     directory = Path(directory)
-    manifest = json.loads(bounded_read(directory, 'manifest.json'))
+    manifest = read_manifest(directory)
     if type(manifest) is not dict:
         raise ValueError('Metadata manifest object required')
     entries = manifest.get('files', [])
@@ -246,7 +259,7 @@ def read_wind_sample(directory, metadata_directory):
     """Materialize validated native samples without a routing qualification."""
     metadata, metadata_texts = _read_metadata_snapshot(metadata_directory)
     directory = Path(directory)
-    manifest = json.loads(bounded_read(directory, 'manifest.json'))
+    manifest = read_manifest(directory)
     if (type(manifest) is not dict or type(manifest.get('schema')) is not int
             or manifest['schema'] != 1 or manifest.get('filename') != 'native-wind-land.txt'):
         raise ValueError('Reviewed wind sample manifest required')

@@ -2286,3 +2286,16 @@ referenser; endast konkreta brister ska leda till kodändring.
 
 Full scripts.check exit 0: 160+188=348 tester, syntax, pip check, låsfiler och
 domängränser godkända. Loggar autonomy/logs/met-time-attributes-{before,targeted,check}-20261016.log.
+
+## 2026-10-16: entydiga MET-manifest
+
+Reproducerat fyra tvetydiga JSON-dubbletter som accepterades med sista värdet:
+schema, filhash, vindhash och nästlat subsetindex. Gemensam bounded
+read_manifest för befintlig metadata-/vindläsning avvisar nu dubbletter på alla
+objektnivåer med fast, värdefri feldiagnostik. Två nya regressioner och 30 riktade
+tester passerar. Inga råfixtures/adaptrar/datum/planeringsspärrar ändrade.
+Nästa oberoende del: granska motsvarande marina manifestläsning för faktisk
+identitetstvetydighet; återanvänd befintlig adapter och samma marina råbytes.
+
+Full scripts.check exit 0: 160+190=350 tester samt syntax, pip check, låsfiler
+ och domängränser godkända. Loggar autonomy/logs/met-manifest-{before,targeted,check}-20261016.log.
