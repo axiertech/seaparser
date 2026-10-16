@@ -2083,3 +2083,22 @@ Frontend oförändrad; sex tester och resurskontroll verifierades tidigare i pas
 Nästa oberoende del: officiell dokumentation om originalfil-/ARCO-urvalssemantik
 och historisk bindning för redan sparat uttag; inga nya marina väderdata eller
 påståenden baserade på filnamn/last_modified/etag. Befintliga CSV återanvänds.
+
+## 2026-10-16 – officiell ARCO-proveniensgranskning
+
+Ny arco-provenance-review.md sammanställer två faktiskt lästa officiella
+Copernicus-artiklar. Originalfiler och ARCO har skilda representations-/
+uppdateringssteg; generell harmonisering är inte ett specifikt tidsändringsbevis
+för våra momentanfält. raise_if_updating finns redan i nedladdningskoden men
+är inget historiskt run-/utfärdandebevis. Dagens CSV återanvänds utan nya
+metadata-/väderanrop. Ingen koppling till vårt historiska ARCO-urval bevisad;
+alla planning_blockers/data_unavailable kvarstår.
+PROJECT_BLOCKER: arkivartikeln gav HTTP 401. Fortsatte med två andra officiella
+källor och offline verifiering; fulltext påstås inte läst. Ingen extern kontakt.
+Åtta regionala regressioner passerar; nio källhashar och dokumentlänkar
+kontrollerade, diff --check godkänd. Ingen produktionskod ändrad, senaste
+kodcommit 756d792 har 335 Python-tester godkända. Frontend oförändrad;
+sex tester/resurskontroll verifierades tidigare i passet. Logg
+autonomy/logs/arco-review-regional-20261016.log.
+Nästa oberoende del: bevara koordinatordning vid permuterade NetCDF-
+lagringsdimensioner genom befintlig audit/freeze. Inga nya adaptrar behövs.
