@@ -9,9 +9,8 @@ import sys
 from application.regional_forecast import RegionalForecastInputs, inspect_regional_inputs
 from infrastructure.copernicus_adapter import CopernicusMarineAdapter
 from infrastructure.native_wind import NativeWindSample
-from scripts.audit_copernicus import audit as audit_marine
 from scripts.audit_met_metadata import PROJ4, audit_coordinate_extents, read_wind_sample
-from scripts.freeze_copernicus_reference import freeze
+from scripts.freeze_copernicus_reference import freeze_with_audit
 
 
 def load_regional_inputs(root):
@@ -32,8 +31,8 @@ def load_regional_inputs(root):
         planes(values['wind_speed_10m']), planes(values['wind_direction_10m']),
         tuple(tuple(values['land_area_fraction'][j * 7:(j + 1) * 7]) for j in range(8)),
         instant(metadata['model_reference']['epoch_seconds']), tuple(sorted(hashes.items())))
-    marine_audit = audit_marine(marine_dir)
-    marine = CopernicusMarineAdapter().normalize(freeze(marine_dir))
+    marine_payload, marine_audit = freeze_with_audit(marine_dir)
+    marine = CopernicusMarineAdapter().normalize(marine_payload)
     return RegionalForecastInputs(wind, marine, tuple(
         (name, marine_audit[name]['forecast_reference_time']) for name in ('waves', 'current')),
         tuple(sorted(marine_audit['manifest_file_hashes'].items())))

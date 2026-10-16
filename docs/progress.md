@@ -2036,3 +2036,27 @@ resurskontroll passerade tidigare i samma pass.
 Nästa oberoende del: koppla regionala marina modellreferenser/hashar och
 normaliserade värden till samma audit_snapshot i stället för separata
 load_regional_inputs-audit/freeze-anrop. Behåll samtliga avvisningsregler.
+
+## 2026-10-16 – sammanhållen regional marin inläsning
+
+Rättad fortsatt samordningslucka: load_regional_inputs gjorde separat marinaudit
+och freeze. Ny freeze_with_audit returnerar payload och rapport från samma
+kontrollerade bytes/manifest; regionala modellreferenser, råhashlista och
+produktvärden binds till detta underlag. Befintlig freeze och dess CLI är
+oförändrade utåt. Inga detached rapporter tas emot som certifiering.
+Två nya regionala fixturekopietester var röda före fix och passerar nu:
+bytta vågvärden/modellreferens/manifesthash efter auditstart samt borttagna
+källor efter kontrollerad läsning. Alla tio riktade regionala tester passerar.
+Originalets providerpayload/reference.json och regionalrapport med nio hashar
+reproduceras exakt. Samtliga planning_blockers/data_unavailable kvarstår.
+Inga nya källhämtningar, marina råfiler, adaptrar, beroenden, databasoperationer
+eller publika ändringar. Detaljer: forecast-run-provenance.md.
+
+Slutlig verifiering: full scripts.check exit 0, 160+175=335 Python-tester,
+syntax, pip check, låsfiler/domängränser. Diff granskad, --check godkänd.
+Loggar autonomy/logs/regional-snapshot-{red,targeted,check}-20261016.log.
+Frontend oförändrad; sex tester och resurskontroll verifierades tidigare i passet.
+Nästa oberoende del: ett kort nytt metadata-only saved-auth-åtkomstprov med
+befintlig Toolbox, eftersom senaste dokumenterade försök är från 2026-10-13.
+Ingen ny marin väderfil eller hel fillistning före ny åtkomstevidens. Vid
+källblockerare: dokumentera faktisk extern exit och fortsätt offlinekontrakt.

@@ -193,3 +193,21 @@ exakt. Bytes exporteras inte i auditrapporten.
 Per-fils hashbindning innebär ingen atomisk flerfilssnapshot, autentisk
 modellutfärdandetid, historisk ARCO-urvalsbindning eller run-förenlighetsregel.
 Alla sådana planning_blockers och data_unavailable kvarstår.
+
+## Regionalt underlag från samma marina audit 2026-10-16
+
+load_regional_inputs använder nu freeze_with_audit, som skapar både payload
+och auditrapport från samma inlästa manifest och hashkontrollerade bytes.
+Marina modellreferenser, separat råhashlista och normaliserade produktvärden
+hämtas därmed från samma kontrollerade underlag. Funktionen tar endast en
+källkatalog; en detached rapport kan inte matas in för att certifiera metadata.
+Publik freeze/CLI och befintligt payloadformat behålls.
+
+Två regionala regressioner använder fixturekopior: vågdata med ny VHM0,
+modellreferens och matchande manifesthash byts efter regional auditstart,
+respektive råfiler/manifest tas bort efter kontrollerad läsning. Båda behåller
+ursprungligt komplett RegionalForecastInputs, utan gamla referenser ihop med
+nya värden. Före rättningen gav första fallet blandade underlag och andra
+fallet krävde omläsning. Regionalrapport och providerpayload för originalet
+är exakt oförändrade, med nio källhashar och samtliga planning_blockers.
+Detta kvalificerar fortfarande ingen run-förenlighet eller utfärdandetid.

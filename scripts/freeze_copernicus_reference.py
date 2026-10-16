@@ -32,7 +32,8 @@ def _grid(values):
     return [[[_json_value(value) for value in row] for row in plane] for plane in values]
 
 
-def freeze(directory):
+def freeze_with_audit(directory):
+    """Create payload and report together; no detached audit input is accepted."""
     import xarray as xr
 
     directory = Path(directory)
@@ -86,6 +87,11 @@ def freeze(directory):
         'products': products,
     }
     CopernicusMarineAdapter().normalize(payload)
+    return payload, report
+
+
+def freeze(directory):
+    payload, _ = freeze_with_audit(directory)
     return payload
 
 
