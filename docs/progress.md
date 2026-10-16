@@ -2312,3 +2312,23 @@ läsbudget före NetCDF-I/O; börja med konkreta negativa offlinefall.
 
 Full scripts.check exit 0: 160+192=352 tester samt samlade kontroller godkända.
 Loggar autonomy/logs/marine-manifest-{before,targeted,check}-20261016.log.
+
+## 2026-10-16: begränsad och källbunden marin manifestläsning
+
+Tre nya regressioner reproducerade felaktig form/bool-schema, fem produkt-/
+filidentitetskonflikter och obegränsad manifestläsning. Tidig objekt-/list-/
+postvalidering, 512 kB-bytebudget, unika granskade filer och bundleidentitet
+införda i befintlig audit_snapshot. Katalogversion är ingen run-identitet.
+18 riktade audit/freeze/snapshot/axelordnings/regionaltester passerar.
+Inga råfixtures/adaptrar/utfärdandetider/planeringsspärrar/databas/publik demo
+ändrade. Nästa del: granska att källäst marin tid/koordinatsemantik inte kan
+ändras med uppdaterad hash; börja med konkreta offlinefall, inga nya datauttag.
+
+Första fullkontrollen visade att äldre syntetiska NetCDF-testfabriken saknade
+produktidentitetsfält. Uppdaterad med komplett deklarerad importidentitet,
+uttryckligen fortsatt syntetiska bytes; befintliga CF-/giltighetsassertioner
+behållna och når åter rätt kontroller. 17 import-/manifesttester passerar.
+Första fulloggen behålls som evidens; fullkontroll körs om efter testfix.
+
+Slutlig full scripts.check exit 0: 160+195=355 tester och samlade kontroller
+godkända. Slutlogg autonomy/logs/marine-manifest-shape-check-fixed-20261016.log.

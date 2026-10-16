@@ -8,10 +8,11 @@ from datetime import datetime, timezone
 from hashlib import sha256
 from io import BytesIO
 import json
-from scripts.manifest_json import manifest_json
+import re
 from pathlib import Path
 import sys
 
+from scripts.manifest_json import manifest_json
 from infrastructure.copernicus_fields import CURRENT_FIELDS, MASK_FIELDS, WAVE_FIELDS, current_node, validate_fields, wave_node
 
 
@@ -98,11 +99,36 @@ def audit_snapshot(directory):
     import numpy as np
     import xarray as xr
     directory = Path(directory)
-    manifest = manifest_json((directory / 'manifest.json').read_bytes())
-    if (manifest.get('schema') != 1 or len(manifest.get('files', [])) != 3
-            or {f['filename'] for f in manifest['files']} != {'waves.nc', 'current.nc', 'wave-mask.nc'}):
+    with (directory / 'manifest.json').open('rb') as handle:
+        data = handle.read(512_001)
+    if len(data) > 512_000:
+        raise ValueError('Marine manifest byte budget exceeded')
+    manifest = manifest_json(data)
+    if (type(manifest) is not dict or type(manifest.get('schema')) is not int
+            or manifest['schema'] != 1 or type(manifest.get('files')) is not list
+            or len(manifest['files']) != 3):
         raise ValueError('Complete three-file download manifest required')
-    entries = {f['filename']: f for f in manifest['files']}
+    # Frozen reviewed bundle identity, never a model-run/issuance certificate.
+    expected = {
+        'waves.nc': (('waves',), 'cmems_mod_bal_wav_anfc_PT1H-i', '202311', 'default', 'arco-geo-series'),
+        'current.nc': (('current',), 'cmems_mod_bal_phy_anfc_PT1H-i', '202411', 'default', 'arco-geo-series'),
+        'wave-mask.nc': (('static', 'wave-mask'), 'cmems_mod_bal_wav_anfc_static', '202311', 'bathy', 'static-arco'),
+    }
+    entries = {}
+    for entry in manifest['files']:
+        if type(entry) is not dict or type(entry.get('filename')) is not str:
+            raise ValueError('Reviewed marine file manifest required')
+        name = entry['filename']
+        if name not in expected or name in entries:
+            raise ValueError('Unique reviewed marine file manifest required')
+        labels, dataset, version, part, service = expected[name]
+        if (entry.get('product') not in labels
+                or tuple(entry.get(key) for key in ('dataset_id', 'version', 'part', 'service'))
+                   != (dataset, version, part, service)
+                or type(entry.get('sha256')) is not str
+                or not re.fullmatch(r'[0-9a-f]{64}', entry['sha256'])):
+            raise ValueError('Reviewed marine product identity manifest required')
+        entries[name] = entry
     sources = {}
     for filename, entry in entries.items():
         with (directory / filename).open('rb') as handle:

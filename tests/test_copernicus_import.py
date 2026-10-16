@@ -83,7 +83,13 @@ class NetCDFAuditTests(unittest.TestCase):
         self.refresh_manifest()
 
     def refresh_manifest(self):
-        files = [{'filename': p.name, 'sha256': sha256(p.read_bytes()).hexdigest()}
+        # Synthetic NetCDF samples still need a complete import-contract manifest.
+        # Reusing declared bundle labels here does not make them producer data.
+        fixture = Path(__file__).resolve().parents[1] / 'fixtures/vinga-copernicus/manifest.json'
+        identities = {entry['filename']: entry for entry in json.loads(fixture.read_text())['files']}
+        keys = ('filename', 'product', 'dataset_id', 'version', 'part', 'service')
+        files = [{**{key: identities[p.name][key] for key in keys},
+                  'sha256': sha256(p.read_bytes()).hexdigest()}
                  for p in sorted(self.directory.glob('*.nc'))]
         (self.directory / 'manifest.json').write_text(json.dumps({'schema': 1, 'files': files}))
 

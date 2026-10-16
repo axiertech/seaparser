@@ -140,3 +140,28 @@ faktisk utfärdandetid eller historisk ARCO-bindning. Samtliga planning_blockers
 kvarstår. Tre marina råfiler och verifierade hashvärden är oförändrade; inga
 nya marina bytes hämtades. Två nya regressioner/fyra subfall fallerade före
 rättning och passerar efteråt; sex riktade marina/MET/snapshot-tester passerar.
+
+## Marin manifestform, läsbudget och filbindning 2026-10-16
+
+Ytterligare negativa fixturekopior visade att malformed manifest gav
+AttributeError/TypeError i stället för valideringsfel; bool-schema accepterades.
+Motsägande produkt/dataset/version/part/service nådde NetCDF-avkodningen.
+Manifestet lästes dessutom utan bytegräns. Audit läser nu högst 512001 bytes och
+avvisar över 512000, före JSON-/NetCDF-avkodning. Form kontrolleras explicit:
+objekt, exakt heltalsschema 1, tre filposter, unika granskade filnamn och
+hexhash med 64 gemena tecken. Befintlig 10 MB-gräns per NetCDF behålls.
+
+Filernas deklarerade produkt/dataset/katalogversion/part/service måste matcha
+det redan granskade frysta bundlet: waves.nc är BAL WAV PT1H-i 202311 default
+arco-geo-series; current.nc är BAL PHY PT1H-i 202411 default arco-geo-series;
+wave-mask.nc är BAL WAV static 202311 bathy static-arco. Static-labeln tillåter
+befintliga static/wave-mask-alias. Exakta datasetnamn finns i kontrollen och
+befintligt manifest. Framtida bundle/version kräver separat granskning.
+
+Detta binder deklarationerna till den avgränsade importens förväntade filer;
+det bevisar inte producentautenticitet eller historisk ARCO-run-bindning.
+Katalogversion används aldrig som modelltid/utfärdandetid. Alla tidigare
+planning_blockers kvarstår. Tester med omordnade NetCDF-dimensioner och samma
+hashbundna snapshot/freeze passerar fortsatt. Inga råfiler eller hashar ändras.
+Tre nya regressioner prövar fyra felaktiga former, fem identitetskonflikter och
+överstor manifestfil före NetCDF-avkodning. 18 riktade tester passerar.
