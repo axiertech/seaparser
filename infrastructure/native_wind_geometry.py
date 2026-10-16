@@ -180,3 +180,55 @@ def enclose_source_box(latitude, longitude, projection):
     theta = n*(lon-15)*pi/180
     rho = rho0*exp_interval(n*log_interval(t0/_tan(pi/4 + phi/2)))
     return rho*sin_interval(theta), rho0-rho*cos_interval(theta)
+
+
+# Deliberately a SOURCE-SPHERE frame; this is not the existing WGS84 AEQD frame.
+SOURCE_LOCAL_FRAME = 'met-source-sphere-aeqd-affine-v1'
+SOURCE_LOCAL_DEFINITION = '+proj=aeqd +lat_0=57.633 +lon_0=11.605 +R=6371000 +units=m +no_defs'
+SOURCE_LOCAL_ORIGIN = (Fraction(57633,1000), Fraction(2321,200))
+SOURCE_LOCAL_MAX_RADIUS_M = 1000
+LOCAL_METHOD = 'met-source-sphere-aeqd-disk-lcc-v1'
+
+
+def sqrt_interval(x):
+    """Exact integer-square comparisons bound a nonnegative rational square root."""
+    from math import isqrt
+    if x.low < 0:
+        raise ValueError('Square root interval must be nonnegative')
+    def floor_root(value):
+        return isqrt(value.numerator*SCALE*SCALE//value.denominator)
+    low, high = floor_root(x.low), floor_root(x.high)
+    if high*high*x.high.denominator < x.high.numerator*SCALE*SCALE:
+        high += 1
+    return Interval(Fraction(low,SCALE),Fraction(high,SCALE))
+
+
+def enclose_source_local_segment(start, end, projection):
+    """Enclose the ENTIRE affine segment in source-sphere AEQD, including error.
+
+    ||(1-t)a+t*b|| <= max(||a||,||b||), so all points lie in the AEQD origin disk.
+    Spherical AEQD radius r is geodesic distance to its origin. Along any radial
+    geodesic of length <=r, |delta phi|<=r/R. In that latitude strip, the sphere's
+    metric bounds |d lambda/ds|<=1/(R*min cos(phi)). This bounds longitude for ALL
+    points in the disk, without inverse-projection or edge sampling. The whole
+    resulting geographic box is passed to the existing rational LCC enclosure.
+    There is no WGS84 datum transformation or wind interpolation here.
+    """
+    if len(start)!=2 or len(end)!=2:
+        raise ValueError('Two exact east/north coordinates required per endpoint')
+    a,b = (tuple(Fraction(v) for v in point) for point in (start,end))
+    radius_squared = max(sum((v*v for v in point),Fraction(0)) for point in (a,b))
+    if radius_squared > SOURCE_LOCAL_MAX_RADIUS_M**2:
+        raise ValueError('Source-sphere local segment outside reviewed 1000 m disk')
+    radius = sqrt_interval(Interval.point(radius_squared))
+    pi = pi_interval()
+    angular_degrees = (Interval.point(radius.high)/6371000)*180/pi
+    latitude0,longitude0 = SOURCE_LOCAL_ORIGIN
+    latitude = Interval.point(latitude0)+Interval(-angular_degrees.high,angular_degrees.high)
+    cos_strip = cos_interval(latitude*pi/180)
+    if cos_strip.low <= 0:
+        raise ValueError('Source-sphere disk cannot cross a pole')
+    longitude_delta = angular_degrees/cos_strip
+    longitude = Interval.point(longitude0)+Interval(-longitude_delta.high,longitude_delta.high)
+    x,y = enclose_source_box((latitude.low,latitude.high),(longitude.low,longitude.high),projection)
+    return x,y,latitude,longitude,radius,radius_squared

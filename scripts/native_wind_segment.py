@@ -5,7 +5,10 @@ from decimal import Decimal
 import json
 from pathlib import Path
 
-from application.native_wind_support import SourceSphereSegment, inspect_native_segment
+from application.native_wind_support import (
+    SourceLocalSegment, SourceSphereSegment, inspect_native_segment, inspect_source_local_segment,
+)
+from infrastructure.native_wind_geometry import SOURCE_LOCAL_FRAME
 from scripts.regional_forecast import load_native_wind
 
 
@@ -22,13 +25,17 @@ def inspect_file(fixtures, path, max_cells=512):
     if len(data)>8192:
         raise ValueError('Segment input exceeds budget')
     raw=json.loads(data,parse_float=Decimal,object_pairs_hook=unique)
-    expected={'coordinate_frame','start_latitude','start_longitude','end_latitude',
-              'end_longitude','start_time','end_time'}
+    local=isinstance(raw,dict) and raw.get('coordinate_frame')==SOURCE_LOCAL_FRAME
+    names=({'start_east_m','start_north_m','end_east_m','end_north_m'} if local else
+           {'start_latitude','start_longitude','end_latitude','end_longitude'})
+    expected=names|{'coordinate_frame','start_time','end_time'}
     if not isinstance(raw,dict) or set(raw)!=expected:
         raise ValueError('Explicit source-sphere segment fields required')
     for key in ('start_time','end_time'):
         raw[key]=datetime.fromisoformat(raw[key].replace('Z','+00:00'))
-    return inspect_native_segment(load_native_wind(fixtures),SourceSphereSegment(**raw),max_cells=max_cells)
+    segment_type,inspect = ((SourceLocalSegment,inspect_source_local_segment) if local else
+                            (SourceSphereSegment,inspect_native_segment))
+    return inspect(load_native_wind(fixtures),segment_type(**raw),max_cells=max_cells)
 
 
 def main():

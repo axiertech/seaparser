@@ -9,7 +9,7 @@ inspect_regional_inputs ger fortfarande data_unavailable och inga kandidater.
 
 | Prioritet / gap | Verifierat underlag | Krävs före kvalificering |
 | --- | --- | --- |
-| 1 Vindgeometri | MET LCC-parametrar och native axlar; rationellt helt-box-hölje för explicit källsfärisk bana; direkt lokal separerbarhet underkänd | HELA den lokalt affina ruttens transformationshölje, källbunden datum-/serialiseringsfelgräns; eventuell regridding enligt beviskontraktet |
+| 1 Vindgeometri | MET LCC-parametrar och native axlar; rationellt helt-box-hölje och analytiskt diskhölje för lokalt affin bana på explicit källsfär | Källbunden WGS84-/datum-/serialiseringsfelgräns för verklig ruttbindning; eventuell regridding enligt beviskontraktet |
 | 1 Vindram | 10 m, 600 s medel och FRÅN-riktning granskade; konvergens varierar över uttaget | Källbunden sann/gridrelativ ram, tidsmedlets placering och verifierad konvertering/rotation före komponentinterpolation |
 | 1 Vindstöd | Fem tider och segmentbunden råinventering av alla tangerande serialiserade rumtidsrutor/hörn för matematisk källsfärsbana | Källans mask-/missing-semantik och vald interpolation med hela stödet; landfraktion får inte ersätta giltighetsmask |
 | 2 Marin run och utfärdande | Befintliga subsethashar, variabler och giltighet; officiella analys-/leveransscheman | Källbunden run-identitet och faktisk utfärdandetid för varje produkt samt verifierbar bindning till redan sparade ARCO-bytes |
@@ -28,7 +28,10 @@ Den separata [native-segmentinventeringen](native-wind-segment-support.md)
 har egna rapportlokala blockerare och ändrar inte regionalrapportens grindar.
 Dess hela icke-linjära hölje kommer från utåtriktad rationell intervallräkning,
 inte nod-/kantprov. raw_inventory_complete gäller bara den explicit angivna
-källsfäriska banan och de serialiserade axlarna. physical_source_support_qualified
+källsfäriska banan och de serialiserade axlarna. Lokalt affin bana har nu ett
+analytiskt helt-disk-hölje på samma sfär, med ursprungliga lokala meter i
+rapportbindningen; detta är inte en transformation av befintliga WGS84-rutter.
+physical_source_support_qualified
 och local_route_geometry_binding_verified förblir false; okända fel är inte noll.
 
 Inget datum får fyllas i från hämtningstid, creation_date, filmodifieringstid,
@@ -57,10 +60,11 @@ Leveranskontroller ändrar inga prognosblockerare. Nya commits verifieras separa
 ## Nästa oberoende tillåtna arbete
 
 Användarens aktuella prioritet är geometri/källstöd efter den levererade
-separata [grafiska Vinga-granskningen](vinga-frozen-review.md). Nästa steg är
-ett konservativt helt-hölje för en lokalt affin bana, med tydlig skillnad
-mellan en matematiskt deklarerad källsfär och ruttens WGS84-/lokala ram.
-Källbunden datum-/serialiseringsevidens, mask och interpolation får aldrig
+separata [grafiska Vinga-granskningen](vinga-frozen-review.md). Helt-hölje för
+en lokalt affin bana finns nu på den uttryckliga källsfären, fortfarande skild
+från verklig WGS84-/lokal ruttbindning. Nästa del behöver konkreta avgränsade
+källmetadata-/proveniensförsök med befintliga källor, utan nya uttag av samma
+marina data. Källbunden datum-/serialiseringsevidens, mask och interpolation får aldrig
 ersättas med en flagga eller små punktresidualer. Djupacceptansen kvarstår
 separat; den utvidgar inte detta funktionssteg.
 

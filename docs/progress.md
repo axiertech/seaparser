@@ -2429,3 +2429,31 @@ Rapportflaggorna för aritmetik/okvalificerat fysiskt stöd tillades därefter;
 riktade tester ska verifieras igen utan en omotiverad ny full körning.
 Frontend och dess beroenden är oförändrade; tidigare lokala TCP-hinder upprepas
 inte. Exakt ny remote-CI kontrolleras efter push.
+
+## 2026-10-16: Helt hölje för lokalt affin källsfärsbana
+
+Föregående e863206 är pushad med grön exakt CI 38958954070. Nu implementeras
+helt segmenthölje i explicit sfärisk AEQD kring Vinga: exakt kvadrerad
+ändpunktsradie, rationellt omsluten kvadratrot och ett analytiskt geodesiskt
+diskhölje från sfärens metrik. Det geografiska höljet går genom befintlig
+rationell LCC-inneslutning och samma fullständiga råinventering. Ingen
+kantprovtagning, ny adapter, databas-/nätverksläsning eller motorändring.
+
+Antagande: lokala meter avser uttryckligen den matematiska MET-sfären, inte
+WGS84-ramen. Ursprungliga lokala koordinater, tider, ram-/metoddefinitioner,
+disk och hela källstödet hashbinds. Verklig ruttbindning, källaxlarnas
+serialiseringsfel, datum, vektorram, mask, interpolation, medelplacering och
+säkerhetshölje förblir okända/blockerade. Båda ruttkandidaterna är null.
+Exemplet ger 12 rumtidsrutor/36 rånoder; tidigare angular-linjära rapport är
+oförändrad. Nio nya tester + 17 tidigare riktade tester passerar. Samlade
+låsta kontroller och exakt commit/CI verifieras vid leverans.
+
+Rapport: artifacts/source-local-wind-review/report.json. Byggkommando och
+härledning i docs/native-wind-segment-support.md. Nästa del behöver konkret
+källbunden metadata-/proveniensevidens för de kvarstående verkliga gapen,
+inte fler antagna ramomvandlingar eller dokumentations-/testfyllnad.
+Leveransverifiering: samtliga 26 installerade Python-låspaket matchar;
+scripts.check passerar 160 domäntester + 230 integrationstester. Föregående
+JSON-rapport återges exakt trots gemensam inventeringsrefaktor. Frontend,
+beroenden och grafisk artefakt är oförändrade; känt TCP-hinder upprepas inte.
+Exakt remote-CI verifieras efter push.

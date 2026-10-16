@@ -1,0 +1,624 @@
+{
+  "adjacent_node_boxes": [
+    [
+      0,
+      2,
+      2
+    ],
+    [
+      0,
+      2,
+      3
+    ],
+    [
+      0,
+      3,
+      2
+    ],
+    [
+      0,
+      3,
+      3
+    ],
+    [
+      1,
+      2,
+      2
+    ],
+    [
+      1,
+      2,
+      3
+    ],
+    [
+      1,
+      3,
+      2
+    ],
+    [
+      1,
+      3,
+      3
+    ],
+    [
+      2,
+      2,
+      2
+    ],
+    [
+      2,
+      2,
+      3
+    ],
+    [
+      2,
+      3,
+      2
+    ],
+    [
+      2,
+      3,
+      3
+    ]
+  ],
+  "arithmetic_error_included_in_enclosure": true,
+  "arrival_before_last_sample": true,
+  "comfortable_candidate": null,
+  "fastest_candidate": null,
+  "intersecting_box_count": 12,
+  "inventory_failures": [],
+  "land_fraction_is_validity_mask": false,
+  "local_route_geometry_binding_verified": false,
+  "max_cells": 512,
+  "mean_window_placement": null,
+  "method": "met-source-sphere-aeqd-disk-lcc-v1",
+  "nominal_time_box_inside": true,
+  "numeric_method": "exact rational interval operations; outward quantum 1e-30; bounded series tails",
+  "physical_source_support_qualified": false,
+  "planning_blockers": [
+    "wind_native_geometry_unqualified",
+    "wind_vector_frame_unqualified",
+    "model_issue_time_unverified",
+    "cross_product_model_run_compatibility_unverified",
+    "wind_source_serialization_error_unverified",
+    "wind_route_datum_binding_unverified",
+    "wind_validity_mask_unverified",
+    "wind_interpolation_rule_unverified",
+    "wind_mean_window_unverified",
+    "wind_safety_envelope_unverified"
+  ],
+  "projected_enclosure_m": {
+    "x": [
+      "-203370.035182218186692040778492541305",
+      "-202314.154583023335649162602968304396"
+    ],
+    "y": [
+      "-592793.470719454866722472393242477792",
+      "-591737.707746898901098789433913963001"
+    ]
+  },
+  "provider_interpolation_stencil_verified": false,
+  "provider_wind_validity_mask": null,
+  "raw_inventory_complete": true,
+  "raw_nodes": [
+    {
+      "direction_from_degrees": "160.0",
+      "index": [
+        0,
+        2,
+        2
+      ],
+      "land_fraction": "0.0",
+      "speed_m_s": "12.976633",
+      "valid_at": "2026-10-13T12:00:00+00:00",
+      "x_m": "-203442.2",
+      "y_m": "-593322.0"
+    },
+    {
+      "direction_from_degrees": "160.0",
+      "index": [
+        0,
+        2,
+        3
+      ],
+      "land_fraction": "0.02",
+      "speed_m_s": "12.968649",
+      "valid_at": "2026-10-13T12:00:00+00:00",
+      "x_m": "-202442.2",
+      "y_m": "-593322.0"
+    },
+    {
+      "direction_from_degrees": "160.0",
+      "index": [
+        0,
+        2,
+        4
+      ],
+      "land_fraction": "0.14",
+      "speed_m_s": "12.955071",
+      "valid_at": "2026-10-13T12:00:00+00:00",
+      "x_m": "-201442.2",
+      "y_m": "-593322.0"
+    },
+    {
+      "direction_from_degrees": "160.0",
+      "index": [
+        0,
+        3,
+        2
+      ],
+      "land_fraction": "0.4",
+      "speed_m_s": "12.938654",
+      "valid_at": "2026-10-13T12:00:00+00:00",
+      "x_m": "-203442.2",
+      "y_m": "-592322.0"
+    },
+    {
+      "direction_from_degrees": "160.0",
+      "index": [
+        0,
+        3,
+        3
+      ],
+      "land_fraction": "0.58",
+      "speed_m_s": "12.925298",
+      "valid_at": "2026-10-13T12:00:00+00:00",
+      "x_m": "-202442.2",
+      "y_m": "-592322.0"
+    },
+    {
+      "direction_from_degrees": "160.0",
+      "index": [
+        0,
+        3,
+        4
+      ],
+      "land_fraction": "0.13",
+      "speed_m_s": "12.898802",
+      "valid_at": "2026-10-13T12:00:00+00:00",
+      "x_m": "-201442.2",
+      "y_m": "-592322.0"
+    },
+    {
+      "direction_from_degrees": "160.0",
+      "index": [
+        0,
+        4,
+        2
+      ],
+      "land_fraction": "0.08",
+      "speed_m_s": "12.908655",
+      "valid_at": "2026-10-13T12:00:00+00:00",
+      "x_m": "-203442.2",
+      "y_m": "-591322.0"
+    },
+    {
+      "direction_from_degrees": "160.0",
+      "index": [
+        0,
+        4,
+        3
+      ],
+      "land_fraction": "0.36",
+      "speed_m_s": "12.88982",
+      "valid_at": "2026-10-13T12:00:00+00:00",
+      "x_m": "-202442.2",
+      "y_m": "-591322.0"
+    },
+    {
+      "direction_from_degrees": "160.0",
+      "index": [
+        0,
+        4,
+        4
+      ],
+      "land_fraction": "0.2",
+      "speed_m_s": "12.82691",
+      "valid_at": "2026-10-13T12:00:00+00:00",
+      "x_m": "-201442.2",
+      "y_m": "-591322.0"
+    },
+    {
+      "direction_from_degrees": "159.0",
+      "index": [
+        1,
+        2,
+        2
+      ],
+      "land_fraction": "0.0",
+      "speed_m_s": "13.420269",
+      "valid_at": "2026-10-13T13:00:00+00:00",
+      "x_m": "-203442.2",
+      "y_m": "-593322.0"
+    },
+    {
+      "direction_from_degrees": "159.0",
+      "index": [
+        1,
+        2,
+        3
+      ],
+      "land_fraction": "0.02",
+      "speed_m_s": "13.442178",
+      "valid_at": "2026-10-13T13:00:00+00:00",
+      "x_m": "-202442.2",
+      "y_m": "-593322.0"
+    },
+    {
+      "direction_from_degrees": "159.0",
+      "index": [
+        1,
+        2,
+        4
+      ],
+      "land_fraction": "0.14",
+      "speed_m_s": "13.458992",
+      "valid_at": "2026-10-13T13:00:00+00:00",
+      "x_m": "-201442.2",
+      "y_m": "-593322.0"
+    },
+    {
+      "direction_from_degrees": "159.0",
+      "index": [
+        1,
+        3,
+        2
+      ],
+      "land_fraction": "0.4",
+      "speed_m_s": "13.410025",
+      "valid_at": "2026-10-13T13:00:00+00:00",
+      "x_m": "-203442.2",
+      "y_m": "-592322.0"
+    },
+    {
+      "direction_from_degrees": "159.0",
+      "index": [
+        1,
+        3,
+        3
+      ],
+      "land_fraction": "0.58",
+      "speed_m_s": "13.42796",
+      "valid_at": "2026-10-13T13:00:00+00:00",
+      "x_m": "-202442.2",
+      "y_m": "-592322.0"
+    },
+    {
+      "direction_from_degrees": "159.0",
+      "index": [
+        1,
+        3,
+        4
+      ],
+      "land_fraction": "0.13",
+      "speed_m_s": "13.444138",
+      "valid_at": "2026-10-13T13:00:00+00:00",
+      "x_m": "-201442.2",
+      "y_m": "-592322.0"
+    },
+    {
+      "direction_from_degrees": "159.0",
+      "index": [
+        1,
+        4,
+        2
+      ],
+      "land_fraction": "0.08",
+      "speed_m_s": "13.406658",
+      "valid_at": "2026-10-13T13:00:00+00:00",
+      "x_m": "-203442.2",
+      "y_m": "-591322.0"
+    },
+    {
+      "direction_from_degrees": "159.0",
+      "index": [
+        1,
+        4,
+        3
+      ],
+      "land_fraction": "0.36",
+      "speed_m_s": "13.42095",
+      "valid_at": "2026-10-13T13:00:00+00:00",
+      "x_m": "-202442.2",
+      "y_m": "-591322.0"
+    },
+    {
+      "direction_from_degrees": "159.0",
+      "index": [
+        1,
+        4,
+        4
+      ],
+      "land_fraction": "0.2",
+      "speed_m_s": "13.411282",
+      "valid_at": "2026-10-13T13:00:00+00:00",
+      "x_m": "-201442.2",
+      "y_m": "-591322.0"
+    },
+    {
+      "direction_from_degrees": "155.0",
+      "index": [
+        2,
+        2,
+        2
+      ],
+      "land_fraction": "0.0",
+      "speed_m_s": "14.501694",
+      "valid_at": "2026-10-13T14:00:00+00:00",
+      "x_m": "-203442.2",
+      "y_m": "-593322.0"
+    },
+    {
+      "direction_from_degrees": "155.0",
+      "index": [
+        2,
+        2,
+        3
+      ],
+      "land_fraction": "0.02",
+      "speed_m_s": "14.431866",
+      "valid_at": "2026-10-13T14:00:00+00:00",
+      "x_m": "-202442.2",
+      "y_m": "-593322.0"
+    },
+    {
+      "direction_from_degrees": "155.0",
+      "index": [
+        2,
+        2,
+        4
+      ],
+      "land_fraction": "0.14",
+      "speed_m_s": "13.9877205",
+      "valid_at": "2026-10-13T14:00:00+00:00",
+      "x_m": "-201442.2",
+      "y_m": "-593322.0"
+    },
+    {
+      "direction_from_degrees": "154.0",
+      "index": [
+        2,
+        3,
+        2
+      ],
+      "land_fraction": "0.4",
+      "speed_m_s": "14.413345",
+      "valid_at": "2026-10-13T14:00:00+00:00",
+      "x_m": "-203442.2",
+      "y_m": "-592322.0"
+    },
+    {
+      "direction_from_degrees": "154.0",
+      "index": [
+        2,
+        3,
+        3
+      ],
+      "land_fraction": "0.58",
+      "speed_m_s": "14.292072",
+      "valid_at": "2026-10-13T14:00:00+00:00",
+      "x_m": "-202442.2",
+      "y_m": "-592322.0"
+    },
+    {
+      "direction_from_degrees": "154.0",
+      "index": [
+        2,
+        3,
+        4
+      ],
+      "land_fraction": "0.13",
+      "speed_m_s": "13.775328",
+      "valid_at": "2026-10-13T14:00:00+00:00",
+      "x_m": "-201442.2",
+      "y_m": "-592322.0"
+    },
+    {
+      "direction_from_degrees": "154.0",
+      "index": [
+        2,
+        4,
+        2
+      ],
+      "land_fraction": "0.08",
+      "speed_m_s": "14.317595",
+      "valid_at": "2026-10-13T14:00:00+00:00",
+      "x_m": "-203442.2",
+      "y_m": "-591322.0"
+    },
+    {
+      "direction_from_degrees": "154.0",
+      "index": [
+        2,
+        4,
+        3
+      ],
+      "land_fraction": "0.36",
+      "speed_m_s": "14.139258",
+      "valid_at": "2026-10-13T14:00:00+00:00",
+      "x_m": "-202442.2",
+      "y_m": "-591322.0"
+    },
+    {
+      "direction_from_degrees": "154.0",
+      "index": [
+        2,
+        4,
+        4
+      ],
+      "land_fraction": "0.2",
+      "speed_m_s": "13.547437",
+      "valid_at": "2026-10-13T14:00:00+00:00",
+      "x_m": "-201442.2",
+      "y_m": "-591322.0"
+    },
+    {
+      "direction_from_degrees": "158.0",
+      "index": [
+        3,
+        2,
+        2
+      ],
+      "land_fraction": "0.0",
+      "speed_m_s": "15.957664",
+      "valid_at": "2026-10-13T15:00:00+00:00",
+      "x_m": "-203442.2",
+      "y_m": "-593322.0"
+    },
+    {
+      "direction_from_degrees": "158.0",
+      "index": [
+        3,
+        2,
+        3
+      ],
+      "land_fraction": "0.02",
+      "speed_m_s": "16.03031",
+      "valid_at": "2026-10-13T15:00:00+00:00",
+      "x_m": "-202442.2",
+      "y_m": "-593322.0"
+    },
+    {
+      "direction_from_degrees": "158.0",
+      "index": [
+        3,
+        2,
+        4
+      ],
+      "land_fraction": "0.14",
+      "speed_m_s": "16.014582",
+      "valid_at": "2026-10-13T15:00:00+00:00",
+      "x_m": "-201442.2",
+      "y_m": "-593322.0"
+    },
+    {
+      "direction_from_degrees": "158.0",
+      "index": [
+        3,
+        3,
+        2
+      ],
+      "land_fraction": "0.4",
+      "speed_m_s": "15.96153",
+      "valid_at": "2026-10-13T15:00:00+00:00",
+      "x_m": "-203442.2",
+      "y_m": "-592322.0"
+    },
+    {
+      "direction_from_degrees": "158.0",
+      "index": [
+        3,
+        3,
+        3
+      ],
+      "land_fraction": "0.58",
+      "speed_m_s": "16.024168",
+      "valid_at": "2026-10-13T15:00:00+00:00",
+      "x_m": "-202442.2",
+      "y_m": "-592322.0"
+    },
+    {
+      "direction_from_degrees": "158.0",
+      "index": [
+        3,
+        3,
+        4
+      ],
+      "land_fraction": "0.13",
+      "speed_m_s": "15.9380245",
+      "valid_at": "2026-10-13T15:00:00+00:00",
+      "x_m": "-201442.2",
+      "y_m": "-592322.0"
+    },
+    {
+      "direction_from_degrees": "158.0",
+      "index": [
+        3,
+        4,
+        2
+      ],
+      "land_fraction": "0.08",
+      "speed_m_s": "15.961141",
+      "valid_at": "2026-10-13T15:00:00+00:00",
+      "x_m": "-203442.2",
+      "y_m": "-591322.0"
+    },
+    {
+      "direction_from_degrees": "158.0",
+      "index": [
+        3,
+        4,
+        3
+      ],
+      "land_fraction": "0.36",
+      "speed_m_s": "16.00747",
+      "valid_at": "2026-10-13T15:00:00+00:00",
+      "x_m": "-202442.2",
+      "y_m": "-591322.0"
+    },
+    {
+      "direction_from_degrees": "158.0",
+      "index": [
+        3,
+        4,
+        4
+      ],
+      "land_fraction": "0.2",
+      "speed_m_s": "15.824284",
+      "valid_at": "2026-10-13T15:00:00+00:00",
+      "x_m": "-201442.2",
+      "y_m": "-591322.0"
+    }
+  ],
+  "report_sha256": "afa1aea0f67c25380e21b7f911e6a4d6464510aa050ee7dd4ef80dccb9c510a5",
+  "routing_status": "data_unavailable",
+  "schema": 1,
+  "scope": "source_sphere_serialized_grid_inventory_only",
+  "segment": {
+    "coordinate_frame": "met-source-sphere-aeqd-affine-v1",
+    "end_east_m": "400",
+    "end_north_m": "300",
+    "end_time": "2026-10-13T14:40:00+00:00",
+    "start_east_m": "-300",
+    "start_north_m": "-200",
+    "start_time": "2026-10-13T12:20:00+00:00"
+  },
+  "segment_coordinate_encoding": "exact rational metres",
+  "serialized_spatial_box_inside": true,
+  "source_coordinate_serialization_error_m": null,
+  "source_hashes": {
+    "met-forecast.das": "e5900e5e61f5c6101a7f39b41f6d43c04f3e43a35e5b829a0f95c40ac454a8df",
+    "met-forecast.dds": "0f9def84356801e3578aef42cfb46cbc624de088a8d44951301fd8ca1f986c09",
+    "met-time-coordinates.txt": "8814dac572cc1b4b3218bf490db6ffee0f7e639d3c8b8baabae037a039d4302f",
+    "native-axes.txt": "4dd5aba4db24e4534dcc548f29eebba2dc91414d46db87fda06b486ccd76e041",
+    "native-wind-land.txt": "52ca1126d058bd98bdee8107b865c2e454fc192e524f41ffa6204c4f5123504d",
+    "vinga-latlon.txt": "60e6a0fab997c372f7366c493c725f488d7df1f1ae0ddb96e1572c005bc4d9f4"
+  },
+  "source_input_sha256": "b40d648c6fccc8f9e74aa26a1c1c051c294d59391ae99bc98a4f45d5c563f22b",
+  "source_local_geometry": {
+    "latitude_degrees": [
+      "57.628503391970406347443352811443",
+      "57.637496608029593652556647188557"
+    ],
+    "local_definition": "+proj=aeqd +lat_0=57.633 +lon_0=11.605 +R=6371000 +units=m +no_defs",
+    "local_to_source_sphere_enclosure_verified": true,
+    "longitude_degrees": [
+      "11.596599429393980345053659582886",
+      "11.613400570606019654946340417114"
+    ],
+    "maximum_endpoint_radius_squared_m2": "250000",
+    "origin_disk_radius_m": [
+      "500",
+      "500"
+    ],
+    "path_model": "affine in source-sphere AEQD east/north metres and time",
+    "projection_enclosure_method": "met-spherical-lcc-rational-box-v1",
+    "radius_limit_m": 1000,
+    "scope": "mathematical source-sphere frame only; no datum/serialization error assumed",
+    "wgs84_route_binding_verified": false
+  },
+  "source_projection": "+proj=lcc +lat_0=63 +lon_0=15 +lat_1=63 +lat_2=63 +no_defs +R=6.371e+06",
+  "source_to_wgs84_datum_error_m": null,
+  "wind_safety_envelope": null,
+  "wind_vector_frame_qualified": false
+}

@@ -115,6 +115,76 @@ har y>390 m: en box byggd bara på ändpunktsprov skulle missa kurvans inre.
 Negativa fall omfattar saknat off-path-hörn, gränskontakt, tids-/rumsextrapolation,
 budget, ändrad hash/värde/bana, okänd ram och tvetydig indata.
 
-Nästa funktionssteg behöver behandla en lokalt affin bana med ett helt verifierat
-transformationshölje och separat källbunden datum-/serialiseringsevidens. Det får
-inte återanvända denna angular-linjära bana som om den vore motorns geometri.
+Den första angular-linjära banan kompletteras nedan med en lokalt affin bana
+på samma uttryckliga källsfär. Ingen av dem får återanvändas som motorns
+WGS84-geometri utan separat källbunden datum-/serialiseringsevidens.
+
+## Lokalt affin bana på källsfären 2026-10-16
+
+`SourceLocalSegment` och `inspect_source_local_segment` utökar samma läsare och
+råinventering till en bana som är affin i lokala öst-/nordmeter och tid på en
+**explicit matematisk MET-sfär**. Ramen har AEQD-origo 57,633°/11,605° och
+R=6371000 m. Det är inte den befintliga WGS84-/AEQD-ramen, och inga verkliga
+ruttkoordinater får byta etikett för att kringgå datumkravet. Ingen adapter,
+väderinterpolation eller transformation av ruttmotorns verkliga indata införs.
+
+[PROJ:s AEQD-dokumentation](https://proj.org/en/stable/operations/projections/aeqd.html)
+anger separata sfäriska/ellipsoidiska former, origo och +R. Följande hela-hölje
+är en egen analytisk härledning för den explicit deklarerade sfären:
+
+1. En affin planbana p(t)=(1−t)a+t*b uppfyller
+   norm(p(t))≤(1−t)norm(a)+t*norm(b)≤max(norm(a),norm(b)). Därför ryms **hela**
+   segmentet i en disk kring origo. Maximal kvadrerad ändpunktsnorm beräknas
+   exakt rationellt, utan att först avrunda en norm. Gränsen 1000 m prövas på
+   den exakta kvadraten; även en godtyckligt liten överskridning avvisas.
+2. Diskradien omsluts med heltals-isqrt och exakta kvadratjämförelser på
+   rationella tal. Nedre/övre rotgränser ligger på 10^-30-metersnätet och deras
+   kvadrater omsluter det exakta talet. Ingen antagen bibliotekssqrt-tolerans.
+3. I sfärisk AEQD är avståndet r från origo den radiala geodetiska längden.
+   På varje radial geodet från origo till diskens punkter gäller
+   ds²=R²(dphi²+cos²(phi)*dlambda²), alltså |dphi/ds|≤1/R. Alla punkter och
+   deras radialgeodeter ligger i latitudbandet phi0±r/R.
+4. I detta band är cos(phi)≥c_min>0, med c_min omsluten nedåt av befintlig
+   rationell cosinusintervallräkning. Därför |dlambda/ds|≤1/(R*c_min) och
+   |delta lambda|≤r/(R*c_min). Bandet når inte en pol; longituden är kontinuerlig
+   runt det fasta Vinga-origot. Detta omsluter **hela disken**, inte ett antal
+   prov på den eller på segmentet.
+5. Det omslutande latitud-/longitudintervallet förs genom befintligt helt-box-
+   hölje för sfärisk LCC och samma slutna rum-/tidsinventering. All aritmetisk
+   intervallavrundning följer med. Okänd datum-/källserialiseringsfelgräns är
+   fortfarande null och får inte uppfattas som noll.
+
+Diskhöljet är avsiktligt brett: två olika banor med samma största ändpunktsradie
+kan få samma hölje och rånodmängd. Rapporten binder därför också de **ursprungliga
+lokala ändpunkterna**, ramdefinitionen, tidsintervallet, diskens exakta
+radiekvadrat, radieintervall, geografiska hölje och båda metodversionerna.
+Samma disk får inte sudda ut banans identitet. Kandidat-/mask-/interpolations-/
+medelperiods-/säkerhetsgrindar är oförändrade. local_to_source_sphere_enclosure_verified
+avser endast denna matematiska ram; wgs84_route_binding_verified,
+local_route_geometry_binding_verified och physical_source_support_qualified är false.
+
+Exemplet `fixtures/met-source-local-segment.json` går från (−300,−200) till
+(400,300) meter på källsfären, 2026-10-13 12:20–14:40 UTC. Den exakta största
+radien är 500 m (3–4–5-referens), och höljet ger 12 rumtidsrutor och 36 rånoder.
+Det är en granskningsbana, inte en verklig navigationsrutt.
+
+```bash
+python -B -m scripts.native_wind_segment --segment fixtures/met-source-local-segment.json --output artifacts/source-local-wind-review/report.json
+python -B -m unittest tests.test_source_local_wind_support -v
+```
+
+Nio nya testmetoder omfattar exakt 3–4–5-norm, rationella/irrationella
+rotgränser, origo, kardinal-/diagonalpunkter via oberoende sfärisk
+3D-storcirkelreferens och PROJ, motsatta ändpunkter genom origo, oförändrat
+resultat vid låg Decimal-precision, full rånodmängd, olika banor inom samma
+disk, budget/lucka/tid, ram-/radieavvisning och föregående rapports identitet.
+Numeriska referenstoleranser 1e-10 grad/1e-6 m gäller bara testreferensernas
+flyttalsavrundning; inneslutningsbeviset bygger på olikheterna ovan och exakta
+utåtriktade intervall, inte på dessa prov eller toleranser.
+
+Det återstående huvudgapet är nu källbunden evidens för verkliga ramar,
+axelserialisering, giltighetsmask och interpolations-/medelperiodssemantik.
+En matematisk transformation mellan uttryckliga sfäriska ramar löser inte det.
+Nästa tillåtna steg är ett konkret avgränsat proveniens-/metadataförsök med
+befintliga källor och autentisering, utan nya uttag av samma marina data eller
+antagna kvalificeringsflaggor. Den befintliga grafiska artefakten är oförändrad.
