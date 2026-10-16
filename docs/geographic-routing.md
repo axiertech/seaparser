@@ -115,3 +115,6 @@ vid verifierade modellgränser. GPX är en planerad granskningsrutt med samma
 osäkerheter, ODbL-attribution och landidentitet; export nekas om väder/ankomst
 inte godkänts. Ingen navigationssäkerhet, djupbaserad passage, tideffekt,
 manöver/kryssplanering eller plotterkompatibilitet garanteras.
+
+Djupgående/vertikala datum: [offline acceptanskontrakt](depth-acceptance.md).
+Horisontell margin_m är inte marginal under kölen. Ingen djupgate är implementerad.

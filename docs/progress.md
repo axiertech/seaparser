@@ -2222,3 +2222,13 @@ Källgap skiljs från lyckad auth/listning och misslyckad push/overifierad CI.
 Historiska försöksavsnitt bevarade, aktuell översikt länkad först.
 Ingen kod, råfixture eller planeringsspärr ändrad. Nästa oberoende backlogdel:
 offline kontraktsgranskning av okänt djup/vertikala datum vid API-/GPX-gräns.
+
+## 2026-10-16: djupkontrakt vid API-/GPX-gräns
+
+Granskat PlanInput, geografiska resultat, regional prognosgräns och GPX.
+Dokumenterat nuläge och offline acceptansmatris i depth-acceptance.md:
+horisontell marginal skiljs från djupgående/marginal under kölen; okända
+vertikala datum får inte adderas. Syntetisk arrived/export bevisar ingen
+klarering. Ingen produktionskod, källa, prognosspärr eller publik demo ändrad.
+Nästa del: riktad regression av avvisade extra djupfält före jobbstart samt
+bevarad unknown/not_assessed och frånvaro av fabricerade GPX-höjder.
