@@ -165,3 +165,29 @@ planning_blockers kvarstår. Tester med omordnade NetCDF-dimensioner och samma
 hashbundna snapshot/freeze passerar fortsatt. Inga råfiler eller hashar ändras.
 Tre nya regressioner prövar fyra felaktiga former, fem identitetskonflikter och
 överstor manifestfil före NetCDF-avkodning. 18 riktade tester passerar.
+
+## Källäst marin tidssemantik 2026-10-16
+
+Ny offlineattributinventering visar cell_methods="time: mean" på samtliga
+sparade VHM0/VTM02/VMDR. uo/vo saknar attributet. De båda tidskoordinaterna
+saknar bounds/climatology. Detta är faktisk sparad metadata, inte ett antagande
+från leveransschema eller timvis provtäthet. Medelperiodens exakta gränser är
+fortsatt okända. Avsaknad av cell_methods för ström bevisar inte i sig dess
+produktions-/medelprocess.
+
+Nio negativa mutationer med uppdaterad hash accepterades av tidigare audit:
+ändrat/borttaget vågmedel, tillagt strömmedel och tidsbounds/climatology.
+Audit kontrollerar nu den granskade skillnaden: vågfält time: mean, ström och
+mask utan cell_methods; nya tidsdomändeklarationer avvisas tills de granskats.
+Auditrapporten bevarar cell_methods per variabel och ger temporal_support
+unverified/time_bounds null för dynamiska produkter. Den ger ingen uppfunnen
+period eller utfärdandetid. Detta är det frysta bundlets kontrakt, ingen generell
+CF-parser. Framtida legitima källattribut kräver separat granskning.
+
+Den normaliserade referenspayloaden och befintlig adapter ändras inte här;
+audit/freeze förblir spärrade för verklig routing. Rapporten kvalificerar inte
+kontinuerlig interpolation av tidsmedel eller hårdgränsbevis. Syntetiska NetCDF-
+testfabriken deklarerar nu vågmedel så att dess befintliga giltighetskontroller
+fortsätter nå avsedd gräns. Tre nya regressioner (tolv negativa subfall och ett
+positivt källmetadatafall) verifierar båda strömkomponenterna och båda produkternas tidsdomäner. Råfixtures och
+verifierade hashvärden oförändrade; inga data hämtade.

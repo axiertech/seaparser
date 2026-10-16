@@ -68,7 +68,7 @@ class NetCDFAuditTests(unittest.TestCase):
         for name, field in WAVE_FIELDS.items():
             val = 1 if name == 'VHM0' else (6 if name == 'VTM02' else 90)
             waves[name] = xr.DataArray(np.full((5, 2, 2), val, dtype=float), dims=['time', 'lat', 'lon'],
-                                      attrs={'standard_name': field[0], 'units': field[1][0]})
+                                      attrs={'standard_name': field[0], 'units': field[1][0], 'cell_methods': 'time: mean'})
         depth = xr.DataArray([0.5], dims=['depth'], attrs={'standard_name': 'depth', 'positive': 'down', 'units': 'm'})
         current = xr.Dataset(coords={'lat': lat, 'lon': lon, 'time': time, 'depth': depth})
         for name, field in CURRENT_FIELDS.items():

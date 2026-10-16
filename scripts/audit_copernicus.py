@@ -33,6 +33,10 @@ def inspect_file(data, fields, np, xr):
         if any(v.size > 100_000 for v in ds.variables.values()):
             raise ValueError('Decoded array budget exceeded')
         validate_fields({n: a.attrs for n, a in ds.data_vars.items()}, fields)
+        for name in fields:
+            expected_method = 'time: mean' if fields == WAVE_FIELDS else None
+            if ds[name].attrs.get('cell_methods') != expected_method:
+                raise ValueError('Unreviewed marine field temporal semantics')
         lon, lat = coordinate(ds, 'longitude'), coordinate(ds, 'latitude')
         for axis, units, bounds in ((lon, 'degrees_east', (11.58, 11.63)),
                                     (lat, 'degrees_north', (57.62, 57.65))):
@@ -45,6 +49,9 @@ def inspect_file(data, fields, np, xr):
                   'variables': {}, 'issued_at': None, 'forecast_reference_time': None}
         if fields != MASK_FIELDS:
             time = coordinate(ds, 'time')
+            if any(key in time.attrs or key in time.encoding for key in ('bounds', 'climatology')):
+                raise ValueError('Unreviewed marine coordinate temporal semantics')
+            result.update(temporal_support='unverified', time_bounds=None)
             raw_times = time.values
             if not np.issubdtype(raw_times.dtype, np.datetime64):
                 raise ValueError('Decoded Gregorian datetime validity required')
@@ -87,6 +94,7 @@ def inspect_file(data, fields, np, xr):
             valid = np.isfinite(array)
             result['variables'][name] = {
                 'standard_name': variable.attrs['standard_name'], 'units': variable.attrs['units'],
+                'cell_methods': variable.attrs.get('cell_methods'),
                 'shape': list(array.shape), 'missing_samples': int((~valid).sum()),
                 'min': float(array[valid].min()) if valid.any() else None,
                 'max': float(array[valid].max()) if valid.any() else None,

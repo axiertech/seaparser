@@ -2332,3 +2332,46 @@ Första fulloggen behålls som evidens; fullkontroll körs om efter testfix.
 
 Slutlig full scripts.check exit 0: 160+195=355 tester och samlade kontroller
 godkända. Slutlogg autonomy/logs/marine-manifest-shape-check-fixed-20261016.log.
+
+## 2026-10-16: marin tidsmedelsemantik bevarad i audit
+
+Faktisk råmetadata visar time: mean på alla tre vågfält men inte strömfält;
+time saknar bounds/climatology. Tidigare audit accepterade nio semantikändringar
+med ny hash. Avgränsad auditkontroll av granskat cell_methods-innehåll och
+frånvaro av nya tidsdomäner införda. Rapport bevarar cell_methods och redovisar
+temporal_support unverified/time_bounds null. Tre nya regressioner och
+23 riktade tester passerar. Syntetisk testfabrik har explicit vågmedel. Inga
+råfixtures, adaptrar, referenspayload, utfärdandetider eller prognosspärrar ändrade.
+Nästa begränsade del: granska den frysta referenspayloadens borttappade cell_methods
+som separat kontraktsgap, utan att ändra data_unavailable eller anta tidsgränser.
+
+
+## 2026-10-16: återhämtad marin tidssemantik och samlad leveransgranskning
+
+De fem kvarvarande filerna granskade och färdigställda utan återställning.
+Tidssemantiktesterna omfattar tolv negativa mutationer: ändrat/borttaget
+vågmedel, båda strömkomponenterna och bounds/climatology på båda tidsaxlarna.
+Audit bevarar källäst cell_methods; okända medelperioder/utfärdanden förblir
+okända. Det frysta referenspayloadets vidare tidssemantikkontrakt är fortsatt
+ett integrationsgap, inte en kvalificerad ögonblicksprognos.
+
+Samlad diff från e117b3b granskad: hashbundna snapshots används genom
+MET-/marinmaterialisering, geografisk axelordning bevaras, tvetydiga manifest
+och ogranskade tids-/fältmetadata avvisas. Ruttkvalificering och publikt
+beteende ändras inte; inga nya väderuttag eller adaptrar. Inga ytterligare
+leveransfel identifierades i denna granskning.
+
+Låsta Pythonberoenden verifierade med pip --require-hashes --only-binary=:all:
+i /tmp/seaparser-ci-clean, Python 3.14.4. npm ci --ignore-scripts passerade med
+Node 22.22.1/npm 9.2.0. Riktad Copernicus-körning: 45 tester godkända.
+En samlad make check: 160+198=358 Python-tester, syntax, beroenden, arkitektur
+och frontend statisk kontroll godkända; frontend landtest godkänt. Kartans två
+API-integrationer blockerades av miljöns socketbegränsning: uvicorn kan inte
+binda 127.0.0.1:0 (exit 3). Tre övriga karttester passerade vid riktad diagnos.
+Fullkörningen upprepas inte; ordinarie CI får pröva integrationerna utan denna
+miljöbegränsning. Full logg: /tmp/seaparser-recovery-full-check.log.
+
+SSH-åtkomst till development/real-map-data verifierad med projektets befintliga
+nyckel, utan att visa hemligheter. GitHub-anslutningen kan läsa privata
+Actions-resultat; tidigare publickey/Unknown tool är inte aktuella hinder.
+Push och CI-resultat redovisas separat först efter faktisk verifiering.
