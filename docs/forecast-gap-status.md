@@ -9,9 +9,9 @@ inspect_regional_inputs ger fortfarande data_unavailable och inga kandidater.
 
 | Prioritet / gap | Verifierat underlag | Krävs före kvalificering |
 | --- | --- | --- |
-| 1 Vindgeometri | MET LCC-parametrar och native axlar; 42 nodrutor/168 rumtidsrutor; direkt lokal separerbarhet underkänd | Granskad representation för hela segment/celler, datumtransformation och konservativa felgränser; eventuell regridding enligt beviskontraktet |
+| 1 Vindgeometri | MET LCC-parametrar och native axlar; rationellt helt-box-hölje för explicit källsfärisk bana; direkt lokal separerbarhet underkänd | HELA den lokalt affina ruttens transformationshölje, källbunden datum-/serialiseringsfelgräns; eventuell regridding enligt beviskontraktet |
 | 1 Vindram | 10 m, 600 s medel och FRÅN-riktning granskade; konvergens varierar över uttaget | Källbunden sann/gridrelativ ram, tidsmedlets placering och verifierad konvertering/rotation före komponentinterpolation |
-| 1 Vindstöd | Finita råvärden, fem tider och native adjacency verifierade | Källans mask-/missing-semantik och vald interpolation med hela stödet; landfraktion får inte ersätta giltighetsmask |
+| 1 Vindstöd | Fem tider och segmentbunden råinventering av alla tangerande serialiserade rumtidsrutor/hörn för matematisk källsfärsbana | Källans mask-/missing-semantik och vald interpolation med hela stödet; landfraktion får inte ersätta giltighetsmask |
 | 2 Marin run och utfärdande | Befintliga subsethashar, variabler och giltighet; officiella analys-/leveransscheman | Källbunden run-identitet och faktisk utfärdandetid för varje produkt samt verifierbar bindning till redan sparade ARCO-bytes |
 | 3 Gemensam run-förenlighet | Gemensamt giltighetsintervall kan beräknas | Dokumenterad, granskad regel för vind/vågor/ström och evidens för hela den frysta produktuppsättningen; lika giltighet eller cykel räcker inte |
 | Separat strömstöd | Strömvärden och native koordinater granskade | Källbunden våt-/giltighetsmask för strömmens eget grid; vågmask får inte överföras |
@@ -23,6 +23,13 @@ current_native_wet_mask_unverified. Vindens mask-/interpolationsgap är separata
 acceptanskrav, inte nya redan implementerade rapportkoder.
 Avgång utanför gemensamt tidsstöd ger dessutom departure_outside_common_validity.
 Gemensamt avgångsstöd bevisar inte stöd längs hela en framtida färd.
+
+Den separata [native-segmentinventeringen](native-wind-segment-support.md)
+har egna rapportlokala blockerare och ändrar inte regionalrapportens grindar.
+Dess hela icke-linjära hölje kommer från utåtriktad rationell intervallräkning,
+inte nod-/kantprov. raw_inventory_complete gäller bara den explicit angivna
+källsfäriska banan och de serialiserade axlarna. physical_source_support_qualified
+och local_route_geometry_binding_verified förblir false; okända fel är inte noll.
 
 Inget datum får fyllas i från hämtningstid, creation_date, filmodifieringstid,
 filnamn, katalogversion eller ett payloadflag. Vindens model_reference_time
@@ -41,19 +48,21 @@ lokala HDF5-läsfönster ger ingen garanti för originalens layout.
 Hämta inte samma marina data igen. Återanvänd fixtures/vinga-copernicus och
 dess verifierade hashvärden; skapa ingen parallell adapter.
 
-Push har misslyckats med Permission denied (publickey). CI-verktyget har gett
-Unknown tool; CI för lokala nya commits är overifierad. Dessa leveranshinder
-är inte prognosbevis och ändrar inga planning_blockers. Exakt commit/push/CI
-hör till respektive delrapport; denna översikt hävdar ingen remoteleverans.
+Tidigare SSH-/CI-hinder är historik. Senast levererade 6e9a1b6 är pushad med
+grön exakt CI 38957365522. Befintlig SSH-agent behöver vara tillgänglig för
+projektets redan laddade nyckel; inga nya nycklar behövdes. Lokal TCP-bindning
+nekas i den hanterade miljön; frontendens API-integration passerade ordinarie CI.
+Leveranskontroller ändrar inga prognosblockerare. Nya commits verifieras separat.
 
 ## Nästa oberoende tillåtna arbete
 
-Granska kontraktet för djupgående/säkerhetsmarginal mot befintlig geografisk
-API-/GPX-gräns: var visas okänt djup, vilka metadata krävs för kompatibla
-vertikala datum och hur hålls båda ruttmålen blockerade vid otillräckligt
-underlag? Förbered en begränsad offline acceptansmatris före eventuell kod.
-Detta är en dokumenterad backlogdel och kvalificerar inga verkliga djupdata.
-Ingen databas, ny källa eller publik demonstration behöver ändras.
+Användarens aktuella prioritet är geometri/källstöd efter den levererade
+separata [grafiska Vinga-granskningen](vinga-frozen-review.md). Nästa steg är
+ett konservativt helt-hölje för en lokalt affin bana, med tydlig skillnad
+mellan en matematiskt deklarerad källsfär och ruttens WGS84-/lokala ram.
+Källbunden datum-/serialiseringsevidens, mask och interpolation får aldrig
+ersättas med en flagga eller små punktresidualer. Djupacceptansen kvarstår
+separat; den utvidgar inte detta funktionssteg.
 
 Återuppta marin metadataåtkomst först när en konkret tillåten metod eller ny
 källevidens finns. Geometri-/mask-/run-granskning kan fortsätta oberoende men

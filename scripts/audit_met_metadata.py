@@ -8,12 +8,13 @@ from pathlib import Path
 import re
 
 from pyproj import CRS, Proj, Transformer
+from infrastructure.native_wind import NATIVE_PROJECTION
 from scripts.manifest_json import manifest_json
 
 MAX_BYTES = 512_000
 SOURCE_FILES = {'met-forecast.dds', 'met-forecast.das', 'met-time-coordinates.txt',
                 'native-axes.txt', 'vinga-latlon.txt'}
-PROJ4 = '+proj=lcc +lat_0=63 +lon_0=15 +lat_1=63 +lat_2=63 +no_defs +R=6.371e+06'
+PROJ4 = NATIVE_PROJECTION
 TIME_UNITS = 'seconds since 1970-01-01 00:00:00 +00:00'
 
 

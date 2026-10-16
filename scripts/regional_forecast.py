@@ -13,12 +13,11 @@ from scripts.audit_met_metadata import PROJ4, audit_coordinate_extents, read_win
 from scripts.freeze_copernicus_reference import freeze_with_audit
 
 
-def load_regional_inputs(root):
+def load_native_wind(root):
+    """Reuse the existing snapshot reader without loading unrelated marine data."""
     root = Path(root)
-    metadata_dir, wind_dir, marine_dir = (root / name for name in
-        ('met-nordic-metadata', 'met-nordic-wind-sample', 'vinga-copernicus'))
-    # Reuse source hash, shape, coordinate/time, and bounded-read checks.
-    audit_coordinate_extents(metadata_dir, wind_dir, marine_dir)
+    metadata_dir, wind_dir = (root / name for name in
+        ('met-nordic-metadata', 'met-nordic-wind-sample'))
     metadata, digest, axes, epochs, values = read_wind_sample(wind_dir, metadata_dir)
     def planes(flat):
         return tuple(tuple(tuple(flat[k * 56 + j * 7:k * 56 + (j + 1) * 7])
@@ -26,11 +25,20 @@ def load_regional_inputs(root):
     def instant(epoch):
         return datetime.fromtimestamp(int(Decimal(epoch)), timezone.utc)
     hashes = dict(metadata['source_hashes'], **{'native-wind-land.txt': digest})
-    wind = NativeWindSample(
+    return NativeWindSample(
         PROJ4, axes['x'], axes['y'], tuple(instant(epoch) for epoch in epochs),
         planes(values['wind_speed_10m']), planes(values['wind_direction_10m']),
         tuple(tuple(values['land_area_fraction'][j * 7:(j + 1) * 7]) for j in range(8)),
         instant(metadata['model_reference']['epoch_seconds']), tuple(sorted(hashes.items())))
+
+
+def load_regional_inputs(root):
+    root = Path(root)
+    metadata_dir, wind_dir, marine_dir = (root / name for name in
+        ('met-nordic-metadata', 'met-nordic-wind-sample', 'vinga-copernicus'))
+    # Preserve diagnostic snapshot ordering before the actual materialization.
+    audit_coordinate_extents(metadata_dir, wind_dir, marine_dir)
+    wind = load_native_wind(root)
     marine_payload, marine_audit = freeze_with_audit(marine_dir)
     marine = CopernicusMarineAdapter().normalize(marine_payload)
     return RegionalForecastInputs(wind, marine, tuple(

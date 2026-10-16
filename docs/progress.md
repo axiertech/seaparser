@@ -2398,3 +2398,34 @@ PROJECT_BLOCKER: lokal API-testserver kan inte binda TCP 127.0.0.1:0:
 PermissionError errno 1, Operation not permitted. Befintlig frontend map.test.mjs
 faller lokalt; ingen upprepad full körning eller publik demo används. Exakt CI
 ska verifiera API-integrationen. Manuell visuell webbläsargranskning återstår.
+
+## 2026-10-16: Konservativt native-hölje och segmentbunden råinventering
+
+Förra leveransen 6e9a1b6 är pushad med grön exakt CI 38957365522.
+Nästa begränsade funktionssteg implementerar rationella utåtriktade intervall
+för HELA boxars sfäriska LCC-bild och binder en explicit källsfärisk,
+angular-linjär granskningsbana till samtliga tangerande serialiserade
+rumtidsrutor och råhörn. Antagandet är en matematisk bana på källsfären,
+inte en redan datumtransformerad WGS84-/lokal rutt. Ingen payloadflag ger
+kvalificering. Det exakta naturliga origo och en latitudbåges inre y=0
+(vardera ändpunkt >390 m) ger oberoende referenser mot ändpunktsprovtagning.
+
+Befintlig NativeWindSample och hashvaliderade läsare återanvänds; ingen ny
+adapter, hämtning, marin masköverföring eller motorändring. Exempel: sex
+rumtidsrutor och 24 unika rånoder. Budget/utanför/luckor kan inte ge klippt
+positiv täckning. Källa, faktisk materialiserad indata, segment, hölje och
+budget binds till rapporthash. Datumsamband, källaxlarnas serialiseringsfel,
+vektorram, mask, interpolation, medelplacering och säkerhetshölje förblir
+okända/blockerade. Inga verkliga ruttkandidater skapas.
+
+Kod/underlag: docs/native-wind-segment-support.md och
+artifacts/native-wind-segment-review/report.json. 17 nya riktade tester
+passerar; samlade låsta kontroller och exakt commit/CI verifieras vid leverans.
+Nästa mål: motsvarande hela-hölje för en lokalt affin bana, utan antaget
+datum-/serialiseringsstöd; därefter fortsatt källspecifik mask-/semantikbindning.
+Samlad leveranskontroll: /tmp/seaparser-ci-clean Python 3.14.4 matchar samtliga
+26 låspaket; scripts.check passerar 160 domäntester + 221 integrationstester.
+Rapportflaggorna för aritmetik/okvalificerat fysiskt stöd tillades därefter;
+riktade tester ska verifieras igen utan en omotiverad ny full körning.
+Frontend och dess beroenden är oförändrade; tidigare lokala TCP-hinder upprepas
+inte. Exakt ny remote-CI kontrolleras efter push.

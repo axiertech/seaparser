@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 
+NATIVE_PROJECTION = '+proj=lcc +lat_0=63 +lon_0=15 +lat_1=63 +lat_2=63 +no_defs +R=6.371e+06'
+
 
 @dataclass(frozen=True)
 class NativeWindSample:
