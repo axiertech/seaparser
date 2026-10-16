@@ -2145,3 +2145,24 @@ sex tester/resurskontroll verifierades tidigare i passet.
 Nästa oberoende del: analytiska kontinuerliga lat/lon-gränser för native
 nodrektanglar på deklarerad sfärisk LCC; kontrollera derivattecken inom
 hela sourceområdet. Ingen WGS84-/rutt-/maskcertifiering får härledas därav.
+
+## 2026-10-16 – analytiska native rektangelgränser
+
+Dokumenterad egen derivathärledning för ideal deklarerad sfärisk tangent-LCC.
+Över aktuellt x<0/b=rho0-y>0-område är latitud växande i x/y och longitud
+växande i x, avtagande i y. Koordinatgränser för varje hel native nodrektangel
+nås därmed i angivna hörn. Detta är matematisk källmodell, ingen numeriskt
+intervallavrundad certifierare eller lokal WGS84-/routing-/maskkvalificering.
+Två nya regressioner kontrollerar områdesvillkor och 25 PROJ-provpunkter i
+vardera 42 rutor samt ett syntetiskt x=0-motexempel där hörnregeln fallerar.
+Provpunkterna är korsjämförelse, inte kontinuitetsbevis; härledningen är separat.
+Sex riktade geometritester passerar. Ingen produktionskod, råfixture, beroende,
+adapter, databaskoppling eller publik demo ändrad. Alla prognosspärrar kvarstår.
+
+Slutlig verifiering: full scripts.check exit 0 med 160+180=340 Python-tester,
+syntax, pip check, låsfiler/domängränser. Diff granskad, --check godkänd.
+Loggar autonomy/logs/native-bounds-{targeted,check}-20261016.log. Frontend
+oförändrad; sex tester/resurskontroll verifierades tidigare i passet.
+Nästa oberoende del: inventera native koordinaters deklarerade Float32-
+precision kontra sparad ASCII/Decimal-representation. Kvantifiera skillnad
+utan att kalla den datum-/routingtolerans eller korrigera källvärden automatiskt.

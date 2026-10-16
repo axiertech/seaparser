@@ -78,3 +78,38 @@ Kör med projektets låsta Pythonmiljö: `python -B -m unittest discover -s test
 -p test_met_native_geometry_reference.py -v`. Fyra tester passerar; de binder
 även regionalindatats exakta axlar/projektion och metadatahashar till referensen.
 Alla planning_blockers och data_unavailable kvarstår.
+
+## Kontinuerliga gränser i den deklarerade källmodellen 2026-10-16
+
+Detta är en analytisk härledning för ideal sfärisk tangent-LCC, inte en
+intervallavrundad runtimecertifierare eller ett bevis om producentmask/WGS84.
+Använd inversen ovan och sätt b=rho0-y, rho²=x²+b² och n=sin(63°).
+Över vårt fulla native nodområde gäller x<0, y<0, rho0>0 och n>0.
+Därmed är b>0, rho>0 och cos(phi)>0 för inversens latitudgren.
+
+Derivatorna i radianer blir:
+
+- d(phi)/dx = -cos(phi)*x/(n*rho²), positiv.
+- d(phi)/dy = cos(phi)*b/(n*rho²), positiv.
+- d(lambda)/dx = b/(n*rho²), positiv.
+- d(lambda)/dy = x/(n*rho²), negativ.
+
+Tecknen gäller över varje hel nodrektangel, inte bara vid dess hörn.
+För [xl,xr]×[yb,yt] ligger därför latitudminimum vid (xl,yb),
+latitudmaximum vid (xr,yt), longitudminimum vid (xl,yt) och
+longitudmaximum vid (xr,yb). Varje koordinats extrema nås alltså i ett
+identifierat hörn för just detta område. Lat/lon-boxen är ett omslutande
+koordinatintervall; dess alla punkter behöver inte ligga i den krökta cellbilden.
+
+Två nya regressioner kontrollerar hela områdets teckenvillkor och jämför
+25 PROJ-provpunkter i vardera av de 42 rutorna med analytiska hörnextremer.
+1e-10 grad används endast för numerisk korsjämförelse, aldrig för att tillåta
+överskridanden i routing. Kontinuitetsargumentet är derivathärledningen, inte
+provpunkterna. En syntetisk rektangel över x=0 har högre latitud vid mitten av
+sin övre kant än i alla hörn och visar varför hörnregeln inte får generaliseras.
+
+Inget lokalt WGS84-segment har transformerats eller bevisats täckt. Ingen
+mask-/interpolationsregel, vindvektorrotation eller hårdgränskontroll följer av
+härledningen. En framtida verifierare behöver dessutom konservativ avrundning,
+verifierad källdatum-/målbindning och samtliga tidigare beviskrav. Alla nuvarande
+planning_blockers och data_unavailable kvarstår.

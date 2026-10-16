@@ -101,3 +101,37 @@ class METNativeGeometryReferenceTests(unittest.TestCase):
             self.assertEqual(dict(wind.source_hashes)[name], digest)
         self.assertIn('wind_native_geometry_unqualified', wind.planning_blockers)
         self.assertIn('wind_vector_frame_unqualified', wind.planning_blockers)
+
+    def test_native_rectangles_match_monotone_corner_bounds(self):
+        # Continuous derivative argument and its domain: docs/met-wind-frame-review.md.
+        self.assertLess(max(self.x), 0)
+        self.assertLess(max(self.y), 0)  # rho0-y > 0 since rho0 > 0.
+        self.assertGreater(RHO0, 0)
+        self.assertGreater(CONE, 0)
+        native = CRS.from_proj4(PROJ4)
+        inverse = Transformer.from_crs(native, native.geodetic_crs, always_xy=True)
+        count = 0
+        for left, right in zip(self.x, self.x[1:]):
+            for bottom, top in zip(self.y, self.y[1:]):
+                left, right, bottom, top = map(float, (left, right, bottom, top))
+                south = inverse_cone(left, bottom)[0]
+                north = inverse_cone(right, top)[0]
+                west = inverse_cone(left, top)[1]
+                east = inverse_cone(right, bottom)[1]
+                # Numerical regression probes supplement, never replace, the proof.
+                for ix in range(5):
+                    for iy in range(5):
+                        x = left + (right - left) * ix / 4
+                        y = bottom + (top - bottom) * iy / 4
+                        lon, lat = inverse.transform(x, y, errcheck=True)
+                        self.assertGreaterEqual(lat, south - 1e-10)
+                        self.assertLessEqual(lat, north + 1e-10)
+                        self.assertGreaterEqual(lon, west - 1e-10)
+                        self.assertLessEqual(lon, east + 1e-10)
+                count += 1
+        self.assertEqual(count, 42)
+
+    def test_corner_extrema_rule_cannot_be_extended_across_central_meridian(self):
+        # Synthetic rectangle crossing x=0 violates the west-of-meridian domain.
+        corner_max = max(inverse_cone(x, y)[0] for x in (-1000, 1000) for y in (-1000, 0))
+        self.assertGreater(inverse_cone(0, 0)[0], corner_max)
