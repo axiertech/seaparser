@@ -1,12 +1,13 @@
 """Freeze an audited download manifest and NetCDF values as provider payload JSON."""
 import argparse
 from datetime import datetime
+from io import BytesIO
 import json
 import math
 from pathlib import Path
 
 from infrastructure.copernicus_adapter import CopernicusMarineAdapter
-from scripts.audit_copernicus import audit
+from scripts.audit_copernicus import audit_snapshot
 
 
 SOURCE_URLS = {
@@ -35,8 +36,7 @@ def freeze(directory):
     import xarray as xr
 
     directory = Path(directory)
-    report = audit(directory)
-    manifest = json.loads((directory / 'manifest.json').read_text())
+    report, manifest, sources = audit_snapshot(directory)
     by_label = {entry['product']: entry for entry in manifest['files']}
     static_entry = by_label.get('static') or by_label.get('wave-mask')
     entries = {'waves': by_label['waves'], 'current': by_label['current'], 'static': static_entry}
@@ -45,8 +45,8 @@ def freeze(directory):
     for label, entry in entries.items():
         if entry is None:
             raise ValueError('Static wet mask is required')
-        path = directory / entry['filename']
-        with xr.open_dataset(path, engine='h5netcdf', decode_cf=True, mask_and_scale=True) as ds:
+        with xr.open_dataset(BytesIO(sources[entry['filename']]), engine='h5netcdf',
+                             decode_cf=True, mask_and_scale=True) as ds:
             metadata = {
                 'dataset_id': entry['dataset_id'], 'version': entry['version'],
                 'source': 'Copernicus Marine Baltic forecast, product version pinned in manifest',

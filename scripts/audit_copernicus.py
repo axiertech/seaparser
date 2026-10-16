@@ -6,6 +6,7 @@ No file data is extrapolated or turned into a ForecastDataset here.
 import argparse
 from datetime import datetime, timezone
 from hashlib import sha256
+from io import BytesIO
 import json
 from pathlib import Path
 import sys
@@ -23,10 +24,10 @@ def coordinate(dataset, standard):
     return result
 
 
-def inspect_file(path, fields, np, xr):
-    if path.stat().st_size > 10_000_000:
+def inspect_file(data, fields, np, xr):
+    if len(data) > 10_000_000:
         raise ValueError('NetCDF size budget exceeded')
-    with xr.open_dataset(path, engine='h5netcdf', decode_cf=True, mask_and_scale=True) as ds:
+    with xr.open_dataset(BytesIO(data), engine='h5netcdf', decode_cf=True, mask_and_scale=True) as ds:
         if any(v.size > 100_000 for v in ds.variables.values()):
             raise ValueError('Decoded array budget exceeded')
         validate_fields({n: a.attrs for n, a in ds.data_vars.items()}, fields)
@@ -91,20 +92,28 @@ def inspect_file(path, fields, np, xr):
         return result, arrays
 
 
-def audit(directory):
+def audit_snapshot(directory):
+    """Return report, manifest and the same bounded hashed bytes decoded here."""
     import numpy as np
     import xarray as xr
+    directory = Path(directory)
     manifest = json.loads((directory / 'manifest.json').read_text())
     if (manifest.get('schema') != 1 or len(manifest.get('files', [])) != 3
             or {f['filename'] for f in manifest['files']} != {'waves.nc', 'current.nc', 'wave-mask.nc'}):
         raise ValueError('Complete three-file download manifest required')
     entries = {f['filename']: f for f in manifest['files']}
+    sources = {}
     for filename, entry in entries.items():
-        if sha256((directory / filename).read_bytes()).hexdigest() != entry['sha256']:
+        with (directory / filename).open('rb') as handle:
+            data = handle.read(10_000_001)
+        if len(data) > 10_000_000:
+            raise ValueError('NetCDF size budget exceeded')
+        if sha256(data).hexdigest() != entry['sha256']:
             raise ValueError('Downloaded file hash mismatch')
-    waves, wa = inspect_file(directory / 'waves.nc', WAVE_FIELDS, np, xr)
-    current, ca = inspect_file(directory / 'current.nc', CURRENT_FIELDS, np, xr)
-    mask, ma = inspect_file(directory / 'wave-mask.nc', MASK_FIELDS, np, xr)
+        sources[filename] = data
+    waves, wa = inspect_file(sources['waves.nc'], WAVE_FIELDS, np, xr)
+    current, ca = inspect_file(sources['current.nc'], CURRENT_FIELDS, np, xr)
+    mask, ma = inspect_file(sources['wave-mask.nc'], MASK_FIELDS, np, xr)
     if waves['longitude'] != mask['longitude'] or waves['latitude'] != mask['latitude']:
         raise ValueError('Static wet mask is not on the exact native wave grid')
     if waves['times'] != current['times']:
@@ -126,11 +135,17 @@ def audit(directory):
             blockers.append(f'{name}_model_issue_time_missing')
     if wave_gaps or current_gaps:
         blockers.append('masked_or_missing_samples_require_routing_support_checks')
-    return {'schema': 1, 'audited_at': datetime.now(timezone.utc).isoformat(),
+    report = {'schema': 1, 'audited_at': datetime.now(timezone.utc).isoformat(),
             'status': 'regional_routing_unavailable', 'adapter_sample_checks': 'passed',
             'waves': waves, 'current': current, 'wave_mask': mask,
             'normalized_wave_gaps': wave_gaps, 'normalized_current_gaps': current_gaps,
             'manifest_file_hashes': {n: f['sha256'] for n, f in entries.items()}, 'blockers': blockers}
+    return report, manifest, sources
+
+
+def audit(directory):
+    report, _, _ = audit_snapshot(directory)
+    return report
 
 
 def main():

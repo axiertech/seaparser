@@ -173,3 +173,23 @@ oförändrade. Strömmens proveniens förblir okänd och spärrad.
 Dessa är explicit modifierade kopior för negativa testfall. De bevisar inte
 faktisk strömmask, navigerbarhet eller regional täckning i originaluttaget.
 Råfixtures/hashar och båda planeringsspärrarna kvarstår oförändrade.
+
+## Hashbundna marina NetCDF-bytes 2026-10-16
+
+Befintlig audit/freeze-kedja läser nu varje råfil med högst 10000001 bytes
+för att verkställa den befintliga 10000000-bytebudgeten före hashning och
+dekodning. Godkända bytes behålls i minnet och dekodas via BytesIO med samma
+låsta h5netcdf-backend. Freeze återanvänder samma manifest och bytes som auditen,
+inte filvägar och manifest som öppnas på nytt efter kontrollen.
+
+Detta rättar konkret risk för rapporterad gammal hash tillsammans med ändrade
+värden eller manifestidentitet. Negativa fixturekopior ändrar VHM0 efter
+hashkontroll respektive efter audit, samt manifestversion under audit.
+Originalets tidigare kontrollerade bytes/identitet används konsekvent i dessa
+fall. En överstor fil avvisas före någon decoder. Ingen ny adapter eller
+NetCDF-källa skapas; originalets reference.json och regionalrapport reproduceras
+exakt. Bytes exporteras inte i auditrapporten.
+
+Per-fils hashbindning innebär ingen atomisk flerfilssnapshot, autentisk
+modellutfärdandetid, historisk ARCO-urvalsbindning eller run-förenlighetsregel.
+Alla sådana planning_blockers och data_unavailable kvarstår.

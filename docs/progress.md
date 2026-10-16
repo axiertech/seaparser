@@ -2010,3 +2010,29 @@ Loggar autonomy/logs/met-snapshot-{red,targeted,check}-20261016.log. Frontend
 oförändrad; sex tester och resurskontroll verifierades tidigare i samma pass.
 Nästa oberoende del: granska hashkontroll kontra NetCDF-omläsning i befintliga
 marina audit/freeze; samma råfiler ska återanvändas och inga nya adaptrar behövs.
+
+## 2026-10-16 – hashbundna marina audit-/freeze-bytes
+
+Rättad konkret omläsningslucka i befintlig Copernicus-kedja. Audit dekodade
+filvägar efter hashkontroll; freeze öppnade både manifest och NetCDF på nytt.
+Ny audit_snapshot returnerar granskad rapport, inläst manifest och exakt samma
+kontrollerade bytes till befintlig freeze. Samma h5netcdf-dekoder via BytesIO;
+ingen ny adapter. Befintlig 10 MB-källbudget verkställs med begränsad faktisk
+läsning före hashning/dekodning. Okänd run/utfärdande är fortsatt okänd.
+Tre nya röda regressioner före fix visar ändrade vågvärden vid audit/freeze
+samt bytt manifestversion efter auditstart. Dessa passerar efter fix.
+Originalets frysta providerpayload/reference.json och regionalrapport med
+nio källhashar reproduceras exakt. Ett fjärde test verifierar överbudgetavvisning
+före decoder. Inga nya marina hämtningar, beroenden, databas-/publika ändringar.
+Alla planning_blockers och data_unavailable kvarstår. Detaljer i
+forecast-run-provenance.md; ingen atomisk flerfilssnapshot påstås.
+
+Slutlig verifiering: full scripts.check exit 0, 160+173=333 Python-tester,
+syntax, pip check, låsfiler/domängränser. 35 riktade Copernicus-tester passerade
+före sista budgettestet; det fjärde nya testet ingår i fullsviten och passerar.
+Diff granskad, --check godkänd. Loggar autonomy/logs/marine-snapshot-
+{red,targeted,check}-20261016.log. Frontend oförändrad; sex tester och
+resurskontroll passerade tidigare i samma pass.
+Nästa oberoende del: koppla regionala marina modellreferenser/hashar och
+normaliserade värden till samma audit_snapshot i stället för separata
+load_regional_inputs-audit/freeze-anrop. Behåll samtliga avvisningsregler.
