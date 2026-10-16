@@ -111,3 +111,24 @@ class METFieldMetadataTests(unittest.TestCase):
                 self.modify('projection_lcc', original, replacement)
                 with self.assertRaisesRegex(ValueError, 'native spherical LCC'):
                     audit(self.directory)
+
+    def test_unreviewed_time_semantics_fail_before_wind_value_io(self):
+        for field in ('time', 'forecast_reference_time'):
+            for declaration in ('Float64 scale_factor 2;', 'Float64 add_offset 3600;',
+                                'Float64 _FillValue 0;', 'Float64 missing_value 0;',
+                                'String bounds "time_bounds";',
+                                'String cell_methods "time: mean";'):
+                with self.subTest(field=field, declaration=declaration):
+                    original = f'String standard_name "{field}";'
+                    self.modify(field, original, original + '\n        ' + declaration)
+                    with self.assertRaisesRegex(ValueError, 'time attributes'):
+                        read_wind_sample(self.directory / 'missing-wind', self.directory)
+
+    def test_duplicate_retyped_and_changed_time_chunk_metadata_are_rejected(self):
+        original = 'UInt32 _ChunkSizes 512;'
+        for replacement in (original + '\n        ' + original,
+                            'UInt32 _ChunkSizes 256;', 'Float64 _ChunkSizes 512;'):
+            with self.subTest(replacement=replacement):
+                self.modify('time', original, replacement)
+                with self.assertRaisesRegex(ValueError, 'time attributes'):
+                    audit(self.directory)

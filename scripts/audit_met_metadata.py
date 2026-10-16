@@ -76,15 +76,12 @@ def time_metadata(dds, das, ascii_text):
         if dds.count(declaration) != 1:
             raise ValueError('Reviewed wind DDS dimensions required')
     for name in ('time', 'forecast_reference_time'):
-        blocks = re.findall(r'^    ' + name + r' \{\n([^{}]*)^    \}', das, re.M)
-        if len(blocks) != 1:
-            raise ValueError('Unambiguous DAS time attributes required')
-        for attribute, value in (('units', TIME_UNITS), ('standard_name', name)):
-            values = re.findall(r'^        String ' + attribute + r' "([^"]*)";$', blocks[0], re.M)
-            if values != [value]:
-                raise ValueError('Reviewed UTC time units and standard names required')
-        if re.search(r'\bcalendar\b', blocks[0]):
-            raise ValueError('Calendar attribute differs from reviewed absent metadata')
+        expected = {'units': ('String', f'"{TIME_UNITS}"'),
+                    'standard_name': ('String', f'"{name}"')}
+        if name == 'time':
+            expected['_ChunkSizes'] = ('UInt32', '512')
+        reviewed_attributes(das, name, expected,
+                            'Reviewed UTC time units and complete DAS time attributes required')
     references = re.findall(r'^forecast_reference_time, ([^\n]+)$', ascii_text, re.M)
     if len(references) != 1:
         raise ValueError('Unambiguous ASCII model reference required')

@@ -2271,3 +2271,18 @@ Full scripts.check exit 0: 160+186=346 tester och samlade kontroller godkända.
 Logg autonomy/logs/local-vector-check-20261016.log. Nästa konkret granskning:
 MET-tidsattributens tillåtna innehåll och negativt test för ogranskad skalning/
 tillägg; befintlig tidsparser är mindre strikt än vind-/geometriblocken.
+
+## 2026-10-16: MET-tidssemantik kan inte ändras genom ny hash
+
+Reproducerat att extra tidsattribut och ändrad chunkmetadata accepterades med
+uppdaterad hash. Före-fix-logg: met-time-attributes-before-20261016.log,
+12 subfall nådde saknad vindfil och tre saknade förväntad avvisning. Återanvänt
+reviewed_attributes för exakt time/forecast_reference_time-layout. Två nya
+regressioner kontrollerar tidig avvisning, 34 riktade tester passerar. Ingen
+råfixture/utfärdandetid/planeringsspärr ändrad. Detaljer i
+met-nordic-metadata-review.md. Nästa del: granska manifestets identitetsbindning
+för native vind och källmetadata, särskilt dubbletter och motsägande produkt/run-
+referenser; endast konkreta brister ska leda till kodändring.
+
+Full scripts.check exit 0: 160+188=348 tester, syntax, pip check, låsfiler och
+domängränser godkända. Loggar autonomy/logs/met-time-attributes-{before,targeted,check}-20261016.log.

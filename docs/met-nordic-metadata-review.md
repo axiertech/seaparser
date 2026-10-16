@@ -325,3 +325,24 @@ Utan verifierad serialiseringsregel eller ursprungliga binära koordinatbytes
 är skillnaden inte en säker felgräns för den verkliga producentaxeln. Den
 bevisar heller ingen WGS84-likvärdighet, ruttmarginal eller celltäckning.
 Ingen routingtolerans väljs; alla planning_blockers/data_unavailable kvarstår.
+
+## Strikt tidsmetadata före vindvärden 2026-10-16
+
+Offline-regression i fixturekopior med uppdaterade hashvärden visade att den
+äldre tidsparsern accepterade tillagda scale_factor/add_offset/missing-/bounds-
+attribut och ändrad chunkmetadata. Den kontrollerade endast utvalda namn och
+kalenderfrånvaro. Korrekt hash är identitet, inte bevis om oförändrad semantik.
+
+Båda blocken time och forecast_reference_time använder nu samma strikt granskade
+attributparser som vind/geometri. Exakt units/standard_name krävs och endast
+time får den befintliga UInt32 _ChunkSizes 512. Saknade, dubbla, omtypade,
+ändrade och extra deklarationer avvisas; framtida legitim metadata kräver separat
+granskning innan parsern utvidgas. Detta är avsiktligt ett kontrakt för den
+frysta källlayouten, ingen generell DAP-parser.
+
+Två nya testmetoder prövar 12 semantiktillägg över de två tidsblocken före
+vindvärdes-I/O samt tre chunkförändringar. Före rättning gick de förra vidare
+till en avsiktligt saknad vindfil och de senare avvisades inte. Efter rättning
+avvisas alla i tidsgranskningen. Oförändrade råfixtures läses fortsatt korrekt.
+Ingen utfärdandetid fylls i, inga tidsgränser uppfinns och alla planning_blockers
+kvarstår. Ingen ny vind-/marinhämtning, adapter eller publik ändring.
