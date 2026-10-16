@@ -65,19 +65,19 @@ def freeze_with_audit(directory):
             if label == 'waves':
                 metadata['times'] = [datetime.fromisoformat(str(value)).isoformat() + 'Z'
                                      for value in ds.time.values.astype('datetime64[s]')]
-                metadata['data'] = {name: _grid(ds[name].values)
+                metadata['data'] = {name: _grid(ds[name].transpose('time', 'latitude', 'longitude').values)
                                     for name in ('VHM0', 'VTM02', 'VMDR')}
             elif label == 'current':
                 metadata['times'] = [datetime.fromisoformat(str(value)).isoformat() + 'Z'
                                      for value in ds.time.values.astype('datetime64[s]')]
                 metadata['depth_m'] = [float(value) for value in ds.depth.values]
-                metadata['data'] = {name: _grid(ds[name].isel(depth=0).values)
+                metadata['data'] = {name: _grid(ds[name].isel(depth=0).transpose('time', 'latitude', 'longitude').values)
                                     for name in ('uo', 'vo')}
             else:
                 metadata['depth_units'] = ds['deptho'].attrs.get('units')
                 metadata['depth_standard_name'] = ds['deptho'].attrs.get('standard_name')
                 metadata['data'] = {name: [[_json_value(value) for value in row]
-                                           for row in ds[name].values]
+                                           for row in ds[name].transpose('latitude', 'longitude').values]
                                     for name in ('deptho', 'mask')}
         products[label] = metadata
     payload = {

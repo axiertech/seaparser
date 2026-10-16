@@ -2102,3 +2102,23 @@ sex tester/resurskontroll verifierades tidigare i passet. Logg
 autonomy/logs/arco-review-regional-20261016.log.
 Nästa oberoende del: bevara koordinatordning vid permuterade NetCDF-
 lagringsdimensioner genom befintlig audit/freeze. Inga nya adaptrar behövs.
+
+## 2026-10-16 – bevarad marin koordinatordning
+
+Rättat verkligt fel i befintlig freeze: godkänd audit transponerade efter
+koordinatnamn men JSON-materialiseringen läste lagringsordningen direkt.
+Freeze transponerar nu explicit till tid/lat/lon och statisk lat/lon efter
+valt strömdjup. En ny regression med tre produktfall reverserar dimensionerna
+i fixturekopior. Före fix ett geografiskt värdefel och två formfel; efter fix
+passerar alla 37 riktade Copernicus-tester. Originalets regionalrapport med
+nio källhashar är exakt oförändrad. Inga nya marina data, adaptrar, beroenden,
+databasoperationer eller publika ändringar. Alla planning_blockers och
+data_unavailable kvarstår; ingen regridding/run-certifiering.
+
+Slutlig verifiering: full scripts.check exit 0 med 160+176=336 Python-tester,
+syntax, pip check, låsfiler/domängränser. Diff granskad, --check godkänd.
+Loggar autonomy/logs/marine-axis-{red,targeted,check}-20261016.log.
+Frontend oförändrad; sex tester/resurskontroll verifierades tidigare i passet.
+Nästa oberoende del: precisera native vindcellernas källstöd och analytiska
+LCC-geometri, utan antagen WGS84-likvärdighet eller dold regridding. Befintliga
+punktreferenser bevisar ännu inte hela celler/segment.

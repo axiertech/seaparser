@@ -211,3 +211,20 @@ nya värden. Före rättningen gav första fallet blandade underlag och andra
 fallet krävde omläsning. Regionalrapport och providerpayload för originalet
 är exakt oförändrade, med nio källhashar och samtliga planning_blockers.
 Detta kvalificerar fortfarande ingen run-förenlighet eller utfärdandetid.
+
+## Lagringsordning och geografiska värden 2026-10-16
+
+Freeze ordnar nu uttryckligen dynamiska fält som time/latitude/longitude
+och statiska fält som latitude/longitude före JSON-materialisering. Strömmens
+enda granskade djup väljs före transponeringen. Tidigare audit gjorde redan
+namnbaserad transponering medan freeze använde direkt lagringsordning.
+Det kunde flytta statiska värden mellan lat/lon-noder när axlarna båda var
+två element långa; andra permutationer gav formfel trots godkänd audit.
+
+Regressionen reverserar lagringsdimensionerna för waves, current och static
+i separata fixturekopior och uppdaterar kopiornas råhashar. Alla produkters
+värden och geografiska axlar måste återges identiskt med originalreferensen.
+Före fix gav de tre fallen ett värdefel och två formfel; efter fix passerar de.
+Originalets regionalrapport med nio källhashar förblir exakt oförändrad.
+Ingen regridding, masköverföring eller ny adapter införs. Utfärdandetid/run
+förblir okända och alla planning_blockers kvarstår.
