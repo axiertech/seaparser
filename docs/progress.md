@@ -2245,3 +2245,14 @@ granskning av MET-vindens tidsmedel/ram i officiell dokumentation, utan datautta
 
 Full scripts.check exit 0: 160+184=344 Python-tester, syntax, pip check,
 låsfiler och domängränser. Loggar autonomy/logs/depth-boundary-{targeted,check}-20261016.log.
+
+## 2026-10-16: MET-vindens tidsmedel och ram avgränsade
+
+Officiella MET Nordic Parameters, Examples, FAQ samt CF 1.7 §7.3 lästa.
+Vindmedlets placering förblir okänd; nederbörds-/observationskonventioner får
+inte överföras. Rotationsexemplet använder äldre MEPS-komponenter, inte vårt
+MET Nordic-riktningsfält. CF interval är provtäthet, inte fulla tidsgränser.
+Sparad DAS saknar vind-cell_methods och time-bounds. Dokumenterat i
+met-wind-frame-review.md. PROJECT_BLOCKER kvarstår för tidsplacering/full
+ramnormalisering. Fortsatte befintliga offline metadata-/vindtester; inga nya
+väderbytes, paket, adaptrar, databas- eller publika ändringar.

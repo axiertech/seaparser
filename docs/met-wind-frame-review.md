@@ -113,3 +113,43 @@ mask-/interpolationsregel, vindvektorrotation eller hårdgränskontroll följer 
 härledningen. En framtida verifierare behöver dessutom konservativ avrundning,
 verifierad källdatum-/målbindning och samtliga tidigare beviskrav. Alla nuvarande
 planning_blockers och data_unavailable kvarstår.
+
+## Fördjupad tids-/ramgranskning 2026-10-16
+
+[MET Nordic Parameters](https://github.com/metno/NWPdocs/wiki/MET-Nordic-dataset#parameters)
+anger tio minuters medel för fart/riktning på 10 m och FRÅN norr/öster.
+För nederbörd anges uttryckligen timmen före tidsstämpeln; någon motsvarande
+placering av vindens tio minuter identifierades inte i parametertabellen.
+Den får inte lånas från nederbörd eller från observationsprodukten Frost.
+Produktens beskrivna nedskalning är inte automatiskt vår framtida
+interpolationsregel mellan redan sparade native noder.
+
+[MET Examples: Wind direction obtained from x y wind](https://github.com/metno/NWPdocs/wiki/Examples#wind-direction-obtained-from-x-y-wind)
+beskriver lokal gridrotation för modellrelativa komponenter. Exempelfilen är
+meps_subset_2_5km_20161129T00Z.nc, inte vårt MET Nordic-riktningsfält från 2026.
+[FAQ](https://github.com/metno/NWPdocs/wiki/FAQ#wind-direction-obtained-from-x-y-wind)
+hänvisar till samma exempel. Detta stöder att ramar måste skiljas, men varken
+exempelkonstanter eller rotationsformel överförs som källbevis för vårt fält.
+Ingen exempelväderfil hämtades och ingen kod från exemplet kördes.
+
+[CF 1.7 §7.3](https://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/build/ch07s03.html)
+förklarar att cellmetod beskriver sammanfattningen och cellgränser dess domän.
+Ett parentetiskt interval beskriver ursprunglig provtäthet; det ensamt bestämmer
+inte medelperiodens gränser. Koordinaten kan ligga vid slut eller mitt i en
+period. Detta är generell metadatavägledning, ingen uppgift om MET:s produktion.
+
+Offlinekontroll av sparad met-forecast.das: vindblocken har standard_name,
+units, grid_mapping, coordinates och _ChunkSizes, men inget cell_methods.
+Time-blocket har units, standard_name och _ChunkSizes men inget bounds.
+Frånvaron avvisar inte råarkivets existens; den hindrar oss från att härleda
+exakta medelperioder ur dessa attribut. 600 s är fortsatt dokumentationsuppgift,
+inte källäst tidsgränspar. Vindens issued_at och cross-product run-förenlighet
+blir inte kända genom denna granskning.
+
+PROJECT_BLOCKER: granskade källor ger fortfarande inte en verifierad placering
+av vindmedlet eller full källbunden normalisering till motorns lokala vektorer.
+Fortsatt oberoende offlineverifiering: befintliga metadata-/vindtester och
+hashbundna läsningar. Alla planning_blockers kvarstår, inga råfixtures ändras.
+Nästa begränsade del kan granska en oberoende numerisk referens för lokal
+vektortransformation, uttryckligen utan att kvalificera källans vindram eller
+utfärdandetid. En sådan referens får inte förväxlas med en färdig vindadapter.
