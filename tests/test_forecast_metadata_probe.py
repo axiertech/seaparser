@@ -178,6 +178,13 @@ class MetadataProbeTests(unittest.TestCase):
     def test_empty_and_invalid_marine_lists_are_not_complete(self):
         for content, expected in (
             ('filename,size,last_modified_datetime,etag\n', 'no_matching_files'),
+            ('filename,size,last_modified_datetime,etag\nfile.nc,112961233.0,date,hash\n', 'file_list_only'),
+            ('filename,size,last_modified_datetime,etag\nfile.nc,123.00,date,hash\n', 'file_list_only'),
+            ('filename,size,last_modified_datetime,etag\nfile.nc,123.5,date,hash\n', 'blocked'),
+            ('filename,size,last_modified_datetime,etag\nfile.nc,-1,date,hash\n', 'blocked'),
+            ('filename,size,last_modified_datetime,etag\nfile.nc,NaN,date,hash\n', 'blocked'),
+            ('filename,size,last_modified_datetime,etag\nfile.nc,Infinity,date,hash\n', 'blocked'),
+            ('filename,size,last_modified_datetime,etag\nfile.nc,1e3,date,hash\n', 'blocked'),
             ('<html>not a file list</html>', 'blocked'),
             ('filename,size,last_modified_datetime,etag\nfile.nc,unknown,date,hash\n', 'blocked'),
             ('filename,size,last_modified_datetime,etag\nfile.nc,123,date\n', 'blocked'),
@@ -189,7 +196,7 @@ class MetadataProbeTests(unittest.TestCase):
             marine = SimpleNamespace(__version__='2.5.0', get=get)
             with tempfile.TemporaryDirectory() as directory, patch('scripts.probe_forecast_metadata.socket.getaddrinfo'):
                 report = probe(Path(directory)/'probe', met_reader=lambda url: b'Dataset { } test;', marine=marine)
-            self.assertFalse(report['metadata_complete'])
+            self.assertEqual(report['metadata_complete'], expected == 'file_list_only')
             self.assertTrue(all(x['status'] == expected for x in report['copernicus']))
             self.assertEqual(report['routing_status'], 'data_unavailable')
 

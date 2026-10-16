@@ -2060,3 +2060,26 @@ Nästa oberoende del: ett kort nytt metadata-only saved-auth-åtkomstprov med
 befintlig Toolbox, eftersom senaste dokumenterade försök är från 2026-10-13.
 Ingen ny marin väderfil eller hel fillistning före ny åtkomstevidens. Vid
 källblockerare: dokumentera faktisk extern exit och fortsätt offlinekontrakt.
+
+## 2026-10-16 – marin metadataåtkomst åter verifierad
+
+Ordinarie saved-auth-validering exit 0 på cirka 2,18 s. Separata befintliga
+metadata-only waves/current-listningar slutfördes på cirka fyra sekunder vardera
+utan NetCDF-hämtning. Ursprungliga exit 2/blocked berodde på vår storleksvalidator:
+Toolbox skriver heltalsstorlek med .0. Rättad exakt decimalregex utan float-
+konvertering; bråk/negativa/NaN/Infinity/exponenter avvisas. Sexton riktade
+probetester passerar, utökad matris var röd före fix. Sparade CSV återvalideras
+offline via befintlig funktion: två poster per produkt, utan nya nätverksanrop.
+Detaljer/hashar/filnamn i copernicus-metadata-diagnostics.md. Originalrapporterna
+bevarar faktiskt blocked; separat offlinekvitto skiljer korrigerad validering.
+Filnamnen bevisar inte historisk ARCO-bindning, utfärdande eller run-förenlighet.
+Alla planning_blockers/data_unavailable kvarstår; inga nya adaptrar/beroenden,
+authändringar, databasoperationer eller publika demoändringar.
+
+Slutlig verifiering: full scripts.check exit 0, 160+175=335 Python-tester,
+syntax, pip check, låsfiler/domängränser. Diff granskad, --check godkänd.
+Loggar autonomy/logs/metadata-size-{red,targeted,check}-20261016.log.
+Frontend oförändrad; sex tester och resurskontroll verifierades tidigare i passet.
+Nästa oberoende del: officiell dokumentation om originalfil-/ARCO-urvalssemantik
+och historisk bindning för redan sparat uttag; inga nya marina väderdata eller
+påståenden baserade på filnamn/last_modified/etag. Befintliga CSV återanvänds.

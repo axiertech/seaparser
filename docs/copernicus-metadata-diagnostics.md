@@ -42,3 +42,41 @@ issued_at/run-ID/förenlighet är okända och planering ger data_unavailable.
 Befintliga marina data och MET-metadata återanvänds utan nya uttag i diagnostiken.
 Nästa oberoende tillåtna arbete är MET-vindens höjd/medelperiod från faktisk
 officiell dokumentation eller offline kontraktsverifiering mot sparade metadata.
+
+## Ny åtkomstevidens 2026-10-16
+
+Ordinarie saved-auth-validering med befintlig Toolbox 2.5.0 gav exit 0 på
+cirka 2,18 s inom separat 25 s-budget. Inga authvärden eller biblioteksutskrifter
+loggades; ingen authfil eller privat konfiguration ändrades. Den tidigare
+25 s-timeouten från 2026-10-13 gäller det historiska försöket, inte dagens åtkomst.
+Kvitton: autonomy/marine-auth-recheck-20261016.json och motsvarande
+marine-auth-recheck-execution-20261016.json.
+
+Därefter kördes befintlig list_marine_metadata separat för waves och current,
+med create_file_list+dry_run, fixerade dataset/versioner, datumfilter 20261013
+och 60 s-gräns. Endast CSV-filer skapades; inga NetCDF-väderfiler hämtades.
+Båda processer slutfördes på cirka fyra sekunder. Ursprungliga rapporter gav
+exit 2/blocked eftersom vår validator krävde enbart siffror i storlekskolumnen.
+Faktiska Toolbox-svar hade heltalsstorlekar med decimalsuffix .0.
+
+Validatorn accepterar nu exakt icke-negativa integrala decimaltoken, såsom
+112961233.0, utan flyttalskonvertering. Bråk, negativa tal, NaN, Infinity och
+exponentnotation avvisas. Lokalt granskad Toolbox-skrivare serialiserar
+s3_file.size direkt till CSV. Ingen generell tids-/run-tolkning tillkommer.
+
+De två befintliga CSV-filerna återvaliderades offline genom samma funktion,
+med transport ersatt av lokal kopiering. Ursprungliga försöksrapporter lämnas
+oförändrade; separat marine-list-offline-review-20261016.json anger resultatet.
+
+| Produkt | Bytes / SHA-256 | Faktiskt listade basnamn |
+| --- | --- | --- |
+| waves | 478 / d14f5238ad0d3c61b3753b3060408c23e89a42975cd20ffa1ed8ae5c58d16be4 | BAL-WAM_WAV2026101300.nc; BAL-WAM_WAV2026101312.nc |
+| current | 482 / bfb6e262c7cd00cda9b83e2e3b0cebe7c448de24b386ba472ec323224e47e188 | BAL-NEMO_PHY-2026101300.nc; BAL-NEMO_PHY-2026101312.nc |
+
+CSV och externa exitkvitton finns under autonomy/marine-list-recheck-
+{waves,current}-20261016/. Offlinegranskningen verifierar två poster per produkt.
+Filnamn är kandidatreferenser, inte verifierade run-ID:n eller faktisk
+utfärdandetid. size/last_modified/etag binder inte historiska ARCO-värden
+till originalfilen. Ingen ny källkoppling eller förenlighetsregel har bevisats;
+alla planning_blockers/data_unavailable kvarstår. Ingen ny hämtning gjordes
+för offlinevalideringen och samma marina råfiler återanvänds fortsatt.

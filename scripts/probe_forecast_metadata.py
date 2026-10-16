@@ -12,6 +12,7 @@ from hashlib import sha256
 import json
 import logging
 import os
+import re
 from pathlib import Path
 import socket
 from urllib.request import HTTPRedirectHandler, Request, build_opener
@@ -90,7 +91,10 @@ def list_marine_metadata(marine, output, progress=None, *, product=None):
             rows = list(csv.reader(StringIO(data.decode('utf-8'), newline=''), strict=True))
             if not rows or rows[0] != ['filename', 'size', 'last_modified_datetime', 'etag']:
                 raise ValueError('Unexpected file-list columns')
-            if any(len(row) != 4 or not row[0] or not row[1].isdigit() for row in rows[1:]):
+            # Toolbox serializes S3 size as e.g. 112961233.0. Accept exact
+            # nonnegative integral decimal tokens, without float rounding.
+            if any(len(row) != 4 or not row[0]
+                   or re.fullmatch(r'[0-9]+(?:\.0+)?', row[1]) is None for row in rows[1:]):
                 raise ValueError('Invalid file-list row')
             entry.update(file_count=len(rows) - 1,
                          status='file_list_only' if len(rows) > 1 else 'no_matching_files')
