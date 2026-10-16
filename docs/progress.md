@@ -2166,3 +2166,25 @@ oförändrad; sex tester/resurskontroll verifierades tidigare i passet.
 Nästa oberoende del: inventera native koordinaters deklarerade Float32-
 precision kontra sparad ASCII/Decimal-representation. Kvantifiera skillnad
 utan att kalla den datum-/routingtolerans eller korrigera källvärden automatiskt.
+
+## 2026-10-16 – native koordinaters representationsprecision
+
+Offlineinventering av deklarerad Float32 kontra sparad ASCII/Decimal med
+struct och exakt Fraction-jämförelse. Max diagnostisk x-skillnad full axel
+1/80 m, vindsubset 1/320 m; y exakt representerbar. Full x-binary32-grannsteg
+varierar 999,984375–1000,015625 m, medan originalets ASCII-steg är exakt 1000 m.
+Inga producentbytes påstås återvunna och ingen verklig koordinat-/datumfelgräns
+härleds utan serialiseringsevidens. Två nya regressioner passerar och verifierar
+att regionala axlar och källhash behålls utan tyst avrundning. Ingen
+produktionskod, råfixture, adapter, beroende, databas-/publik ändring.
+Alla planning_blockers/data_unavailable kvarstår. Detaljer i
+met-nordic-metadata-review.md.
+
+Slutlig verifiering: full scripts.check exit 0 med 160+182=342 Python-tester,
+syntax, pip check, låsfiler/domängränser. Diff granskad, --check godkänd.
+Loggar autonomy/logs/native-precision-{targeted,check}-20261016.log. Frontend
+oförändrad; sex tester/resurskontroll verifierades tidigare i passet.
+Nästa oberoende del: granska om originalfilernas källmetadata kan nås med
+en strikt metadata-only metod och hård bytebudget, utan nya vädervärden eller
+återhämtning av marina data. Utvärdera metoden före nätverksanrop; annars
+fortsätt med offlinekontrakt för osäker koordinat-/runbindning.

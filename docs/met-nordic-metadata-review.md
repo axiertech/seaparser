@@ -295,3 +295,33 @@ Borttagning av redan kontrollerade koordinatfiler påverkar inte resultatet
 under samma inläsning; originalets kontrollerade bytes används i minnet.
 Alla 41 riktade MET-tester passerar. Originalets regionalrapport och nio
 hashbindningar är exakt oförändrade; samtliga prognosspärrar kvarstår.
+
+## Koordinatprecision: ASCII och deklarerad Float32 2026-10-16
+
+Källans DDS deklarerar Float32 för x/y. Befintlig parser bevarar de sparade
+ASCII-talen som exakta Decimal. En separat offlinekontroll avrundar dessa tal
+till IEEE binary32 via standardbibliotekets struct och jämför exakt med
+Fraction. Den återvinner inte ursprungliga producentbytes och ändrar inga axlar.
+
+| Område/axel | Max absolut skillnad ASCII till diagnostisk binary32 | Diagnostiska grannsteg |
+| --- | --- | --- |
+| Full x, 1796 noder | 1/80 m = 0,0125 m | min 999,984375 m, max 1000,015625 m |
+| Vindsubset x, 7 noder | 1/320 m = 0,003125 m | 1000 m |
+| Full y och vindsubset y | 0 m | 1000 m |
+
+I vindsubsetet är binary32-minus-ASCII för varje x exakt -1/320 m.
+Originalets ASCII-x-steg är fortsatt exakt 1000 m. Att Float32-avrundning av
+hela axeln ger något varierande steg är ingen instruktion att byta geometri
+eller acceptera avvikelse i befintlig kontroll. Diagnostiken beskriver bara två
+representationer av samma sparade decimaltal.
+
+Två regressioner verifierar de kända rationella skillnaderna, DDS-typerna och
+att regionala NativeWindSample fortfarande innehåller samma Decimal-axlar och
+källhash. Float64 används endast som mellanrepresentation vid struct-packning;
+resultatet är här en numerisk kontroll av de sparade ändliga talen, ingen
+generell algoritm för exakt Decimal-till-binary32 eller DAP-serialisering.
+
+Utan verifierad serialiseringsregel eller ursprungliga binära koordinatbytes
+är skillnaden inte en säker felgräns för den verkliga producentaxeln. Den
+bevisar heller ingen WGS84-likvärdighet, ruttmarginal eller celltäckning.
+Ingen routingtolerans väljs; alla planning_blockers/data_unavailable kvarstår.
