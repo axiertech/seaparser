@@ -1,5 +1,8 @@
 # Kvarvarande prognosblockerare och metadataövergång
 
+Aktuell gapöversikt 2026-10-16: [forecast-gap-status.md](forecast-gap-status.md).
+Den skiljer kvarvarande källbevis från åtkomst- och leveransproblem.
+
 Arbetskatalog: `/tmp/seaparser-real-map-data`, branch `development/real-map-data`.
 Återanvänd endast `fixtures/vinga-copernicus/` för det granskade marina uttaget.
 SHA-256 finns i dess manifest; originalen ligger i `/tmp/seaparser-cmems-vinga/`.

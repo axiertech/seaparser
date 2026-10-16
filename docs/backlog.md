@@ -1,5 +1,8 @@
 # Backlog och nästa sammanhängande leverans
 
+Aktuell gapöversikt 2026-10-16: [forecast-gap-status.md](forecast-gap-status.md).
+Den skiljer kvarvarande källbevis från åtkomst- och leveransproblem.
+
 Prioriteringen bygger på requirements.md, architecture.md, decisions.md och
 kvarstående begränsningar i prototype/README.md. Historiska nästa-steg i
 progress.md är arbetslogg, inte en aktuell komplett backlog.

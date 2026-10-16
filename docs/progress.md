@@ -2212,3 +2212,13 @@ med explicita evidenskrav för native vindgeometri/ram/mask, marin utfärdande,
 historisk run-bindning och hela produktuppsättningens förenlighet. Identifiera
 nästa meningsfulla offline/backlogdel utifrån krav, utan upprepade källprov
 när ingen ny åtkomstevidens finns.
+
+## 2026-10-16: samlad aktuell prognosgaprapport
+
+Granskat RegionalForecastInputs och befintliga käll-/transportfynd. Ny
+forecast-gap-status.md anger verifierat underlag och nödvändiga bevis per
+vindgeometri/ram/stöd, marin run/utfärdande och gemensam förenlighet.
+Källgap skiljs från lyckad auth/listning och misslyckad push/overifierad CI.
+Historiska försöksavsnitt bevarade, aktuell översikt länkad först.
+Ingen kod, råfixture eller planeringsspärr ändrad. Nästa oberoende backlogdel:
+offline kontraktsgranskning av okänt djup/vertikala datum vid API-/GPX-gräns.
