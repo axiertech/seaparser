@@ -1969,3 +1969,24 @@ visar den tidigare luckan, inte ett kvarvarande testfel. Frontend oförändrad;
 sex frontendtester och resurskontroll passerade tidigare i samma aktiva pass.
 Nästa oberoende del: granska koordinat-/projektionsattributens konsistens,
 särskilt numeriska CF-parametrar kontra proj4, utan datum-/routingcertifiering.
+
+## 2026-10-16 – konsistenta koordinat- och projektionsattribut
+
+Rättad faktisk lucka i MET-offlineaudit: proj4 kunde finnas i ett omdöpt block
+samtidigt som numeriska CF-parametrar eller koordinatenheter motsade den
+använda geometrin. Befintlig attributkontroll återanvänds nu för fyra
+koordinatblock och det explicit länkade projection_lcc-blocket. Exakta granskade
+värden/typer och frånvaro av dubbletter/extra tolkningar krävs.
+Fyra nya negativa testmatriser gav femton röda motsägelsefall före fix;
+alla 38 riktade MET-tester passerar efter fix. Originalets regionalrapport
+är exakt oförändrad, inklusive nio hashbindningar och samtliga blockerare.
+Ingen ny parser/adapter, datumtransformation, datahämtning, beroende,
+databasoperation eller publik demoändring. Fortsatt data_unavailable.
+
+Slutlig verifiering: full scripts.check exit 0, 160+166=326 Python-tester,
+syntax, pip check, låsfiler och domängränser. Diff granskad, --check godkänd.
+Loggar autonomy/logs/met-crs-{red,targeted,check}-20261016.log. Frontend
+oförändrad; sex tester och resurskontroll verifierades tidigare i samma pass.
+Nästa oberoende del: säkra att native axlar/tider vid materialisering läses
+från samma hashkontrollerade källsnapshot som metadataauditen; granska dagens
+omläsning före vidare geometri-/vektorarbete. Inga run-/datumantaganden.

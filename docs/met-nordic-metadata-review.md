@@ -259,3 +259,21 @@ MET-tester passerar efter rättningen. Regionalrapporten för originalfixturen
 är exakt oförändrad, inklusive samtliga nio källhashar och planeringsspärrar.
 Ingen höjd, medelfönsterplacering, giltighetsmask, datumekvivalens eller
 utfärdandetid fabriceras. data_unavailable kvarstår.
+
+## Konsistent källgeometri 2026-10-16
+
+Samma strikta attributläsning används nu för x, y, latitude, longitude och
+projection_lcc. Native axlar kräver meter och rätt projection_x/y_coordinate;
+geografiska fält kräver sparade degree_north/east och rätt standardnamn samt
+koppling till projection_lcc. Det namngivna projektionsblocket måste samtidigt
+innehålla granskad proj4, lambert_conformal_conic, båda standardparallellerna
+63, centralmeridian 15, origo 63 och sfärradie 6371000 m, med granskade typer
+samt rårepresentation. Motstridiga/extra ellipsoid- eller offsetfält avvisas.
+
+Tidigare räckte förekomst av proj4-strängen någonstans i DAS. Fyra negativa
+testmatriser visade femton accepterade motsägelser innan rättningen, inklusive
+ett omdöpt projektionsblock. Efter rättningen passerar alla 38 riktade MET-tester.
+Originalets regionalrapport och nio hashbindningar är exakt oförändrade.
+Kontrollen tolkar inte sfären som WGS84 och häver ingen geometri-, vindram-,
+mask-, utfärdande- eller run-spärr. Detta är fortsatt fryst källgranskning,
+inte en generell CF-parser eller en kvalificerad ruttprognos.

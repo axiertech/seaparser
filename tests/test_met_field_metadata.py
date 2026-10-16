@@ -74,3 +74,40 @@ class METFieldMetadataTests(unittest.TestCase):
                             'String units "m/s";\n        ' + declaration)
                 with self.assertRaisesRegex(ValueError, 'field attributes'):
                     audit(self.directory)
+
+    def test_coordinate_units_standard_names_and_mapping_cannot_change(self):
+        for field, old, new in (('x', '"m"', '"km"'),
+                                ('y', '"projection_y_coordinate"', '"projection_x_coordinate"'),
+                                ('latitude', '"degree_north"', '"radian"'),
+                                ('longitude', '"longitude"', '"latitude"'),
+                                ('latitude', '"projection_lcc"', '"unknown_crs"')):
+            with self.subTest(field=field, changed=old):
+                self.modify(field, old, new)
+                with self.assertRaisesRegex(ValueError, 'coordinate field attributes'):
+                    audit(self.directory)
+
+    def test_cf_projection_parameters_cannot_contradict_proj4(self):
+        for old, new in (('63.0, 63.0', '62.0, 63.0'),
+                         ('central_meridian 15.0', 'central_meridian 16.0'),
+                         ('projection_origin 63.0', 'projection_origin 62.0'),
+                         ('earth_radius 6371000.0', 'earth_radius 6378137.0'),
+                         ('"lambert_conformal_conic"', '"latitude_longitude"')):
+            with self.subTest(changed=old):
+                self.modify('projection_lcc', old, new)
+                with self.assertRaisesRegex(ValueError, 'native spherical LCC'):
+                    audit(self.directory)
+
+    def test_projection_block_must_be_the_referenced_block(self):
+        self.modify('projection_lcc', 'projection_lcc {', 'unrelated_projection {')
+        with self.assertRaisesRegex(ValueError, 'native spherical LCC'):
+            audit(self.directory)
+
+    def test_ambiguous_or_unreviewed_projection_parameters_are_rejected(self):
+        original = 'Float64 earth_radius 6371000.0;'
+        for replacement in ('', original + '\n        ' + original,
+                            original + '\n        Float64 semi_major_axis 6378137.0;',
+                            original + '\n        Float64 false_easting 1000;'):
+            with self.subTest(replacement=replacement):
+                self.modify('projection_lcc', original, replacement)
+                with self.assertRaisesRegex(ValueError, 'native spherical LCC'):
+                    audit(self.directory)

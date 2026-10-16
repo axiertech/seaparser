@@ -16,29 +16,53 @@ PROJ4 = '+proj=lcc +lat_0=63 +lon_0=15 +lat_1=63 +lat_2=63 +no_defs +R=6.371e+06
 TIME_UNITS = 'seconds since 1970-01-01 00:00:00 +00:00'
 
 
+def reviewed_attributes(das, name, expected, error):
+    """Validate one flat block in this frozen DAS, including absence of extras."""
+    blocks = re.findall(r'^    ' + re.escape(name) + r' \{\n([^{}]*)^    \}', das, re.M)
+    if len(blocks) != 1:
+        raise ValueError(error)
+    actual = {}
+    for line in blocks[0].splitlines():
+        match = re.fullmatch(r'\s*(String|UInt32|Float64) (\w+) ([^;]+);', line)
+        if not match or match[2] in actual:
+            raise ValueError(error)
+        actual[match[2]] = (match[1], match[3])
+    if actual != expected:
+        raise ValueError(error)
+
+
+def geometry_metadata(das):
+    for name, standard_name, units in (
+            ('x', 'projection_x_coordinate', 'm'), ('y', 'projection_y_coordinate', 'm'),
+            ('latitude', 'latitude', 'degree_north'), ('longitude', 'longitude', 'degree_east')):
+        expected = {'standard_name': ('String', f'"{standard_name}"'),
+                    'units': ('String', f'"{units}"')}
+        if name in ('latitude', 'longitude'):
+            expected['grid_mapping'] = ('String', '"projection_lcc"')
+        reviewed_attributes(das, name, expected, 'Reviewed coordinate field attributes required')
+    reviewed_attributes(das, 'projection_lcc', {
+        'grid_mapping_name': ('String', '"lambert_conformal_conic"'),
+        'proj4': ('String', f'"{PROJ4}"'),
+        'standard_parallel': ('Float64', '63.0, 63.0'),
+        'longitude_of_central_meridian': ('Float64', '15.0'),
+        'latitude_of_projection_origin': ('Float64', '63.0'),
+        'earth_radius': ('Float64', '6371000.0'),
+    }, 'Only the reviewed native spherical LCC field attributes are supported')
+
+
 def field_metadata(das):
     """Accept only the reviewed frozen field semantics, not arbitrary DAP."""
     for name, standard_name, units in (
             ('wind_speed_10m', 'wind_speed', 'm/s'),
             ('wind_direction_10m', 'wind_from_direction', 'degree'),
             ('land_area_fraction', 'land_area_fraction', '1')):
-        blocks = re.findall(r'^    ' + name + r' \{\n([^{}]*)^    \}', das, re.M)
-        if len(blocks) != 1:
-            raise ValueError('Unambiguous reviewed DAS field attributes required')
         expected = {'coordinates': ('String', '"longitude latitude"'),
                     'grid_mapping': ('String', '"projection_lcc"'),
                     'standard_name': ('String', f'"{standard_name}"'),
                     'units': ('String', f'"{units}"')}
         if name != 'land_area_fraction':
             expected['_ChunkSizes'] = ('UInt32', '1, 2321, 1796')
-        actual = {}
-        for line in blocks[0].splitlines():
-            match = re.fullmatch(r'\s*(String|UInt32) (\w+) ([^;]+);', line)
-            if not match or match[2] in actual:
-                raise ValueError('Unambiguous reviewed DAS field attributes required')
-            actual[match[2]] = (match[1], match[3])
-        if actual != expected:
-            raise ValueError('Reviewed DAS field attributes required')
+        reviewed_attributes(das, name, expected, 'Unambiguous reviewed DAS field attributes required')
 
 
 def time_metadata(dds, das, ascii_text):
@@ -143,8 +167,7 @@ def audit(directory):
     das = texts['met-forecast.das']
     field_metadata(das)
     reference = time_metadata(texts['met-forecast.dds'], das, texts['met-time-coordinates.txt'])
-    if f'String proj4 "{PROJ4}";' not in das:
-        raise ValueError('Only the reviewed native spherical LCC is supported')
+    geometry_metadata(das)
     axes = {name: axis(texts['native-axes.txt'], name, count)
             for name, count in (('x', 1796), ('y', 2321))}
     for values in axes.values():
