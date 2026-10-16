@@ -2256,3 +2256,18 @@ Sparad DAS saknar vind-cell_methods och time-bounds. Dokumenterat i
 met-wind-frame-review.md. PROJECT_BLOCKER kvarstår för tidsplacering/full
 ramnormalisering. Fortsatte befintliga offline metadata-/vindtester; inga nya
 väderbytes, paket, adaptrar, databas- eller publika ändringar.
+
+## 2026-10-16: oberoende lokal vektorreferens
+
+Konkret risk: koordinathastighet i AEQD är inte generellt fysisk öst/nord-fart
+med enbart rotation. Härlett sfärisk centralmeridiandifferential
+ diag(c/sin(c),1) och jämfört med symmetriska biblioteksdifferenser vid
+0/±1 km/±1000 km. Två numeriska referenstester passerar; avlägsna fall är
+syntetiska stresstester utanför routingområdet. Detaljer/toleranser i
+met-wind-frame-review.md. Ingen produktionsfunktion, rådata, adapter eller
+källdatum-/vindkvalificering införs; alla planeringsspärrar kvarstår.
+
+Full scripts.check exit 0: 160+186=346 tester och samlade kontroller godkända.
+Logg autonomy/logs/local-vector-check-20261016.log. Nästa konkret granskning:
+MET-tidsattributens tillåtna innehåll och negativt test för ogranskad skalning/
+tillägg; befintlig tidsparser är mindre strikt än vind-/geometriblocken.

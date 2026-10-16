@@ -153,3 +153,30 @@ hashbundna läsningar. Alla planning_blockers kvarstår, inga råfixtures ändra
 Nästa begränsade del kan granska en oberoende numerisk referens för lokal
 vektortransformation, uttryckligen utan att kvalificera källans vindram eller
 utfärdandetid. En sådan referens får inte förväxlas med en färdig vindadapter.
+
+## Lokal vektoravbildning: separat sfärisk referens 2026-10-16
+
+En framtida metod måste bestämma om en vektor avser fysisk fart i en lokal
+ortonormal öst/nord-bas eller koordinathastighet i projektionsplanet. Dessa
+är inte generellt samma. Ingen sådan policy ändras i denna leverans.
+
+Egen analytisk referens för sfärisk AEQD: längs centralmeridianen norr/söder
+om origo är den signerade vinkelradien c=phi-phi0. AEQD ger y=R*c och x=0.
+För en liten longitudavvikelse är x=R*(c/sin(c))*cos(phi)*d(lambda).
+Eftersom fysisk öströrelse är ds=R*cos(phi)*d(lambda), är den transversella
+lokala differentialskalan c/sin(c), med gränsvärde 1 vid c=0. Radial nordskala
+är 1. Därför är differentialen där diag(c/sin(c),1), inte generellt en ren
+rotation. Detta är vår matematiska härledning, ingen producentuppgift.
+
+Två tester i test_local_vector_reference.py jämför analytiska derivator med
+symmetriska projektionsdifferenser för en syntetisk sfär med R=6371000 m.
+Testpositioner ligger vid 0, ±1000 och ±1000000 m längs meridianen, med separata
+basvektorer och blandad (3,-4). 1 m bassteg och numerisk jämförelsetolerans
+2e-8 gäller endast regressionen. Det avlägsna fallet visar skala över 1,004 för
+en enhetsvektor, vilket ingen ren rotation kan ge. Det ligger uttryckligen
+utanför demonstratorns routingområde; ingen praktisk lokal felgräns härleds.
+
+Testet använder inte WGS84, MET-vindvärden eller accepterade segment, och binder
+inte MET-sfären till motorns WGS84-datum. Positiv differentialreferens kvalificerar
+varken källa, mask, tidsmedel, interpolation, hårdgränsbevis eller run-förenlighet.
+Ingen vektorfunktion införs i produktionskoden. Alla planning_blockers kvarstår.
