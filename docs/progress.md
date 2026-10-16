@@ -2188,3 +2188,27 @@ Nästa oberoende del: granska om originalfilernas källmetadata kan nås med
 en strikt metadata-only metod och hård bytebudget, utan nya vädervärden eller
 återhämtning av marina data. Utvärdera metoden före nätverksanrop; annars
 fortsätt med offlinekontrakt för osäker koordinat-/runbindning.
+
+## 2026-10-16 – metodgräns för originalmetadata
+
+Granskad Toolbox-kod ger objektmetadata via HEAD men ingen separat NetCDF-
+attributexport i granskade get-kodvägar. Officiell Toolbox-/h5py-dokumentation
+läst. PROJECT_BLOCKER: ingen verifierad transportmetod som garanterar enbart
+originalmetadata utan väderbytes. Inga nya källanrop genomfördes.
+Fortsatte offline: lässpårning av tre hashkontrollerade subsetfiler och ett
+syntetiskt kompakt HDF5-motexempel. Lokal metadataåtkomst överlappade inga
+inventerade våg-/strömchunkar, men ett kompakt syntetiskt fält visar att
+units-attributläsning kan transportera väderbytes i samma läsfönster.
+En ny riktad regression passerar. Detaljer och omfattning i
+copernicus-metadata-diagnostics.md. Ingen produktionskod, råfixture, adapter,
+beroende, databas-/publik ändring. Alla prognosspärrar/data_unavailable kvarstår.
+
+Slutlig verifiering: full scripts.check exit 0 med 160+183=343 Python-tester,
+syntax, pip check, låsfiler/domängränser. Diff granskad, --check godkänd.
+Loggar autonomy/logs/metadata-method-{targeted,check}-20261016.log. Frontend
+oförändrad; sex tester/resurskontroll verifierades tidigare i passet.
+Nästa oberoende del: samlad prognosgaprapport från aktuella verkliga indata,
+med explicita evidenskrav för native vindgeometri/ram/mask, marin utfärdande,
+historisk run-bindning och hela produktuppsättningens förenlighet. Identifiera
+nästa meningsfulla offline/backlogdel utifrån krav, utan upprepade källprov
+när ingen ny åtkomstevidens finns.

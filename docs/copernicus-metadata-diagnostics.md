@@ -80,3 +80,46 @@ utfärdandetid. size/last_modified/etag binder inte historiska ARCO-värden
 till originalfilen. Ingen ny källkoppling eller förenlighetsregel har bevisats;
 alla planning_blockers/data_unavailable kvarstår. Ingen ny hämtning gjordes
 för offlinevalideringen och samma marina råfiler återanvänds fortsatt.
+
+## Bedömning av originalfilers metadata-only åtkomst 2026-10-16
+
+Granskad installerad Toolbox 2.5.0 skiljer transportmetadata från NetCDF-
+attribut: _get_file_size_last_modified_and_etag använder HeadObject och
+returnerar ContentLength/LastModified/ETag. _download_one_file använder
+session.download_file för objektet. Ingen separat NetCDF-attributexport
+identifierades i dessa granskade kodvägar. Detta är ett avgränsat kodfynd,
+inte bevis att ingen annan tjänst kan ha sådan metadata.
+[Officiell Python-interface](https://toolbox-docs.marine.copernicus.eu/en/stable/python-interface.html)
+lästes som kompletterande API-referens; ingen ny originalhämtning kördes.
+
+[h5py:s file-like-dokumentation](https://docs.h5py.org/en/stable/high/file.html#python-file-like-objects)
+beskriver läs-/seek-gränssnitt och flera lagringsdrivrutiner. Ett file-like-
+gränssnitt begränsar hur bytes läses, men intygar inte att ett godtyckligt
+läsintervall enbart innehåller metadata. Detta sista är vår slutsats, verifierad
+av det syntetiska motexemplet nedan.
+
+Offline lässpårning av redan sparade hashkontrollerade filer gav:
+
+| Fil | Läsanrop / summerade lästa bytes | Överlapp med inventerade väderchunkar |
+| --- | --- | --- |
+| waves.nc | 40 / 20054 | 0 |
+| current.nc | 44 / 21344 | 0 |
+| wave-mask.nc | 27 / 14106 | Ej tillämpligt: inga våg-/strömvariabler inventerade |
+
+Summeringen räknar även återlästa byteintervall, inte unika bytes eller
+nätverkstrafik. Dessa är lokala subsetfiler och resultatet kvalificerar inte
+originalfilernas okända layout. Rapport: autonomy/hdf5-read-review-20261016.json.
+Globala attributvärden eller kontakt-/history-fält loggades inte.
+
+En körbar syntetisk HDF5-regression skapar kompakt lagrade vädervärden. Trots
+att konsumenten bara begär units-attributet innehåller ett HDF5-läsfönster de
+identifierade väderbytesen. Därmed räcker logisk attributläsning inte som garanti
+för att en framtida range-transport aldrig hämtar väderdata. Det är ett
+motexempel, inget påstående att våra originalfiler har kompakt lagring.
+
+PROJECT_BLOCKER: ingen verifierad metod i granskad kedja för att garantera
+originalfilernas metadataåtkomst utan väderbytehämtning. Inget remote range-
+anrop, HEAD eller nytt get/subset gjordes i denna del. Fortsatt arbete kräver
+separat metadataartefakt/tjänst med verifierad semantik eller nytt mandat för
+annan dataåtkomst. Befintliga nio källfiler och dagens CSV återanvänds.
+Alla planning_blockers och data_unavailable kvarstår.
