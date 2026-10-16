@@ -277,3 +277,21 @@ Originalets regionalrapport och nio hashbindningar är exakt oförändrade.
 Kontrollen tolkar inte sfären som WGS84 och häver ingen geometri-, vindram-,
 mask-, utfärdande- eller run-spärr. Detta är fortsatt fryst källgranskning,
 inte en generell CF-parser eller en kvalificerad ruttprognos.
+
+## Samma kontrollerade metadata vid materialisering 2026-10-16
+
+read_wind_sample använder nu de källtexter som den interna metadataauditen
+redan läst med bytebudget, hashkontroll och semantikkontroll. Native axlar och
+tidskoordinater öppnas inte på nytt efter den kontrollen. Det publika audit-
+resultatet är oförändrat; källtexterna följer inte med i rapport/export.
+Detta är per-fils hashbindning till lästa bytes, ingen atomisk filsystemsnapshot
+eller run-certifiering av flera produkter.
+
+Tre regressioner använder enbart temporära fixturekopior. Samordnad ändring
+av metadataaxel respektive giltighetstid och vindfilens kartlänkar efter
+metadataaudit avvisas, även när vindmanifestets hash räknas om. Före rättningen
+kunde de ändrade koordinaterna materialiseras med den gamla metadatahashen.
+Borttagning av redan kontrollerade koordinatfiler påverkar inte resultatet
+under samma inläsning; originalets kontrollerade bytes används i minnet.
+Alla 41 riktade MET-tester passerar. Originalets regionalrapport och nio
+hashbindningar är exakt oförändrade; samtliga prognosspärrar kvarstår.

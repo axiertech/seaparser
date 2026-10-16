@@ -1990,3 +1990,23 @@ oförändrad; sex tester och resurskontroll verifierades tidigare i samma pass.
 Nästa oberoende del: säkra att native axlar/tider vid materialisering läses
 från samma hashkontrollerade källsnapshot som metadataauditen; granska dagens
 omläsning före vidare geometri-/vektorarbete. Inga run-/datumantaganden.
+
+## 2026-10-16 – hashbundna metadata vid vindmaterialisering
+
+Rättad konkret omläsningslucka i read_wind_sample. Native axlar och tider
+hämtas nu från exakt de källtexter som metadataauditen redan hash-/byte-/
+semantikkontrollerat. Intern helper delar kontrollerad läsning, publika
+rapportformatet är oförändrat. Ingen atomisk flerfilssnapshot påstås.
+Tre nya tester var röda före fix: samordnade ändrade vind-/metadata-kartor
+kunde bära gamla metadatahashar, och borttagna källor krävde onödig omläsning.
+Alla 41 riktade MET-tester passerar efter fix. Originalets regionalrapport
+inklusive nio källhashar och alla blockerare är exakt oförändrad.
+Inga nya källanrop, marina data, adaptrar, beroenden, databasoperationer eller
+publika ändringar. Fortsatt data_unavailable, ingen run-/datumcertifiering.
+
+Slutlig verifiering: full scripts.check exit 0 med 160+169=329 Python-tester,
+syntax, pip check, låsfiler och domängränser. Diff granskad och --check godkänd.
+Loggar autonomy/logs/met-snapshot-{red,targeted,check}-20261016.log. Frontend
+oförändrad; sex tester och resurskontroll verifierades tidigare i samma pass.
+Nästa oberoende del: granska hashkontroll kontra NetCDF-omläsning i befintliga
+marina audit/freeze; samma råfiler ska återanvändas och inga nya adaptrar behövs.

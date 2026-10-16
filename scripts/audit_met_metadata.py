@@ -142,7 +142,8 @@ def matrix(text, name, rows, columns):
     return result
 
 
-def audit(directory):
+def _read_metadata_snapshot(directory):
+    """Return diagnostics and the exact bounded, hashed source texts used."""
     directory = Path(directory)
     manifest = json.loads(bounded_read(directory, 'manifest.json'))
     if type(manifest) is not dict:
@@ -217,7 +218,7 @@ def audit(directory):
     north_spread = max(max(row) - min(row) for row in north)
     if not all(isfinite(value) for value in errors + convergence + [east_spread, north_spread]):
         raise ValueError('Nonfinite geometry diagnostic')
-    return {'schema': 1, 'scope': 'offline_coordinate_diagnostic_not_routing_qualification',
+    report = {'schema': 1, 'scope': 'offline_coordinate_diagnostic_not_routing_qualification',
             'source_hashes': hashes, 'source_node_count': rows * columns,
             'native_axes': {name: {'count': len(values), 'first_m': str(values[0]),
                                   'last_m': str(values[-1]), 'step_m': '1000'}
@@ -236,12 +237,18 @@ def audit(directory):
             'issued_at': None, 'routing_status': 'data_unavailable',
             'blockers': ['regional_wind_not_imported', 'native_grid_to_local_geometry_unqualified',
                          'model_issue_time_unverified', 'cross_product_model_run_compatibility_unverified']}
+    return report, texts
+
+
+def audit(directory):
+    report, _ = _read_metadata_snapshot(directory)
+    return report
 
 
 def read_wind_sample(directory, metadata_directory):
     """Materialize validated native samples without a routing qualification."""
-    metadata = audit(metadata_directory)
-    directory, metadata_directory = Path(directory), Path(metadata_directory)
+    metadata, metadata_texts = _read_metadata_snapshot(metadata_directory)
+    directory = Path(directory)
     manifest = json.loads(bounded_read(directory, 'manifest.json'))
     if (type(manifest) is not dict or type(manifest.get('schema')) is not int
             or manifest['schema'] != 1 or manifest.get('filename') != 'native-wind-land.txt'):
@@ -254,11 +261,10 @@ def read_wind_sample(directory, metadata_directory):
     references = re.findall(r'^forecast_reference_time, ([^\n]+)$', text, re.M)
     if len(references) != 1 or numbers(references[0], 1)[0] != Decimal(metadata['model_reference']['epoch_seconds']):
         raise ValueError('Wind sample model reference differs from frozen metadata')
-    native_axes = bounded_read(metadata_directory, 'native-axes.txt').decode('utf-8')
+    native_axes = metadata_texts['native-axes.txt']
     expected_axes = {'x': axis(native_axes, 'x', 1796)[692:699],
                      'y': axis(native_axes, 'y', 2321)[509:517]}
-    expected_times = axis(bounded_read(metadata_directory, 'met-time-coordinates.txt').decode('utf-8'),
-                          'time', 59)[12:17]
+    expected_times = axis(metadata_texts['met-time-coordinates.txt'], 'time', 59)[12:17]
     values = {}
     for name in ('wind_speed_10m', 'wind_direction_10m', 'land_area_fraction'):
         for coordinate, expected in expected_axes.items():
