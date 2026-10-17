@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync,existsSync} from 'node:fs';
 import {spawn} from 'node:child_process';
 import {createRequire} from 'node:module';
 import {JSDOM} from 'jsdom';
@@ -12,7 +12,7 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
 async function until(check,ms=30000){const end=Date.now()+ms;while(Date.now()<end){if(check())return;await wait(50);}assert.fail('PoC integration timed out');}
 async function server(){
  if(process.env.SEAPARSER_POC_URL)return {url:process.env.SEAPARSER_POC_URL.replace(/\/$/,''),public:true,close:async()=>{}};
- const root=new URL('../../',import.meta.url),python=process.env.PYTHON||new URL('.venv/bin/python',root).pathname;
+ const root=new URL('../../',import.meta.url),local=new URL('.venv/bin/python',root),python=process.env.PYTHON||(existsSync(local)?local.pathname:'python');
  const child=spawn(python,['-B','-m','uvicorn','scripts.local_demo:poc_app','--factory','--host','127.0.0.1','--port','0','--no-access-log'],{cwd:root,stdio:['ignore','pipe','pipe']});
  let log='',url;child.stderr.on('data',x=>{log+=x;url=log.match(/http:\/\/127\.0\.0\.1:\d+/)?.[0];});
  try{await until(()=>url||child.exitCode!==null,15000);assert.ok(url,'PoC API did not bind');}catch(e){child.kill();throw e;}
