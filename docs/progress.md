@@ -2841,3 +2841,22 @@ altered date/assumption content and existing target; git diff --check passed.
 Next: exact-commit CI, prepare/verify/publish as seaparser, then verify HTTPS,
 exact returned bytes and interaction controls against the deployed response.
 No service, Apache, database, weather or routing changes are part of this step.
+
+
+Publication completed and verified: https://seaparser.com/vinga-ruttjamforelse.html
+returned HTTP 200, text/html, validated TLS certificate (curl verify result 0),
+and byte-for-byte approved artifact SHA-256
+871adb4e6031b4734e35687d06be481d16d2a8dd45bc78078aabe183f6b51950.
+The public tree contains exactly the previous 21 unchanged files plus this one
+HTML file. No JSON/config/resources were added. Historical date 2026-10-13 is
+visible. DOM execution of the exact HTTPS response passed all four named route
+selectors, reset, the single initially open eight-item assumptions explanation,
+and labeled SVG/native controls; no external resources are requested. No
+visual-browser audit is claimed. No response CSP header overrides the reviewed
+page policy. Sandbox DNS failed; the authorized network check succeeded.
+
+Release da9a958 passed exact CI 39028331617 before activation. Private staging
+and final verification receipt: /tmp/seaparser-route-publication-da9a958/
+verified-publication-result.json. Next: preserve the published snapshot and
+continue real-data development/source qualification separately. No further
+activation or service changes are needed for this page.
