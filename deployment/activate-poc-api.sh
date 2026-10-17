@@ -23,6 +23,7 @@ if [[ "${1:-}" == --rollback ]]; then restore_poc_api; exit; fi
 /usr/bin/test -z "$(/usr/bin/ss -H -ltn 'sport = :8766')"
 legacy_pid="$(/usr/bin/systemctl show seaparser-api.service --property=MainPID --value)"
 /usr/sbin/apache2ctl configtest
+/usr/bin/python3 -B -m deployment.poc_api preflight "$poc_stage"
 trap restore_poc_api ERR
 /usr/bin/python3 -B -m deployment.poc_api install "$poc_stage"
 /usr/bin/systemctl daemon-reload

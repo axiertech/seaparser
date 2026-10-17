@@ -83,13 +83,14 @@ def root_action(action,stage):
     if os.geteuid()!=0:raise ValueError('Run activation as root in the ordinary SSH terminal')
     with (stage/'activation.lock').open('a') as lock:
         fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB);m=verify(stage,runtime=action!='restore')
-        if action=='install':
+        if action in ('preflight','install'):
             if subprocess.check_output(['/usr/sbin/runuser','-u','seaparser','--','git','-C',str(CHECKOUT),'rev-parse','HEAD'],text=True).strip()!=m['commit'] or subprocess.check_output(['/usr/sbin/runuser','-u','seaparser','--','git','-C',str(CHECKOUT),'status','--porcelain'],text=True).strip():raise ValueError('Reviewed checkout changed')
             ci=json.loads((stage/'ci-success.json').read_text())
             if ci.get('commit')!=m['commit'] or ci.get('conclusion')!='success':raise ValueError('Exact successful CI commit required')
             check_system(m)
             if UNIT.exists() or UNIT.is_symlink():raise ValueError('PoC unit already exists')
             if tree_hashes(PUBLIC)!=m['public_before']:raise ValueError('Public files changed; prepare fresh activation')
+            if action=='preflight':return
             release=Path(m['release'])
             if not release.exists():shutil.copytree(stage/'release',release)
             if tree_hashes(release)!=m['release_files']:raise ValueError('Installed release differs; no service activated')
@@ -104,7 +105,7 @@ def root_action(action,stage):
 
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('action',choices=('prepare','verify','install','restore'));p.add_argument('stage',type=Path);a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('action',choices=('prepare','verify','preflight','install','restore'));p.add_argument('stage',type=Path);a=p.parse_args()
     try:
         result=prepare(a.stage) if a.action=='prepare' else verify(a.stage) if a.action=='verify' else root_action(a.action,a.stage)
         if a.action=='prepare':print(json.dumps(result,indent=2))

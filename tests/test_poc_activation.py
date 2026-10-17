@@ -34,6 +34,8 @@ class PocActivationTests(unittest.TestCase):
                 self.assertFalse(unit.exists());self.assertEqual(proxy.read_text(),'old proxy\n')
                 (stage/'ci-success.json').write_text(json.dumps({'commit':'a'*40,'conclusion':'success'}));p.root_action('install',stage)
                 self.assertEqual(unit.read_text(),'reviewed PoC service\n');self.assertEqual(proxy.read_text(),'new proxy\n')
+                with self.assertRaises(ValueError):p.root_action('preflight',stage)
+                self.assertEqual(unit.read_text(),'reviewed PoC service\n');self.assertEqual(proxy.read_text(),'new proxy\n')
                 p.root_action('restore',stage);self.assertFalse(unit.exists());self.assertEqual(proxy.read_text(),'old proxy\n');verify.assert_called_with(stage,runtime=False)
                 proxy.write_text('external admin change')
                 with self.assertRaises(ValueError):p.root_action('restore',stage)
