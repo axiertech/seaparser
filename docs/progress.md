@@ -3014,3 +3014,11 @@ med alla nya hinder kvar som hårda segmentkontroller, därefter samlat vind-/ma
 land-/rörelseramsstöd före större routing. Ingen allmän optimalitet, inga borttagna
 process-/sök-/väder-/mask-/ankomstskydd och ingen höjning av 900 m för att passera.
 Återanvänd frysta 17-oktober-data och nytt land; hämta inte om dem.
+
+## 2026-10-17: Native kandidataudit med alla24 landhinder
+
+Fria ändpunkter(500,0)–(500,350), samma frysta17-oktober-MET/WAV/PHY, 2/4/8kandidater och fyra avgångar. Explicit offlinebudget66noder rymmer60noder; 26 stoppar. Exakt Fraction-boxavvisning och begränsad256geometri-LRU bevarar slutna hinder-/marginalpredikat, inga hinder tas bort. Grafprov90,840s före,11,581s efter; samma kandidater.
+
+Auditen13,506/13,128/14,630s ger8/16/32 ankomster, alla med fulla segment-/ankomstkontroller. Samma vinnare auto-0 kl04:00,136,813299s och60,3404 exponering. Grafisk artefakt artifacts/native-candidate-budget/index.html; audit/result/workers JSON. Källor unverified, resultat conditional_on_assumptions och antagna fält separat. Båt uppskattad/komfort ej validerad, djup/landfullständighet okända.
+
+Kalla processprov:2×4=14,894s och8×2=15,965s passerar20s/8MB;4×4 överskrider20s medan riktad lokal kontroll överlappar. Ingen interaktiv nodutökning; generella process-/sökgränser och900m kvar. Ingen hämtning/publicering/DB-ändring. Samlade kontroller godkända:161+310=471tester, låsta beroenden/syntax/domängränser. 16riktade tester godkända före fullkontroll. Loggar /tmp/seaparser-native-budget-check.log och /tmp/seaparser-native-budget-final-targeted.log. ExaktCI ska verifieras efter granskad commit/push. Nästa funktion: explicit valbar utvecklingskomposition först efter robust uppmätt processbudget, sedan helt större vind-/marin-/land-/rörelseramsstöd.

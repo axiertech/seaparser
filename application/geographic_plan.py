@@ -62,7 +62,7 @@ def scene(profile='vinga'):
             'notice':'Uppskattade syntetiska testdata. Ingen GPS/AIS. Kartbakgrund är inte routingsunderlag.'}
 
 
-def calculate_geographic(payload, *, audit_candidate_limit=None, weather_config=None):
+def calculate_geographic(payload, *, audit_candidate_limit=None, weather_config=None, audit_node_limit=None):
     if payload.get('profile','vinga') not in ('synthetic','vinga'):
         raise ValueError('Okänd region')
     regional=payload.get('profile','vinga')=='vinga'
@@ -119,8 +119,15 @@ def calculate_geographic(payload, *, audit_candidate_limit=None, weather_config=
                        'current_m_s':sampled.current.speed if sampled.current is not None else None,
                        'wave_height_m':sampled.waves.height_m if sampled.waves is not None else None,
                        'wave_period_seconds':sampled.waves.period_seconds if sampled.waves is not None else None}
+    nodes=26 if regional else 10
+    if audit_node_limit is not None:
+        if (audit_candidate_limit is None or not regional or
+                config.get('source_bundle')!='vinga-expanded-20261017' or
+                type(audit_node_limit) is not int or audit_node_limit not in (26,66)):
+            raise ValueError('Offline native-audit kräver uttrycklig nodbudget 26 eller 66')
+        nodes=audit_node_limit
     raw=json.loads(run_obstacle_plan(request,SearchPolicy(clearance_m=5,max_candidates=candidate_limit,
-                                                        max_waypoints=waypoints,max_expansions=1000,max_nodes=26 if regional else 10)))
+                                                        max_waypoints=waypoints,max_expansions=1000,max_nodes=nodes)))
     features=[]; alternatives=[]
     if raw['planning']:
         for index,departure in enumerate(raw['planning']['comparison']['departures']):

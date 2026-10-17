@@ -366,3 +366,7 @@ den gamla startpunkten. Ny väderkomposition får därför inte återgå till de
 äldre sexpolygonutdraget. Endast ett separat specificerat segment används som
 kompositionsprov. Ordinarie API:s historiska konfiguration, 900 m och publik
 tjänst är oförändrade. Se native-marine-geometry.md för prov, bevis och nästa steg.
+
+## 2026-10-17: Uppmätt offlinebudget med alla nya landhinder
+
+Behåll API:s nod-/processgränser. Tillåt endast explicit offlineaudit26/66noder med17-oktober-bunten; mät2/4/8kandidater över fyra tidsstödda avgångar. Exakt separerande box och begränsad geometri-LRU ändrar inga slutna hinder-/marginalpredikat. Alla24hinder kvar, samma faktiska vinnare i båda kriterierna och trunkering redovisas. Se native-candidate-budget.md.

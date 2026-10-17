@@ -1,6 +1,7 @@
 """Closed simple polygons in local metres; exact predicates on stored numbers."""
 from dataclasses import dataclass
 from fractions import Fraction
+from functools import lru_cache
 from math import isfinite
 from .model import Vector
 
@@ -46,6 +47,14 @@ def inside(p, vertices):
     return result
 
 
+@lru_cache(maxsize=256)
+def exact_geometry(vertices):
+    """Bounded cache of immutable source coordinates; never caches a verdict."""
+    points = tuple(xy(p) for p in vertices)
+    bounds = tuple((min(p[i] for p in points),max(p[i] for p in points)) for i in (0,1))
+    return points,bounds
+
+
 @dataclass(frozen=True)
 class Polygon:
     name: str
@@ -82,7 +91,14 @@ class Polygon:
         a,b = xy(start),xy(end)
         if self.restriction == 'information':
             return False
-        vertices = tuple(xy(p) for p in self.vertices)
+        vertices,bounds = exact_geometry(self.vertices)
+        # Exact broad phase: a Euclidean margin is contained in this expanded
+        # axis-aligned box. Strict separation proves no contact; equality must
+        # continue to the closed-edge and exact-distance predicates below.
+        margin = Fraction(self.margin_m)
+        if any(max(a[i],b[i]) < bounds[i][0]-margin or
+               min(a[i],b[i]) > bounds[i][1]+margin for i in (0,1)):
+            return False
         if inside(a,vertices) or inside(b,vertices):
             return True
         margin2 = Fraction(self.margin_m)**2

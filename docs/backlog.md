@@ -86,3 +86,5 @@ utfärdandetid, källans vindmask, 10-minutersmedlets placering och förenlighet
 med marina körningar inte är verifierade. Varken polar, ström, vågor, land- eller
 djupbedömning används. Därför tillkommer ingen planeringskandidat och ingen
 publik ändring.
+
+Native kandidataudit17okt levererad offline: 2/4/8kandidater, fyra avgångar, fulla24hinder, 66noder, grafisk jämförelse och kalla processprov. Ingen interaktiv nodutökning eller900m-höjning. Nästa: explicit valbar utvecklingskomposition med processbudget, sedan helt kombinerat större stöd. Se native-candidate-budget.md.

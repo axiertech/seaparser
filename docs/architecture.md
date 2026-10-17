@@ -110,3 +110,5 @@ SQL eller UI. Legacy GridProduct-läget och 1 m-gränsen är oförändrade. Samm
 NetCDF-fältmaterialisering används. Namngiven utvecklingskomposition kan
 använda native-läget med oförändrat 900 m-tak och separat käll-/antagandeproveniens.
 Se native-marine-geometry.md; större landgranskning är separat från kartbakgrund.
+
+Exakt polygonbox-avvisning och en begränsad geometri-LRU minskar kostnaden utan att ändra hinderpredikat. Native-kandidataudit använder explicit offlinebudget66, alla24hinder och befintlig planering. API-budgeten är oförändrad. Se native-candidate-budget.md.

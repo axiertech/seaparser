@@ -17,6 +17,8 @@ for folder in ("prototype", "infrastructure", "application", "presentation", "ap
             allowed = {"dataclasses", "datetime", "math", "typing"}
             if path.name in ("segment_weather.py", "polygon.py"):
                 allowed.add("fractions")
+            if path.name == "polygon.py":
+                allowed.add("functools")
             if path.name == "auto_routing.py":
                 allowed.add("heapq")
             for node in ast.walk(tree):

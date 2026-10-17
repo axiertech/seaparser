@@ -1,6 +1,6 @@
 """Analytic geometry references and full time-dependent route integration."""
 from datetime import datetime, timedelta, timezone
-from math import hypot
+from math import hypot, nextafter, inf
 import unittest
 from prototype.auto_routing import generate_routes, SearchPolicy
 from prototype.environment import Conditions, SyntheticEnvironment
@@ -15,6 +15,20 @@ def box(margin=0, **kwargs):
     return Polygon('island',(Vector(40,-10),Vector(60,-10),Vector(60,10),Vector(40,10)),margin,**kwargs)
 
 class PolygonReferenceTests(unittest.TestCase):
+    def test_exact_box_separation_retains_sub_ulp_margin_and_closed_contact(self):
+        vertices=(Vector(0,0),Vector(1,0),Vector(1,1),Vector(0,1))
+        outside=nextafter(1,inf)
+        # One ulp of margin meets the next representable coordinate exactly.
+        # A quarter ulp must not be rounded into a different geometric verdict.
+        for margin,expected in ((2**-52,True),(2**-54,False),(0,False)):
+            polygon=Polygon('ulp',vertices,margin)
+            self.assertEqual(polygon.intersects(Vector(outside,0),Vector(outside,1)),expected)
+            self.assertTrue(polygon.intersects(Vector(1,0),Vector(1,1)))
+        for distance in (0,1,5,6,1000000):
+            polygon=box(5)
+            self.assertEqual(polygon.intersects(Vector(-100,10+distance),Vector(200,10+distance)),distance<=5)
+            self.assertEqual(polygon.intersects(Vector(60+distance,-100),Vector(60+distance,100)),distance<=5)
+
     def test_crossing_and_closed_boundary(self):
         polygon=box()
         for a,b in ((A,B),(Vector(40,10),Vector(60,10)),(Vector(40,10),Vector(40,10)),
