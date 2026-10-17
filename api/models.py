@@ -13,7 +13,7 @@ class Position(BaseModel):
 
 class PlanInput(BaseModel):
     model_config=ConfigDict(extra='forbid',strict=True,allow_inf_nan=False)
-    profile: Literal['synthetic','vinga']='vinga'
+    profile: Literal['synthetic','vinga','vinga-native']='vinga'
     start: Position
     target: Position
     margin_m: float=Field(default=2,ge=0,le=10)
@@ -26,9 +26,9 @@ class PlanInput(BaseModel):
 
     @model_validator(mode='after')
     def departures(self):
-        if self.profile=='vinga' and self.scenario != 'baseline':
+        if self.profile in ('vinga','vinga-native') and self.scenario != 'baseline':
             raise ValueError('Vinga använder verkligt väder; syntetiska marina scenarier är bara referenstester')
-        local=vinga_local if self.profile=='vinga' else to_local
+        local=vinga_local if self.profile in ('vinga','vinga-native') else to_local
         for p in (self.start,self.target):
             local(p.latitude,p.longitude)
         validate_budget(self.profile,self.candidate_limit,self.departure_offsets_seconds)

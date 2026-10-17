@@ -78,6 +78,20 @@ class PolygonReferenceTests(unittest.TestCase):
         self.assertTrue(box(quality='unknown').intersects(A,B))
 
 class AutomaticRoutingTests(unittest.TestCase):
+    def test_search_disk_is_closed_exact_and_never_discards_obstacles(self):
+        policy=SearchPolicy(max_candidates=8,max_nodes=26,max_expansions=1000)
+        self.assertEqual(generate_routes(Vector(0,0),Vector(3,4),(),policy,node_radius_m=5).lengths_m,(5,))
+        outside=generate_routes(Vector(0,0),Vector(nextafter(5,inf),0),(),policy,node_radius_m=5)
+        self.assertEqual(outside.status,'endpoint_outside_search_disk');self.assertEqual(outside.candidates,())
+        # All box corners lie outside the disk, but the wall still blocks the
+        # entire direct segment. Filtering nodes must never filter this wall.
+        wall=Polygon('wall',(Vector(40,-1000),Vector(60,-1000),Vector(60,1000),Vector(40,1000)))
+        result=generate_routes(Vector(0,0),Vector(90,0),(wall,),policy,node_radius_m=100)
+        self.assertEqual(result.node_count,2);self.assertEqual(result.candidates,())
+        self.assertEqual(result.status,'no_graph_path')
+        for radius in (True,0,-1,float('nan'),float('inf'),10001):
+            with self.assertRaises(ValueError):generate_routes(A,B,(),policy,node_radius_m=radius)
+
     def test_free_direct_path(self):
         result=generate_routes(A,B,())
         self.assertEqual(result.status,'candidates_found')

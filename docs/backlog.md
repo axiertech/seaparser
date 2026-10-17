@@ -88,3 +88,5 @@ djupbedömning används. Därför tillkommer ingen planeringskandidat och ingen
 publik ändring.
 
 Native kandidataudit17okt levererad offline: 2/4/8kandidater, fyra avgångar, fulla24hinder, 66noder, grafisk jämförelse och kalla processprov. Ingen interaktiv nodutökning eller900m-höjning. Nästa: explicit valbar utvecklingskomposition med processbudget, sedan helt kombinerat större stöd. Se native-candidate-budget.md.
+
+Valbar native17-utvecklingsprofil levererad med stödd900m-kandidatdisk,21noder inom26, alla24hinder, fler avgångar och grafisk/GPX-integration. Kalla standardprocessprov godkända. Nästa geografiska funktion: verifiera helt större vind-/marin-/land-/rörelseramsstöd före900m-utökning. Se supported-native-routing.md.

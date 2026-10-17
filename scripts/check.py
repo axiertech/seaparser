@@ -15,7 +15,7 @@ for folder in ("prototype", "infrastructure", "application", "presentation", "ap
         tree = ast.parse(path.read_text(), filename=str(path.relative_to(root)))
         if path.name in ("calculation.py", "model.py", "environment.py", "obstacles.py", "routes.py", "polar.py", "sailing.py", "weather.py", "forecast.py", "departures.py", "forecast_data.py", "forecast_metadata.py", "segment_weather.py", "polygon.py", "auto_routing.py"):
             allowed = {"dataclasses", "datetime", "math", "typing"}
-            if path.name in ("segment_weather.py", "polygon.py"):
+            if path.name in ("segment_weather.py", "polygon.py", "auto_routing.py"):
                 allowed.add("fractions")
             if path.name == "polygon.py":
                 allowed.add("functools")

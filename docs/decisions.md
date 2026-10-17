@@ -370,3 +370,7 @@ tjänst är oförändrade. Se native-marine-geometry.md för prov, bevis och nä
 ## 2026-10-17: Uppmätt offlinebudget med alla nya landhinder
 
 Behåll API:s nod-/processgränser. Tillåt endast explicit offlineaudit26/66noder med17-oktober-bunten; mät2/4/8kandidater över fyra tidsstödda avgångar. Exakt separerande box och begränsad geometri-LRU ändrar inga slutna hinder-/marginalpredikat. Alla24hinder kvar, samma faktiska vinnare i båda kriterierna och trunkering redovisas. Se native-candidate-budget.md.
+
+## 2026-10-17: Begränsa kandidatnoder till verkligt utvecklingsstöd
+
+Filtrera enbart kandidathörn med exakt sluten900m-disk, aldrig hinder. All kant-/färdkontroll behåller24hinder; externa hinderhörn kan ändå blockera. 21noder ryms inom26 och samma första8vägar behålls. Kalla standardprocessprov under20s/8MB möjliggör explicit vinga-native-profil med högst16kombinationer. Standard/publik tjänst och900m-tak oförändrade. Se supported-native-routing.md.

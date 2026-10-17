@@ -1,12 +1,12 @@
 // Map rendering only. GeoJSON is always longitude, latitude; Leaflet clicks are lat/lng.
 export function createMap(L, element, scene, onPick) {
-  const map = L.map(element, { maxZoom: 22, minZoom: scene.profile === 'vinga' ? 14 : 17, zoomControl: true });
+  const map = L.map(element, { maxZoom: 22, minZoom: scene.profile !== 'synthetic' ? 14 : 17, zoomControl: true });
   const coverage = L.geoJSON(scene.coverage, { style: { color: '#577f90', fillOpacity: 0.05, dashArray: '3 6' } }).addTo(map);
   if (scene.land_display) {
     L.geoJSON(scene.land_display, { style: { color: '#9a5830', fillOpacity: 0.35 } }).addTo(map);
     map.attributionControl.addAttribution('Land: <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors, ODbL</a>');
   }
-  L.geoJSON(scene.obstacles, { style: { color: '#9a5830', fillColor: '#c6b38d', fillOpacity: scene.profile === 'vinga' ? 0.1 : 0.8 } }).addTo(map);
+  L.geoJSON(scene.obstacles, { style: { color: '#9a5830', fillColor: '#c6b38d', fillOpacity: scene.profile !== 'synthetic' ? 0.1 : 0.8 } }).addTo(map);
   const margins = L.layerGroup().addTo(map);
   const routes = L.layerGroup().addTo(map);
   const markers = L.layerGroup().addTo(map);
@@ -39,7 +39,7 @@ export function createMap(L, element, scene, onPick) {
     }).addTo(routes);
   }
   return { map, endpoints, show, background() {
-    if (scene.profile !== 'vinga') return;
+    if (scene.profile === 'synthetic') return;
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxNativeZoom: 19, maxZoom: 22,
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>' }).addTo(map);
   }, dispose() { map.remove(); } };

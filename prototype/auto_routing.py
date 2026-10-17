@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 from heapq import heappop, heappush
 from math import isfinite
+from fractions import Fraction
 from .model import Vector
 from .polygon import Polygon, xy
 from .routes import RouteCandidate
@@ -42,8 +43,17 @@ class GeneratedRoutes:
     scope: str = SCOPE
 
 
-def generate_routes(position, target, obstacles, policy=SearchPolicy()):
+def generate_routes(position, target, obstacles, policy=SearchPolicy(), *, node_radius_m=None):
     xy(position); xy(target)
+    if node_radius_m is not None and (type(node_radius_m) not in (int,float) or
+            not isfinite(node_radius_m) or not 0 < node_radius_m <= 10000):
+        raise ValueError('Finit sökdiskradie 0–10000 m krävs')
+    radius2=None if node_radius_m is None else Fraction(node_radius_m)**2
+    def supported(point):
+        return radius2 is None or sum(v*v for v in xy(point)) <= radius2
+    scope=SCOPE if radius2 is None else SCOPE+f' Kandidatnoder endast inom sluten disk vid lokalt origo, radie {node_radius_m} m; samtliga hårda hinder behålls.'
+    def report(*args,**kwargs):
+        return GeneratedRoutes(*args,scope=scope,**kwargs)
     if type(policy) is not SearchPolicy or policy.max_nodes < 2:
         raise ValueError('Fryst sökpolicy med minst två noder krävs')
     items = []
@@ -53,8 +63,10 @@ def generate_routes(position, target, obstacles, policy=SearchPolicy()):
         items.append(obstacle)
     obstacles = tuple(items)
     hard = tuple(o for o in obstacles if o.restriction == 'hard')
+    if not all(supported(p) for p in (position,target)):
+        return report('endpoint_outside_search_disk',(),(),0,2,False,policy)
     if any(o.intersects(p,p) for o in hard for p in (position,target)):
-        return GeneratedRoutes('endpoint_blocked',(),(),0,2,False,policy)
+        return report('endpoint_blocked',(),(),0,2,False,policy)
     nodes = [position,target]
     for obstacle in hard:
         xs = [p.east for p in obstacle.vertices]; ys = [p.north for p in obstacle.vertices]
@@ -62,10 +74,10 @@ def generate_routes(position, target, obstacles, policy=SearchPolicy()):
         for x,y in ((min(xs)-padding,min(ys)-padding),(min(xs)-padding,max(ys)+padding),
                     (max(xs)+padding,min(ys)-padding),(max(xs)+padding,max(ys)+padding)):
             point = Vector(x,y); xy(point)
-            if point not in nodes and not any(o.intersects(point,point) for o in hard):
+            if supported(point) and point not in nodes and not any(o.intersects(point,point) for o in hard):
                 nodes.append(point)
                 if len(nodes) > policy.max_nodes:
-                    return GeneratedRoutes('node_limit',(),(),0,len(nodes),True,policy,limit_reason='max_nodes')
+                    return report('node_limit',(),(),0,len(nodes),True,policy,limit_reason='max_nodes')
     graph = [[] for _ in nodes]
     for i,a in enumerate(nodes):
         for j in range(i+1,len(nodes)):
@@ -94,7 +106,7 @@ def generate_routes(position, target, obstacles, policy=SearchPolicy()):
             heappush(queue,(new_length+(target-nodes[next_node]).speed,(*path,next_node),new_length))
             # Memory is bounded independently of how many entries have been popped.
             if len(queue) >= policy.max_expansions:
-                return GeneratedRoutes('search_limit',tuple(candidates),tuple(lengths),expansions,len(nodes),True,policy,limit_reason='queue_budget')
+                return report('search_limit',tuple(candidates),tuple(lengths),expansions,len(nodes),True,policy,limit_reason='queue_budget')
     truncated = bool(queue) or depth_cut
     status = 'candidates_found' if candidates else 'no_graph_path'
     if truncated:
@@ -104,4 +116,4 @@ def generate_routes(position, target, obstacles, policy=SearchPolicy()):
         limits.append('max_candidates' if len(candidates) >= policy.max_candidates else 'max_expansions')
     if depth_cut:
         limits.append('max_waypoints')
-    return GeneratedRoutes(status,tuple(candidates),tuple(lengths),expansions,len(nodes),truncated,policy,limit_reason=','.join(limits))
+    return report(status,tuple(candidates),tuple(lengths),expansions,len(nodes),truncated,policy,limit_reason=','.join(limits))

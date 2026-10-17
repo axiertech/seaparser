@@ -23,7 +23,7 @@ async function server(profile = 'synthetic') {
     const generated = spawnSync(python, ['-B', '-m', 'scripts.land_preview', '--bundle', '--output', 'frontend/land-dist'], { cwd: root, encoding: 'utf8' });
     assert.equal(generated.status, 0, 'Regional bundleexport misslyckades');
   }
-  const app = profile === 'vinga' ? ['scripts.local_demo:regional_app', '--factory'] : ['api.main:app'];
+  const app = profile === 'vinga-native' ? ['scripts.local_demo:native_app', '--factory'] : profile === 'vinga' ? ['scripts.local_demo:regional_app', '--factory'] : ['api.main:app'];
   const child = spawn(python, ['-B', '-m', 'uvicorn', ...app, '--host', '127.0.0.1', '--port', '0', '--no-access-log'], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
   let log = ''; let url;
   child.stderr.on('data', data => { log += data.toString(); url = log.match(/http:\/\/127\.0\.0\.1:\d+/)?.[0]; });
@@ -32,12 +32,16 @@ async function server(profile = 'synthetic') {
   return { url, async close() { const done = new Promise(resolve => child.once('exit', resolve)); child.kill('SIGTERM'); await done; } };
 }
 
-for (const profile of process.env.SEAPARSER_DEMO_URL && process.env.SEAPARSER_DEMO_PROFILE !== 'vinga' ? ['synthetic'] : ['synthetic','vinga']) test(`${profile}: kartklick → verklig API-process → Leaflet-rutter → GPX`, async () => {
+for (const profile of process.env.SEAPARSER_DEMO_URL && process.env.SEAPARSER_DEMO_PROFILE !== 'vinga' ? ['synthetic'] : process.env.SEAPARSER_DEMO_URL ? ['synthetic','vinga'] : ['synthetic','vinga','vinga-native']) test(`${profile}: kartklick → verklig API-process → Leaflet-rutter → GPX`, async () => {
   const api = await server(profile);
   let view;
   try {
     const fetcher = (path, options) => fetch(api.url + path, options);
     let html = readFileSync(new URL('../map/index.html', import.meta.url), 'utf8');
+    if (profile === 'vinga-native') {
+      const page = await fetch(api.url + '/native.html'); assert.equal(page.status, 200); html = await page.text();
+      assert.match(html, /2026-10-17/);
+    }
     if (profile === 'vinga') {
       const page = await fetch(api.url + '/vinga.html'); assert.equal(page.status, 200); html = await page.text();
       for (const name of ['land.geojson', 'routing.geojson', 'controller.mjs', 'map-component.mjs', 'client.mjs', 'vendor/leaflet.js']) {
@@ -67,7 +71,7 @@ for (const profile of process.env.SEAPARSER_DEMO_URL && process.env.SEAPARSER_DE
     element.getBoundingClientRect = () => ({ x: 0, y: 0, left: 0, top: 0, right: 800, bottom: 480, width: 800, height: 480 });
     const require = createRequire(import.meta.url); delete require.cache[require.resolve('leaflet')];
     const L = require('leaflet');
-    const transport = { loadScene: () => loadScene(fetcher,profile), plan: (payload, options) => plan(payload, { ...options, fetcher, pause: () => wait(profile === 'vinga' ? 250 : 10) }) };
+    const transport = { loadScene: () => loadScene(fetcher,profile), plan: (payload, options) => plan(payload, { ...options, fetcher, pause: () => wait(profile !== 'synthetic' ? 250 : 10) }) };
     view = await mount(document, (node, scene, pick) => createMap(L, node, scene, pick), transport);
     assert.ok(view);
     const scene = await loadScene(fetcher,profile);
@@ -82,7 +86,7 @@ for (const profile of process.env.SEAPARSER_DEMO_URL && process.env.SEAPARSER_DE
     assert.equal(Number(document.getElementById('start-lat').value), Number(scene.start[1].toFixed(10)));
     assert.equal(Number(document.getElementById('target-lon').value), Number(scene.target[0].toFixed(10)));
     document.getElementById('plan-form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
-    await until(() => !document.getElementById('calculate').disabled, profile === 'vinga' ? 25000 : 15000);
+    await until(() => !document.getElementById('calculate').disabled, profile !== 'synthetic' ? 25000 : 15000);
     assert.ok(document.querySelector('a[download]'), document.getElementById('status').textContent + ' ' + [...document.querySelectorAll('.route')].map(card => card.textContent).join(' | '));
     assert.ok(document.querySelectorAll('.leaflet-overlay-pane path').length > 3, 'Verklig Leaflet-geometri saknas');
     assert.ok(document.querySelectorAll('.route').length > 1);
@@ -92,9 +96,15 @@ for (const profile of process.env.SEAPARSER_DEMO_URL && process.env.SEAPARSER_DE
     const response = await fetch(link.href); assert.equal(response.status, 200);
     const xml = new dom.window.DOMParser().parseFromString(await response.text(), 'application/xml');
     assert.equal(xml.querySelectorAll('parsererror').length, 0);
-    assert.ok(xml.querySelectorAll('rtept').length >= 3);
+    assert.ok(xml.querySelectorAll('rtept').length >= (profile === 'vinga-native' ? 2 : 3));
     assert.equal(xml.querySelectorAll('trk').length, 0);
     assert.ok(Number(xml.querySelector('rtept').getAttribute('lat')) > 57);
+    if (profile === 'vinga-native') {
+      assert.equal(document.getElementById('scenario-label').hidden, true);
+      assert.match(document.getElementById('search-budget').options[0].textContent, /01:00, 01:10/);
+      assert.match(document.getElementById('comparison').textContent, /Samma alternativ vinner/);
+      assert.match(document.getElementById('provenance').textContent, /conditional_on_assumptions/);
+    }
     if (profile === 'vinga') {
       assert.match(xml.querySelector('metadata desc').textContent, /Ej navigationssäkert/);
       assert.match(document.getElementById('provenance').textContent, /seaparser-real-meteo-marine/);
@@ -130,7 +140,7 @@ test('misslyckad API-beräkning ger uttryckligt fel', async () => {
 });
 
 test('publik build har endast uttryckliga frontendfiler och lokala resurser', () => {
-  const expected = ['client.mjs', 'controller.mjs', 'index.html', 'main.mjs', 'map-component.mjs', 'map.css', 'vendor'];
+  const expected = ['client.mjs', 'controller.mjs', 'index.html', 'main.mjs', 'map-component.mjs', 'map.css', 'native.html', 'vendor'];
   assert.deepEqual(readdirSync(new URL('../dist/', import.meta.url)).sort(), expected);
   const html = readFileSync(new URL('../dist/index.html', import.meta.url), 'utf8');
   assert.ok(!/(?:src|href)="https?:/i.test(html));

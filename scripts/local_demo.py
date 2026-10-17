@@ -7,10 +7,15 @@ from api.main import create_app
 
 
 def review_app(profile='vinga'):
-    if profile not in ('synthetic','vinga'):
+    if profile not in ('synthetic','vinga','vinga-native'):
         raise ValueError('Okänd granskningsprofil')
     directory=Path(__file__).resolve().parents[1]/'frontend'/('land-dist' if profile=='vinga' else 'dist')
     app=create_app()
+    if profile=='vinga-native':
+        from fastapi.responses import FileResponse
+        @app.get('/')
+        async def native_index():
+            return FileResponse(directory/'native.html')
     app.mount('/',StaticFiles(directory=directory,html=True),name='public-demo')
     return app
 
@@ -19,9 +24,13 @@ def regional_app():
     return review_app('vinga')
 
 
+def native_app():
+    return review_app('vinga-native')
+
+
 def main():
     parser=argparse.ArgumentParser()
-    parser.add_argument('--profile',choices=('synthetic','vinga'),default='vinga')
+    parser.add_argument('--profile',choices=('synthetic','vinga','vinga-native'),default='vinga')
     parser.add_argument('--port',type=int,default=8765)
     args=parser.parse_args()
     if not 0<=args.port<=65535:

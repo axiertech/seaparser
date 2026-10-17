@@ -47,8 +47,8 @@ def obstacle_geometry(shape, convert=to_geo):
 
 
 def scene(profile='vinga'):
-    if profile == 'vinga':
-        return regional_scene()
+    if profile in ('vinga','vinga-native'):
+        return regional_scene(profile)
     if profile != 'synthetic':
         raise ValueError('Okänd region')
     request=demo_request(); shape=obstacle()
@@ -63,9 +63,16 @@ def scene(profile='vinga'):
 
 
 def calculate_geographic(payload, *, audit_candidate_limit=None, weather_config=None, audit_node_limit=None):
-    if payload.get('profile','vinga') not in ('synthetic','vinga'):
+    if payload.get('profile','vinga') not in ('synthetic','vinga','vinga-native'):
         raise ValueError('Okänd region')
-    regional=payload.get('profile','vinga')=='vinga'
+    profile=payload.get('profile','vinga')
+    regional=profile!='synthetic'
+    native=profile=='vinga-native'
+    if native:
+        if weather_config is not None:
+            raise ValueError('Nativeprofilen har fast versionsbunden konfiguration')
+        from pathlib import Path
+        weather_config=Path(__file__).resolve().parents[1]/'settings/development-weather-native-assumptions.json'
     offsets=payload.get('departure_offsets_seconds',[0,600])
     candidate_limit=validate_budget('vinga' if regional else 'synthetic',payload.get('candidate_limit'),offsets)
     if audit_candidate_limit is not None:
@@ -127,7 +134,8 @@ def calculate_geographic(payload, *, audit_candidate_limit=None, weather_config=
             raise ValueError('Offline native-audit kräver uttrycklig nodbudget 26 eller 66')
         nodes=audit_node_limit
     raw=json.loads(run_obstacle_plan(request,SearchPolicy(clearance_m=5,max_candidates=candidate_limit,
-                                                        max_waypoints=waypoints,max_expansions=1000,max_nodes=nodes)))
+                                                        max_waypoints=waypoints,max_expansions=1000,max_nodes=nodes),
+                    node_radius_m=dataset.support_radius_m if native else None))
     features=[]; alternatives=[]
     if raw['planning']:
         for index,departure in enumerate(raw['planning']['comparison']['departures']):
@@ -149,7 +157,7 @@ def calculate_geographic(payload, *, audit_candidate_limit=None, weather_config=
     land_metadata=json.loads(snapshot.source_geojson)['metadata'] | {'sha256':snapshot.sha256} if regional else None
     identity=digest({'routing_input_sha256':raw['input_sha256'],'land_snapshot_sha256':snapshot.sha256,
                      'projection':projection,'geographic_algorithm':'vinga-aeqd-geojson-v1'}) if regional else raw['input_sha256']
-    return {'synthetic':not regional,'profile':'vinga' if regional else 'synthetic','projection':projection,'geometry_search':raw['geometry_search'],
+    return {'synthetic':not regional,'profile':profile,'projection':projection,'geometry_search':raw['geometry_search'],
             'land':land_metadata,'depth_status':'unknown','navigational_safety':'not_assessed',
             'data_quality':{'weather':'real_frozen_with_assumptions' if regional else 'synthetic_estimated','boat':'estimated','land':'unknown' if regional else 'synthetic_estimated'},
             **({'weather_provenance':evidence,'weather_at_start':start_weather,'result_qualification':'conditional_on_assumptions',
@@ -162,21 +170,29 @@ def calculate_geographic(payload, *, audit_candidate_limit=None, weather_config=
             'notice':raw['limitations']+(f' Verkliga historiska MET/WAV/PHY-data {request.departures[0].date().isoformat()}; beräknad med uttryckliga utvecklingsantaganden, uppskattad konstantfartsbåt och ej validerat komfortmått.' if regional else ' Syntetiska referensdata.')+' Djup och landfullständighet är okända. Ej navigationssäkert.'}
 
 
-def regional_scene():
-    dataset,config,evidence=load_development_weather()
-    snapshot=land.load_land(margin_m=10)
+def regional_scene(profile='vinga'):
+    native=profile=='vinga-native'
+    from pathlib import Path
+    root=Path(__file__).resolve().parents[1]
+    dataset,config,evidence=load_development_weather(root/'settings/development-weather-native-assumptions.json' if native else None)
+    snapshot=land.load_land(root/'fixtures/vinga-land-expanded-20261017.geojson',margin_m=10,review_bounds=(11.55,57.60,11.66,57.67)) if native else land.load_land(margin_m=10)
+    obstacle_convert=land.review_to_geo if native else land.to_geo
     corners=(Vector(-450,-420),Vector(520,-420),Vector(520,420),Vector(-450,420),Vector(-450,-420))
-    return {'synthetic':False,'profile':'vinga','dataset_version':dataset.version,'dataset_id':dataset.dataset_id,
+    if native:
+        from math import sin,cos,pi
+        corners=tuple(Vector(900*cos(i*pi/36),900*sin(i*pi/36)) for i in range(72))
+        corners=(*corners,corners[0])
+    return {'synthetic':False,'profile':profile,'dataset_version':dataset.version,'dataset_id':dataset.dataset_id,
             'planning_time':config['planning_time'],'departure':config['departure'],
             'weather_provenance':evidence,'weather_limits':{'max_wind_m_s':config['max_wind_m_s'],'max_wave_height_m':config['max_wave_height_m']},
-            'start':land.to_geo(Vector(300,-400)),'target':land.to_geo(Vector(300,400)),'projection':land.metadata(),
+            'start':land.to_geo(Vector(500,0) if native else Vector(300,-400)),'target':land.to_geo(Vector(500,350) if native else Vector(300,400)),'projection':land.metadata(),
             'coverage':collection([feature({'type':'Polygon','coordinates':[[land.to_geo(p) for p in corners]]},{'kind':'forecast_coverage','quality':'estimated'})]),
-            'obstacles':collection([f for p in snapshot.obstacles for f in obstacle_geometry(p,land.to_geo)['features']]),
+            'obstacles':collection([f for p in snapshot.obstacles for f in obstacle_geometry(p,obstacle_convert)['features']]),
             'land_display':json.loads(snapshot.source_geojson),'land':json.loads(snapshot.source_geojson)['metadata'] | {'sha256':snapshot.sha256},
             'depth_status':'unknown','navigational_safety':'not_assessed','default_margin_m':10,
             'limits':{'max_candidates':8,'max_departures':4,'max_evaluations':MAX_EVALUATIONS,
                       'candidate_limits':[2,4,8],'departure_offsets_seconds':list(VINGA_OFFSETS),'margin_m':[0,10]},
-            'notice':'Vinga: verkliga frysta MET-vind- och Copernicus-våg-/strömdata 2026-10-13. Historisk ruttjämförelse med uttryckliga antaganden och uppskattad konstantfartsbåt. Djup och landfullständighet okända. Ej navigationssäkert.'}
+            'notice':f'Vinga: verkliga frysta MET-vind- och Copernicus-våg-/strömdata {config["departure"][:10]}. Historisk ruttjämförelse med uttryckliga antaganden och uppskattad konstantfartsbåt. Djup och landfullständighet okända. Ej navigationssäkert.'}
 
 
 def compare_alternatives(alternatives, comfort_extra_seconds):

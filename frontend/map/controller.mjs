@@ -15,8 +15,16 @@ export async function mount(document, mapFactory, transport = { loadScene, plan 
   try {
     const profile = document.documentElement.dataset.profile || 'vinga';
     const scene = await transport.loadScene(undefined, profile);
-    if (byId('search-budget-label')) byId('search-budget-label').hidden = profile !== 'vinga';
-    const scenarioLabel = byId('scenario-label'); if (scenarioLabel) scenarioLabel.hidden = profile === 'vinga';
+    const regional = profile === 'vinga' || profile === 'vinga-native';
+    if (scene.departure && byId('search-budget')) {
+      const base = Date.parse(scene.departure);
+      for (const option of byId('search-budget').options) {
+        const [count, offsets] = option.value.split(':');
+        option.textContent = `${count} kandidater · ${offsets.split(',').map(o => new Date(base + Number(o) * 1000).toISOString().slice(11, 16)).join(', ')} UTC`;
+      }
+    }
+    if (byId('search-budget-label')) byId('search-budget-label').hidden = !regional;
+    const scenarioLabel = byId('scenario-label'); if (scenarioLabel) scenarioLabel.hidden = regional;
     if (byId('assumptions')) byId('assumptions').textContent = scene.weather_provenance ? 'Historiska verkliga data. Metadata kvalificering: antagen.\n' + Object.values(scene.weather_provenance.assumptions).join('\n\n') : 'Syntetiskt referensfall för tester.';
     if (scene.weather_limits) { if (byId('wind-limit')) byId('wind-limit').value = scene.weather_limits.max_wind_m_s; if (byId('wave-limit')) byId('wave-limit').value = scene.weather_limits.max_wave_height_m; }
     if (scene.default_margin_m !== undefined) byId('margin').value = scene.default_margin_m;
@@ -40,7 +48,7 @@ export async function mount(document, mapFactory, transport = { loadScene, plan 
     view.endpoints(getPoint('start'), getPoint('target'));
     view.show({ routes: { features: [] }, obstacles: previewObstacles() });
     const background = byId('background');
-    if (background && scene.profile === 'vinga') background.addEventListener('click', () => { view.background(); background.disabled = true; }, { once: true });
+    if (background && scene.profile !== 'synthetic') background.addEventListener('click', () => { view.background(); background.disabled = true; }, { once: true });
     for (const name of ['start', 'target']) byId(`choose-${name}`).addEventListener('click', () => { selected = name; status.textContent = `Klicka för att välja ${name === 'start' ? 'start' : 'mål'}.`; });
     byId('plan-form').addEventListener('input', invalidate);
     byId('plan-form').addEventListener('submit', async event => {
@@ -48,8 +56,8 @@ export async function mount(document, mapFactory, transport = { loadScene, plan 
       byId('calculate').disabled = true; status.textContent = 'Beräknar i separat process…';
       try {
         const [candidateChoice, departureChoice] = (byId('search-budget')?.value || '2:0,600').split(':');
-        const departureOffsets = profile === 'vinga' ? departureChoice.split(',').map(Number) : [0, 600];
-        const response = await transport.plan({ profile, start: getPoint('start'), target: getPoint('target'), margin_m: Number(byId('margin').value), scenario: profile === 'vinga' ? 'baseline' : byId('scenario').value, ...(profile === 'vinga' ? { candidate_limit: Number(candidateChoice), max_wind_m_s: Number(byId('wind-limit').value), max_wave_height_m: Number(byId('wave-limit').value) } : {}), departure_offsets_seconds: departureOffsets }, { signal: abort.signal });
+        const departureOffsets = regional ? departureChoice.split(',').map(Number) : [0, 600];
+        const response = await transport.plan({ profile, start: getPoint('start'), target: getPoint('target'), margin_m: Number(byId('margin').value), scenario: regional ? 'baseline' : byId('scenario').value, ...(regional ? { candidate_limit: Number(candidateChoice), max_wind_m_s: Number(byId('wind-limit').value), max_wave_height_m: Number(byId('wave-limit').value) } : {}), departure_offsets_seconds: departureOffsets }, { signal: abort.signal });
         if (current !== generation) return;
         const result = response.result; view.show(result);
         const summary = result.geometry_search;
