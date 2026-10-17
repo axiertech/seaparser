@@ -2592,3 +2592,40 @@ tests passed. `git diff --check` passed. These checks preserve the existing
 fail-closed input behavior. Next: commit this narrowly scoped blocker/status
 update, push the development branch and verify CI. No DB, deployment or public
 demo changes.
+
+
+## 2026-10-17: WAV dry_run ValueError isolated without downloading weather
+
+Task: identify and reproduce the previously reported WAV ValueError, keep the
+2 MB file / 5 MB transfer probe cap and all planning gates intact.
+
+Located the original call in `/tmp/seaparser-met-copernicus-probe.py`:
+`marine.subset(**req, dry_run=True)` followed by the local budget check.
+Request: dataset `cmems_mod_bal_wav_anfc_PT1H-i`, version `202311`, part
+`default`, service `arco-geo-series`, variables VHM0/VTM02/VMDR, longitude
+11.58–11.63, latitude 57.62–57.65, strict-inside, 2026-10-17 00:00–04:00 UTC,
+NetCDF, progress disabled, raise_if_updating=True. Output target was
+`/tmp/seaparser-met-copernicus-probe-data-3/waves.nc`.
+
+Three network-enabled dry-run repetitions succeeded with Toolbox 2.5.0.
+The final repetition also executed the original budget check and reproduced
+`ValueError('probe exceeds 2 MB file / 5 MB transfer cap')` after dry_run,
+with 0.013297709923664122 MB file / 40.67862595419847 MB transfer estimates.
+The old stage remained dry_run:waves during the check, so the earlier status
+incorrectly attributed the exception to the client call. The original traceback
+was discarded; this identifies the reproducible failure path, without claiming
+to recover that discarded evidence or a historical transfer estimate.
+
+Private reproduction script, exact request, numeric result and traceback are
+under `/tmp/seaparser-wav-error-20261017` (directory 0700, files 0600);
+script `/tmp/seaparser-wav-reproduce.py` is 0600. No credentials or signed URLs
+were emitted or committed. An initial sandbox-only attempt failed in metadata
+network access; the network-enabled reproduction resolved that limitation.
+No subset download was invoked, no original get was invoked, no dependencies,
+DB, deployment or planning code changed. The budget rejection is correct;
+there is no faulty subset argument to fix on the observed evidence.
+
+Verification: exact live dry-run plus original postcondition, private traceback
+and file permissions, and git diff --check. Documentation-only change, so no
+full test suite was run. Next: source-backed provenance/time-support/mask work
+within existing limits; do not increase the transfer cap to bypass this result.

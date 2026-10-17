@@ -69,10 +69,16 @@ egen våtmask.
 En ny, separat Copernicus-provbegäran avgränsades till Vinga-boxen,
 2026-10-17 00–04Z, två variabelgrupper och högst 2 MB per fil / 5 MB överföring
 med den befintliga Toolbox/autentiseringen. Katalogen svarade med samma WAV
-202311 och PHY 202411-versioner. WAV `dry_run` avslutades med `ValueError`
-innan någon väderfil hämtades; felmeddelandet undertrycktes för att undvika
-eventuella privata URL-/autentiseringsuppgifter. Därför finns inget nytt uttag
-eller nytt vädervärde att redovisa. En begränsad ARCO-subset skulle inte på
+202311 och PHY 202411-versioner. Felsökning 2026-10-17 reproducerade
+anropet med Toolbox 2.5.0: själva WAV `dry_run` lyckas. Därefter kastar provets
+egen budgetkontroll `ValueError("probe exceeds 2 MB file / 5 MB transfer cap")`.
+Estimatet är 0,013297709923664122 MB fil och 40,67862595419847 MB överföring;
+överföringen överskrider 5 MB-gränsen. Stegmarkören stod fortfarande på
+`dry_run:waves` vid kontrollen och identifierade därför inte kaststället.
+Det ursprungliga felmeddelandet sparades inte; samma anrop och efterkontroll
+har nu reproducerat detta fel med privat traceback. Ingen väderfil hämtades
+under reproduktionen och budgeten är oförändrad. Därför finns inget nytt uttag
+eller nytt vädervärde från denna provbegäran att redovisa. En begränsad ARCO-subset skulle inte på
 egen hand binda svaret till originalrun; ordinarie `get` hämtar hela WAV-
 originalfilen (110 MB komprimerad enligt WAV-manualen) och överskrider den
 avgränsade uttagsbudgeten. Äldre fixturer återanvänds.
