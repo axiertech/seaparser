@@ -131,3 +131,48 @@ Detta är en matematisk frågefixture, inga nya väderdata eller kvalificerade r
 Varje artefakts aktuella SHA-256 finns i dess `index.receipt.json`; kontrollera
 filhashen mot detta före senare godkänd publicering. Båda byggena är fristående
 och förblir opublicerade. Manuell visuell browsergranskning återstår.
+
+
+## Separat webbpublicering av granskningen
+
+Föreslagen adress: https://seaparser.com/vinga-prognosprov.html
+Befintlig startsida, Vinga-demo, API och systemtjänst behålls.
+`deployment.frozen_review` återanvänder befintliga Vinga-flödets
+`atomic_public_copy`, hashkontroller och manifestprincip, avgränsat till en
+enda ny statisk fil. Kör inte activate-vinga.sh för denna tilläggssida: det
+flödet byter startsida och tjänst och är avsett för annan aktivering.
+
+Efter granskad ren commit förbereds en ny katalog utanför public/:
+
+```sh
+cd /tmp/seaparser-real-map-data
+/usr/bin/python3 -B -m deployment.frozen_review prepare /home/web/seaparser/backups/vinga-prognosprov-STAGE
+/usr/bin/python3 -B -m deployment.frozen_review verify /home/web/seaparser/backups/vinga-prognosprov-STAGE
+```
+
+Byt STAGE mot en ny identifierare. Det faktiska förberedda underlagets
+absoluta sökväg och exakta aktiveringskommando lämnas i leveranskvittot.
+Endast `public-ready/vinga-prognosprov.html` får ingå. Rå-NetCDF, repository,
+manifest, byggkvitto, arbetsloggar och konfiguration publiceras inte.
+Artefaktens SHA-256 kontrolleras mot byggkvittot; HTML måste motsvara den
+granskade layouten inklusive historik-/routingvarning, tre produkter och
+CSP:s hashbundna resurser. Inget nätverk behövs för visningen.
+
+Senare uttrycklig aktivering, som seaparser, använder `publish` i stället för
+`verify` med samma katalog. Den vägrar skriva över befintlig separat adress,
+kontrollerar att granskad checkout och hela tidigare publiceringen är
+oförändrade, och kopierar bara den nya filen atomiskt med 0644-attribut.
+Inga root-steg, Apacheändringar, reload/restart eller databasanrop behövs.
+`publication-result.json` skrivs först efter lokal innehållsverifiering och
+anger uttryckligen att HTTPS ännu inte är verifierat. Ändrad publik snapshot
+kräver ny förberedelse; skriv inte över någon extern ändring.
+
+Efter aktivering: hämta exakt den nya URL:en och jämför SHA-256 med manifestet,
+kontrollera HTML/MIME och öppna desktop/mobil i webbläsare. Prova produkt-,
+tids- och punktval, tangentbord, provsegment och varningar. Kontrollera även
+att tidigare demo är oförändrad. Ingen aktivering har gjorts av förberedelsen.
+
+I agentmiljön 2026-10-17 saknas browserverktyg och installerad Chromium,
+Chrome/Firefox/Playwright. DOM-tester är körbara men ersätter inte visuell
+browser- och mobilgranskning. Detta redovisas som återstående manuell kontroll,
+inte som ett godkänt browserprov.

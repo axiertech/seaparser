@@ -2508,3 +2508,21 @@ matematisk källsfärsgranskning ersätter inte saknad datum-/ram-/masksemantik.
 Verifierat vid leverans: låsta scripts.check passerar 160 domän- och 238
 integrationstester; frontend check passerar. De åtta riktade DOM-testerna är gröna.
 Lokal TCP-bindning provas inte om; API-integration verifieras i ordinarie CI.
+
+
+## 2026-10-17: fryst Vinga-granskning förberedd för separat URL
+
+Deploymentflödets befintliga atomiska Vinga-kopiering återanvänds för en
+allowlist med endast vinga-prognosprov.html. Prepare/verify ändrar inget
+publikt; senare publish vägrar befintlig adress, ändrad checkout, extra
+resurser och ändrat demo-innehåll. Manifest/kvittot förblir utanför public/.
+Historiska verkliga prov och ej kvalificerad routing verifieras mot exakt
+rendering och CSP. Ingen riktig webbläsare/browserverktyg finns här;
+visuell desktop/mobilgranskning kvarstår. Inget publicerat eller omstartat.
+
+Verifiering: 20 riktade Python-tester och fristående HTML:ens DOM-test gröna.
+Samlad kontroll: 160+244=404 Python-tester, beroende-/arkitekturkontroll,
+frontend statisk kontroll samt DOM-/landtester godkända. Befintligt karttest
+kan inte starta sin lokala API-process i denna hanterade miljö; exakt
+socketdiagnos och full logg sparas utanför repositoryt. CI verifierar
+hela körningen före leverans; ingen ny full lokal körning utan ändring.

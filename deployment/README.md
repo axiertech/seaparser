@@ -72,3 +72,13 @@ budgetar ersätter inte framtida perklient-/ingresskontroll. Omstart tappar jobb
 Publikt indexprov ska underkännas före aktivering: rollback har korrekt återställt
 statiska sidan. Inga förväntade frontendbytes ändras. Fullt HTTPS-kart/API/GPX-prov
 körs automatiskt först efter fungerande API/proxy och byte till nya index.html.
+
+
+## Separat fryst prognosgranskning (ingen demo-/tjänsteuppgradering)
+
+Se [vinga-frozen-review.md](../docs/vinga-frozen-review.md).
+`python3 -B -m deployment.frozen_review prepare|verify|publish STAGE` är en
+avgränsad tilläggsväg i befintligt atomiskt Vinga-publiceringsflöde. Endast
+nya /vinga-prognosprov.html tillåts. Förberedelse/verify ändrar inget publikt;
+publish är ett separat uttryckligt steg som seaparser. Använd inte root-
+aktiveringsflödena ovan för denna fristående statiska granskningssida.
