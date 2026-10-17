@@ -97,8 +97,9 @@ skrivs alltså inte tillbaka till källor eller till frysta verifieringsfixtures
   marina cellhöljen. För stor omslutning ger otillräckligt bevis, inte tillåtelse.
 - Alla hårda OSM-landhinder och vald marginal kontrolleras över hela segment.
   Hårda vädergränser och ankomstkontroll kan inte vägas bort av komfort/tid.
-- Samma frysta underlag och antaganden används vid båda avgångarna. Max två
-  kandidater, åtta mellanvägpunkter, 1000 kö-/expansionsposter, 26 grafnoder,
+- Samma frysta underlag och antaganden används vid alla valda avgångar.
+  Högst åtta kandidater, fyra avgångar och 16 kombinationer i interaktiv utveckling.
+  Åtta mellanvägpunkter, 1000 kö-/expansionsposter, 26 grafnoder,
   2000 integreringssteg och 1800 s per rutt behålls.
 
 Grafkön använder nu A* med euklidiskt återstående avstånd som undre gräns,
@@ -109,3 +110,61 @@ Sökbegränsning och ofullständighet redovisas fortfarande.
 
 Djup och landunderlagets fullständighet är fortsatt okända. Användning av
 verkliga prognosvärden och uttryckliga antaganden är ingen navigationsgaranti.
+
+
+## Uppmätt utökning 2026-10-17
+
+[Utökad grafisk jämförelse](../artifacts/real-route-budget/index.html) visar
+fyra kandidater vid 12:00, 12:10, 13:00 och 15:00 UTC, totalt 16 alternativ.
+Karta och klickbart diagram kopplar restid till komfortexponering. Gemensamma
+vinnare jämförs över dessa explicita avgångar, och korten behåller vinnare per
+avgång. Komfortvalet får högst 300 s extra restid jämfört med snabbaste
+undersökta alternativ över samtliga avgångar. Det är kortast restid, inte
+ett allmänt råd om avgång eller tidigast ankomst. Exakta lika resultat följer
+angiven avgångs-/kandidatordning.
+
+Fler geometriska vägar ändrade inte vinnaren: **auto-0 vid 12:00 UTC** är
+både snabbast och har lägst exponeringskostnad över alla undersökta avgångar.
+Restid 355,715161 s och komfortexponering 1862,0702 i modellens ej validerade
+mått. Samma kandidat vinner också båda kriterierna vid varje avgång. Ingen
+syntetisk marin serie eller väderändring har skapats för att skilja vinnarna.
+Alla sökningar är trunkerade vid kandidatbudgeten; ingen global optimalitet.
+
+Reproducera utan nätåtkomst:
+
+```bash
+.venv/bin/python -B -m scripts.audit_candidates --output artifacts/real-route-budget/audit.json
+.venv/bin/python -B -m scripts.audit_candidates --workers --output artifacts/real-route-budget/workers.json
+.venv/bin/python -B -m scripts.export_real_routes --output artifacts/real-route-budget --candidates 4 --departures 0 600 3600 10800
+```
+
+Auditen prövar 2/4/8 kandidater vid samma fyra avgångar på samma frysta underlag,
+med faktisk väggtid separat från resultatidentiteten, sökbudget/trunkering,
+alla alternativs status, restid och komfortexponering. Den körs sekventiellt
+med varm indatacache; slutlig JSON-kodning och processstart ingår endast i
+`workers.json`.
+
+| Kandidater × fyra avgångar | Beräkningstid | Resultatbyte | Grafexpansioner | Trunkering |
+| --- | ---: | ---: | ---: | --- |
+| 2×4 | 6,677 s | 1 964 132 | 47 | max_candidates |
+| 4×4 | 11,261 s | 4 143 644 | 57 | max_candidates |
+| 8×4 | 22,180 s | 8 430 172 | 72 | max_candidates |
+
+Samma datasethash användes i alla tre budgetar. Varken 1000-posters sökbudget
+eller övriga geometriska gränser höjdes.
+Åtta kandidater × fyra avgångar kräver över 20 s och över 8 MB och tillåts därför
+**endast i offlineaudit**, inte som API-val. Oförändrade API-skydd är 20 s,
+8 000 000 utbytesbyte, två aktiva processer och åtta sparade jobb.
+Kalla workerprov gav 4×4: 14,21 s / 4 143 670 byte; 8×2: 15,24 s /
+4 276 984 byte. Det är mätningar för standardändpunkter och 10 m marginal,
+inte prestandagarantier för andra vägar eller samtidig last. Jobb som når
+processgränserna avvisas fortfarande.
+
+API och lokal kartklient erbjuder kandidatbudget 2/4/8 och unika avgångsoffset
+0/600/3600/10800 s, högst fyra avgångar och **16 kombinationer**. Standardvalet
+är fortfarande två kandidater och två avgångar. Det syntetiska referensfallet
+behåller sina tidigare åtta kandidater/två avgångar. Applikationen kräver att
+avgång plus hela 1800 s-ruttbudgeten ryms före det gemensamma exklusiva slutet;
+segment- och ankomstkontrollerna gäller dessutom varje färd. Geografiskt stöd
+är oförändrat: 900 m-tak och egna marina grid/masker. Ingen hämtning eller
+publik driftsättning ingår i denna leverans.

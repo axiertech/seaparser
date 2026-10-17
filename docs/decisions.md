@@ -323,3 +323,19 @@ behålls som tester. Standardens grafiska Vinga-rutt använder frysta verkliga
 MET/WAV/PHY-filer med faktisk gemensam giltighet 2026-10-13 12–16 UTC; inget
 påstående om aktuell prognos. En uppskattad konstantfartsbåt används eftersom
 testsegelpolaren inte täcker den verkliga vindstyrkan. Se development-real-routing.md.
+
+
+## 2026-10-17: Uppmätt begränsad kandidat-/avgångsutökning
+
+Offlineaudit använder samma verkliga frysta MET/WAV/PHY och fyra avgångar inom
+12–16 UTC, inklusive 1800 s reserv för varje rutt. 8×4 överskrider befintliga
+20 s/8 MB-gränser och förblir offline. Interaktiv utveckling tillåter därför
+endast 2/4/8 kandidater, högst fyra explicita avgångar och 16 kombinationer.
+Kalla processprov för 4×4 och 8×2 ryms inom befintliga process-/utdatagränser.
+Inga generella skydd eller 900 m-stödtak ändras. Standard förblir 2×2.
+
+Gemensam jämförelse över undersökta avgångar använder kortast restid och lägst
+komfortexponering med samma 300 s tillåtna extra restid. Per-avgångsurvalen
+behålls separat. Identiska vinnare visas uttryckligen; ingen marin serie
+konstrueras för att skilja dem. Källa unverified, beräkning villkorad av
+antaganden och båt/komfort ej validerade. Se development-real-routing.md.

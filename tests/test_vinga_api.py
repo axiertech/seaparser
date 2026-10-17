@@ -120,3 +120,22 @@ class VingaApiTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result['alternatives'],[])
         self.assertEqual(result['navigational_safety'],'not_assessed')
         self.assertEqual((await self.client.get(f'/api/plans/{key}/routes/none/gpx')).status_code,422)
+
+
+    async def test_bounded_expansion_uses_real_process_and_same_winner(self):
+        response=await self.client.post('/api/plans',json=self.payload | {
+            'candidate_limit':8,'departure_offsets_seconds':[0,600,3600,10800]})
+        self.assertEqual(response.status_code,422)
+        self.assertEqual(self.store.jobs,{})
+        _,result=await self.finished(self.payload | {
+            'candidate_limit':4,'departure_offsets_seconds':[0,600,3600,10800]})
+        self.assertEqual(len(result['alternatives']),16)
+        self.assertEqual(len({r['departure_time'] for r in result['alternatives']}),4)
+        self.assertEqual(len({r['candidate'] for r in result['alternatives']}),4)
+        self.assertTrue(result['alternative_comparison']['same_winner'])
+        winner=next(r for r in result['alternatives'] if r['id']==result['alternative_comparison']['fastest_id'])
+        self.assertEqual(winner['candidate'],'auto-0')
+        self.assertAlmostEqual(winner['travel_seconds'],355.715161,places=5)
+        self.assertEqual(winner['departure_time'],'2026-10-13T12:00:00+00:00')
+        self.assertEqual(result['result_qualification'],'conditional_on_assumptions')
+        self.assertTrue(result['geometry_search']['truncated'])

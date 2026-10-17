@@ -15,6 +15,7 @@ export async function mount(document, mapFactory, transport = { loadScene, plan 
   try {
     const profile = document.documentElement.dataset.profile || 'vinga';
     const scene = await transport.loadScene(undefined, profile);
+    if (byId('search-budget-label')) byId('search-budget-label').hidden = profile !== 'vinga';
     const scenarioLabel = byId('scenario-label'); if (scenarioLabel) scenarioLabel.hidden = profile === 'vinga';
     if (byId('assumptions')) byId('assumptions').textContent = scene.weather_provenance ? 'Historiska verkliga data. Metadata kvalificering: antagen.\n' + Object.values(scene.weather_provenance.assumptions).join('\n\n') : 'Syntetiskt referensfall för tester.';
     if (scene.weather_limits) { if (byId('wind-limit')) byId('wind-limit').value = scene.weather_limits.max_wind_m_s; if (byId('wave-limit')) byId('wave-limit').value = scene.weather_limits.max_wave_height_m; }
@@ -32,7 +33,7 @@ export async function mount(document, mapFactory, transport = { loadScene, plan 
       return { ...scene.obstacles, features: scene.obstacles.features.map(feature => ({ ...feature, properties: { ...feature.properties, margin_m: margin } })) };
     }
     function invalidate() {
-      generation++; abort?.abort(); results.replaceChildren(); byId('provenance').textContent = '';
+      generation++; abort?.abort(); results.replaceChildren(); if (byId('comparison')) byId('comparison').textContent = ''; byId('provenance').textContent = '';
       view.show({ routes: { features: [] }, obstacles: previewObstacles() });
       view.endpoints(getPoint('start'), getPoint('target')); byId('calculate').disabled = false;
     }
@@ -46,17 +47,24 @@ export async function mount(document, mapFactory, transport = { loadScene, plan 
       event.preventDefault(); invalidate(); const current = generation; abort = new AbortController();
       byId('calculate').disabled = true; status.textContent = 'Beräknar i separat process…';
       try {
-        const response = await transport.plan({ profile, start: getPoint('start'), target: getPoint('target'), margin_m: Number(byId('margin').value), scenario: profile === 'vinga' ? 'baseline' : byId('scenario').value, ...(profile === 'vinga' ? { max_wind_m_s: Number(byId('wind-limit').value), max_wave_height_m: Number(byId('wave-limit').value) } : {}), departure_offsets_seconds: [0, 600] }, { signal: abort.signal });
+        const [candidateChoice, departureChoice] = (byId('search-budget')?.value || '2:0,600').split(':');
+        const departureOffsets = profile === 'vinga' ? departureChoice.split(',').map(Number) : [0, 600];
+        const response = await transport.plan({ profile, start: getPoint('start'), target: getPoint('target'), margin_m: Number(byId('margin').value), scenario: profile === 'vinga' ? 'baseline' : byId('scenario').value, ...(profile === 'vinga' ? { candidate_limit: Number(candidateChoice), max_wind_m_s: Number(byId('wind-limit').value), max_wave_height_m: Number(byId('wave-limit').value) } : {}), departure_offsets_seconds: departureOffsets }, { signal: abort.signal });
         if (current !== generation) return;
         const result = response.result; view.show(result);
         const summary = result.geometry_search;
+        const comparison = result.alternative_comparison;
+        if (comparison && byId('comparison')) {
+          const describe = id => { const r = result.alternatives.find(r => r.id === id); return r ? `${r.candidate} vid ${r.departure_time.slice(11, 16)} UTC` : 'inget genomfört alternativ'; };
+          byId('comparison').textContent = `Kortast restid över undersökta avgångar: ${describe(comparison.fastest_id)}. Lägst komfortexponering: ${describe(comparison.comfortable_id)}. ${comparison.same_winner === true ? 'Samma alternativ vinner båda kriterierna.' : comparison.same_winner === false ? 'Olika alternativ vinner kriterierna.' : 'Ingen vinnare kan utses.'} Komfortvalet tillåter högst ${comparison.max_comfort_extra_seconds} s extra restid. Ingen global optimalitet.`;
+        }
         status.textContent = summary.candidates.length ? `${result.alternatives.length} undersökta rutt-/avgångsalternativ. ${summary.truncated ? 'Begränsad sökning: ' + summary.limit_reason : 'Grafen uttömd; ingen global optimalitet.'}` : 'Ingen genererad kandidat; det bevisar inte att andra möjliga rutter saknas.';
         byId('provenance').textContent = JSON.stringify({ projection: result.projection, search: summary, input_sha256: result.input_sha256, dataset: result.planning?.manifest.dataset_id, version: result.planning?.manifest.dataset_version, land: result.land, depth: result.depth_status, navigational_safety: result.navigational_safety, boat: result.planning?.manifest.boat.model, assumptions: result.weather_provenance?.assumptions, qualification: result.result_qualification, limits: result.selected_weather_limits, notice: result.notice }, null, 2);
         for (const route of result.alternatives) {
           const card = document.createElement('article'); card.className = `route ${category(route)}`;
           const heading = document.createElement('h3'); heading.textContent = `${route.candidate} · avgång ${route.departure_time}`; card.append(heading);
           const detail = document.createElement('p');
-          detail.textContent = `${category(route) === 'verified' ? 'Verifierade modellgränser' : category(route) === 'assumed' ? 'Beräknad med antaganden; modellgränser uppfyllda' : labels[route.status] || 'Inte verifierad'}. Restid: ${route.travel_seconds === null ? '—' : route.travel_seconds.toFixed(2) + ' s'}. Ankomst: ${route.arrival_time || '—'}. Syntetisk komfort: ${route.comfort_exposure === null ? '—' : route.comfort_exposure.toFixed(2)}. ${route.fastest ? 'Snabbast vid denna avgång. ' : ''}${route.comfortable ? 'Bekvämast vid denna avgång. ' : ''}${route.reason || ''}`;
+          detail.textContent = `${category(route) === 'verified' ? 'Verifierade modellgränser' : category(route) === 'assumed' ? 'Beräknad med antaganden; modellgränser uppfyllda' : labels[route.status] || 'Inte verifierad'}. Restid: ${route.travel_seconds === null ? '—' : route.travel_seconds.toFixed(2) + ' s'}. Ankomst: ${route.arrival_time || '—'}. Komfortexponering (ej validerad): ${route.comfort_exposure === null ? '—' : route.comfort_exposure.toFixed(2)}. ${route.fastest ? 'Snabbast vid denna avgång. ' : ''}${route.comfortable ? 'Bekvämast vid denna avgång. ' : ''}${route.reason || ''}`;
           card.append(detail);
           const show = document.createElement('button'); show.type = 'button'; show.textContent = 'Visa på kartan';
           show.addEventListener('click', () => { view.show(result, route.id); for (const child of results.children) child.classList.remove('picked'); card.classList.add('picked'); }); card.append(show);

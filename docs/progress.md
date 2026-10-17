@@ -2860,3 +2860,45 @@ and final verification receipt: /tmp/seaparser-route-publication-da9a958/
 verified-publication-result.json. Next: preserve the published snapshot and
 continue real-data development/source qualification separately. No further
 activation or service changes are needed for this page.
+
+## 2026-10-17: begränsad kandidat-/avgångsutökning med verkliga data
+
+Arbetsrot `/tmp/seaparser-real-map-data`, branch `development/real-map-data`,
+utgångspunkt 8de1620556373440d70aa2b9902d71064222e536. Nästa begränsade leverans
+är implementerad: offlineaudit 2/4/8 kandidater × fyra explicita avgångar,
+interaktiv utvecklingsbudget högst 16 kombinationer och en grafisk jämförelse
+med karta, klickbart restids-/exponeringsdiagram och gemensamma vinnare.
+`artifacts/real-route-budget/` innehåller HTML, fullständigt JSON, audit och
+kalla workerprov. Befintlig offlinevisning för 2×2 är regenererad; ingen publik
+webbrot eller tjänst är ändrad.
+
+Slutlig varm audit: 6,677 / 11,261 / 22,180 s för 2/4/8 × fyra avgångar.
+8×4 ger 8 430 172 resultatbyte och stannar offline. Kalla 4×4/8×2-workerprov
+ryms inom oförändrade 20 s / 8 MB (14,21 / 15,24 s). Samma frysta dataset,
+A*-graf, cache, 1000-posters sökbudget och fullständiga segment-/ankomstskydd
+används. Alla sökningar trunkeras vid kandidatbudget; ingen global optimalitet.
+Auto-0 kl. 12:00 UTC vinner både restid och komfortexponering. Ingen syntetisk
+marin serie eller väderändring skapad. Källor förblir unverified och beräkningar
+conditional_on_assumptions med assumed_fields separat. 900 m-taket är oförändrat.
+
+Verifiering: låsta 26 Python-/40 npm-paketversioner kontrollerade, Python 3.14.4,
+Node 22.22.1, npm 9.2.0. Samlad `scripts.check`: 160 domäntester + 288 övriga
+tester godkända. Därefter nytt riktat ASGI/API-/processprov för 4×4 godkänt
+(18,244 s inklusive testuppsättning); avvisar även 8×4 före jobbskapande.
+Frontendens resurskontroll och fyra serveroberoende testfiler godkända,
+inklusive nya diagram-/formulärtester. Relevanta nya gränsfall: 16 kombinationer,
+strikta heltal/unika avgångar, exklusivt tidsstöd inklusive full ruttbudget,
+kända globala komfort-/restidsurval och avvisad ofullständig ankomst.
+
+PROJECT_BLOCKER: lokal `npm --prefix frontend test` fallerar i
+`tests/map.test.mjs`; separat TCP-bindningsdiagnos ger
+`PermissionError: [Errno 1] Operation not permitted` för 127.0.0.1:0.
+Ingen upprepning eller publik demo som ersättning. Ordinarie GitHub CI för
+exakt pushad SHA ska verifiera hela frontendintegrationen. Ingen ny hämtning,
+installation, databasoperation, kostnad eller publicering i leveransen.
+
+Nästa funktion efter godkänd exakt CI: större faktiskt gemensamt geografiskt
+område och tidsstöd med egna grid samt landunderlag. Kontrollera disk och
+överföringsestimat separat från resultatstorlek, återanvänd hashmanifest/cache,
+ingen dubbelextraktion och ingen andra adapter. Höj inte 900 m före verifierat
+helt rumtidsstöd. Kvarvarande marina proveniens-/mask-/utfärdandegap är oförändrade.

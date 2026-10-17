@@ -1,5 +1,6 @@
 from typing import Literal
 from pydantic import BaseModel,ConfigDict,Field,model_validator
+from application.geographic_budget import validate_budget
 from infrastructure.geography import to_local
 from infrastructure.land import to_local as vinga_local
 
@@ -16,7 +17,8 @@ class PlanInput(BaseModel):
     start: Position
     target: Position
     margin_m: float=Field(default=2,ge=0,le=10)
-    departure_offsets_seconds: list[int]=Field(default=[0,600],min_length=1,max_length=2)
+    departure_offsets_seconds: list[int]=Field(default=[0,600],min_length=1,max_length=4)
+    candidate_limit: int | None=Field(default=None,ge=2,le=8)
     scenario: Literal['baseline','weather-limit','unverified','missing-waves']='baseline'
 
     max_wind_m_s: float | None=Field(default=None,ge=0,le=100)
@@ -29,6 +31,5 @@ class PlanInput(BaseModel):
         local=vinga_local if self.profile=='vinga' else to_local
         for p in (self.start,self.target):
             local(p.latitude,p.longitude)
-        if any(o not in (0,600) for o in self.departure_offsets_seconds) or len(set(self.departure_offsets_seconds)) != len(self.departure_offsets_seconds):
-            raise ValueError('Unika syntetiska avgångsoffset 0 eller 600 krävs')
+        validate_budget(self.profile,self.candidate_limit,self.departure_offsets_seconds)
         return self

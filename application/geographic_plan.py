@@ -2,6 +2,7 @@
 from dataclasses import replace, asdict
 from datetime import datetime, timedelta
 from .development_weather import load_development_weather
+from .geographic_budget import validate_budget, VINGA_OFFSETS, MAX_EVALUATIONS
 from .planning import PlanRequest
 from prototype.model import ConstantBoat
 from prototype.forecast import ForecastPolicy
@@ -65,11 +66,12 @@ def calculate_geographic(payload, *, audit_candidate_limit=None):
     if payload.get('profile','vinga') not in ('synthetic','vinga'):
         raise ValueError('Okänd region')
     regional=payload.get('profile','vinga')=='vinga'
-    candidate_limit=2 if regional else 8
+    offsets=payload.get('departure_offsets_seconds',[0,600])
+    candidate_limit=validate_budget('vinga' if regional else 'synthetic',payload.get('candidate_limit'),offsets)
     if audit_candidate_limit is not None:
         if not regional or audit_candidate_limit not in (2,4,8):
             raise ValueError('Offlineaudit tillåter endast Vinga och 2/4/8 kandidater')
-        candidate_limit=audit_candidate_limit
+        candidate_limit=validate_budget('vinga',audit_candidate_limit,offsets,offline=True)
     convert=land.to_geo if regional else to_geo
     local=land.to_local if regional else to_local
     projection=land.metadata() if regional else metadata()
@@ -93,11 +95,16 @@ def calculate_geographic(payload, *, audit_candidate_limit=None):
     snapshot=land.load_land(margin_m=payload.get('margin_m',2)) if regional else None
     shapes=snapshot.obstacles if regional else (shape,)
     waypoints=8 if regional else 4
-    offsets=payload.get('departure_offsets_seconds',[0,600])
+    if regional:
+        valid_from=max(p.valid_from for p in dataset.product_metadata)
+        valid_until=min(p.valid_until for p in dataset.product_metadata)
+        if any(not (valid_from <= request.departures[0]+timedelta(seconds=o) and
+                       request.departures[0]+timedelta(seconds=o+1800) < valid_until) for o in offsets):
+            raise ValueError('Avgång och hela ruttbudgeten måste rymmas i faktiskt gemensamt tidsstöd')
     request=replace(request,position=start,target=target,obstacles=shapes,
                     candidates=request.candidates[:2] if regional else request.candidates,
                     departures=tuple(request.departures[0]+timedelta(seconds=o) for o in offsets),
-                    max_candidates=candidate_limit,max_waypoints=waypoints,max_steps=2000,max_seconds=1800,
+                    max_departures=4 if regional else 2,max_candidates=candidate_limit,max_waypoints=waypoints,max_steps=2000,max_seconds=1800,
                     step_seconds=30 if regional else 10,tolerance_m=.01)
     if regional:
         sampled=request.dataset.evaluate(start,request.departures[0])
@@ -135,7 +142,10 @@ def calculate_geographic(payload, *, audit_candidate_limit=None):
             **({'weather_provenance':evidence,'weather_at_start':start_weather,'result_qualification':'conditional_on_assumptions',
                  'selected_weather_limits':{'wind_m_s':request.weather_policy.max_wind_m_s,'wave_height_m':request.weather_policy.max_wave_height_m}} if regional else {}),
             'input_sha256':identity,'planning':raw['planning'],'routes':collection(features),
-            'alternatives':alternatives,'obstacles':collection([f for p in shapes for f in obstacle_geometry(p,convert)['features']]),
+            'alternatives':alternatives,'alternative_comparison':compare_alternatives(alternatives,request.max_comfort_extra_seconds),
+            'search_budget':{'candidate_limit':candidate_limit,'departure_offsets_seconds':offsets,
+                             'evaluation_limit':candidate_limit*len(offsets),'max_interactive_evaluations':MAX_EVALUATIONS,
+                             'offline_audit':audit_candidate_limit is not None},'obstacles':collection([f for p in shapes for f in obstacle_geometry(p,convert)['features']]),
             'notice':raw['limitations']+(' Verkliga historiska MET/WAV/PHY-data 2026-10-13; beräknad med uttryckliga utvecklingsantaganden, uppskattad konstantfartsbåt och ej validerat komfortmått.' if regional else ' Syntetiska referensdata.')+' Djup och landfullständighet är okända. Ej navigationssäkert.'}
 
 
@@ -151,5 +161,21 @@ def regional_scene():
             'obstacles':collection([f for p in snapshot.obstacles for f in obstacle_geometry(p,land.to_geo)['features']]),
             'land_display':json.loads(snapshot.source_geojson),'land':json.loads(snapshot.source_geojson)['metadata'] | {'sha256':snapshot.sha256},
             'depth_status':'unknown','navigational_safety':'not_assessed','default_margin_m':10,
-            'limits':{'max_candidates':2,'max_departures':2,'margin_m':[0,10]},
+            'limits':{'max_candidates':8,'max_departures':4,'max_evaluations':MAX_EVALUATIONS,
+                      'candidate_limits':[2,4,8],'departure_offsets_seconds':list(VINGA_OFFSETS),'margin_m':[0,10]},
             'notice':'Vinga: verkliga frysta MET-vind- och Copernicus-våg-/strömdata 2026-10-13. Historisk ruttjämförelse med uttryckliga antaganden och uppskattad konstantfartsbåt. Djup och landfullständighet okända. Ej navigationssäkert.'}
+
+
+def compare_alternatives(alternatives, comfort_extra_seconds):
+    """Compare duration and exposure across explicit departures, preserving tie order."""
+    feasible=[r for r in alternatives if r['status']=='arrived' and r['travel_seconds'] is not None
+              and r['comfort_exposure'] is not None and r['weather_segment_status']=='verified'
+              and r['arrival_weather_status']=='passed_at_arrival']
+    fastest=min(feasible,key=lambda r:r['travel_seconds']) if feasible else None
+    eligible=[r for r in feasible if r['travel_seconds'] <= fastest['travel_seconds']+comfort_extra_seconds] if fastest else []
+    comfortable=min(eligible,key=lambda r:(r['comfort_exposure'],r['travel_seconds'])) if eligible else None
+    return {'fastest_id':fastest['id'] if fastest else None,
+            'comfortable_id':comfortable['id'] if comfortable else None,
+            'same_winner':fastest['id']==comfortable['id'] if fastest and comfortable else None,
+            'max_comfort_extra_seconds':comfort_extra_seconds,
+            'scope':'Kortast restid och lägst komfortexponering inom tillåten extra restid, över enbart undersökta kandidater och avgångar. Inte tidigast ankomst eller global optimalitet.'}
