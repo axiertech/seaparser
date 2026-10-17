@@ -146,3 +146,18 @@ får inte ersättas med fler positiva punktprov eller antaganden.
 - [Marina körbegrepp](marine-run-source-review.md), [ARCO-bindning](arco-provenance-review.md)
 - [Metadataåtkomst](copernicus-metadata-diagnostics.md), [run-kontrakt](forecast-run-provenance.md)
 - [Backlog](backlog.md), [krav](requirements.md)
+
+
+## Uppföljning: regional budget och lyckat WAV-uttag 2026-10-17
+
+Användarens utökade mandat ersätter ovanstående felsökningsbudget med
+konfigurerbara GB-budgetar. [Hämtningsbudgetar och cache](copernicus-download-budgets.md)
+beskriver implementation, avgränsning och verifiering. Samma WAV-urval 00–04 UTC
+hämtades nu: 26 114 byte, cirka 42,6 MB uppskattad överföring. En identisk
+begäran återanvände verifierad cache utan ny väderhämtning. Den tidigare
+budgetblockeringen gäller därför inte det nya mandatet.
+
+Filen saknar fortsatt run-ID/modellreferens, issued_at, revision och tidsbounds;
+alla tre vågvariabler anger time: mean. Käll-/tidsstödsblockerarna och samtliga
+planeringsspärrar kvarstår. Den nya filen ersätter inte befintliga frysta
+planeringsfixtures och ger inget kvalificerat blandat Vinga-fall.

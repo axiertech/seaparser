@@ -2629,3 +2629,52 @@ Verification: exact live dry-run plus original postcondition, private traceback
 and file permissions, and git diff --check. Documentation-only change, so no
 full test suite was run. Next: source-backed provenance/time-support/mask work
 within existing limits; do not increase the transfer cap to bypass this result.
+
+
+## 2026-10-17: Regional download budgets, cache and completed WAV metadata probe
+
+User authorized configurable GB-scale regional forecast budgets, routine
+adjustments within free data work, scoped WAV retrieval and metadata analysis;
+no purchases or planning-gate changes. This supersedes the diagnostic 2/5 MB
+limit documented above. Implemented in the existing Copernicus downloader,
+with a standard-library budget/cache helper; no new packages or adapters.
+
+Defaults: 2 decimal GB result per request, 10 GB estimated transfer per request,
+20 GB estimated transfer per invocation, 1 GB disk reserve. CLI bounds area,
+time, reviewed product variables and current depth. Check finite estimates,
+individual and cumulative transfer budgets, output size and free cache/output
+disk. Actual traffic is not measured; manifest distinguishes estimates from
+actual result bytes. Streaming hashes avoid loading GB files just to hash.
+
+Cache identity includes the exact source selection and bounds, with canonical
+UTC times. Hash/size/age checks, per-request process locks and staging exclude
+incomplete or damaged downloads. Six-hour snapshot reuse is configurable;
+retrieval time is preserved and never treated as issuance/model-run evidence.
+The shell wrapper forwards options and has a configurable one-hour timeout;
+custom subsets remain diagnostic and cannot pass as full audited bundles.
+
+WAV live retrieval succeeded: 202311/default/arco-geo-series, Vinga box,
+2026-10-17 00–04 UTC, VHM0/VTM02/VMDR, no depth axis. Result 26114 bytes,
+SHA-256 9030a4d3cb945410e3ec7d69018886e43f859d3696e973360eea96b4b65bf279.
+Private result/manifest/metadata: /tmp/seaparser-wav-regional-20261017.
+Estimated transfer approximately 42.6 MB, estimated result approximately
+13.9 kB. The already existing inspect file covered October 13, so could not
+replace this request. A second identical live request verified CACHE_HIT,
+zero new estimated weather transfer and the same result hash.
+
+Metadata: 5 hourly times x 2 latitudes x 2 longitudes per variable; no missing
+or nonfinite samples among 60 variable values. Still no forecast_reference_time,
+forecast_period, issued_at, run ID or revision. All three wave variables retain
+cell_methods=time: mean and no bounds. Existing provenance/time-support/mask
+and planning gates remain unchanged; no regional route run, DB or deployment.
+Assumption: GB defaults are operational diagnostic budgets, not guarantees of
+actual transfer, temporary disk or memory use, and not source qualification.
+
+Verification: offline budget/cache/scope regressions including pre-download
+rejection, integrity/expiry and a duplicate-request workflow; existing import
+regressions; live download and cache-hit checks; shell syntax and diff check.
+Python project check passed 160 domain and 264 integration tests before final
+small diagnostic/UTC-normalization refinements; focused tests rechecked after
+them. See copernicus-download-budgets.md for commands and remaining limits.
+Next: reviewed commit/push and exact-commit CI, then source-backed run and
+time-support evidence rather than bypassing planning gates.

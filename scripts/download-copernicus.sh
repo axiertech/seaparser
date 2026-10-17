@@ -3,6 +3,9 @@ set -euo pipefail
 umask 077
 WORKTREE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 BASE=${1:-/tmp/seaparser-copernicus}
+if (( $# > 0 )); then shift; fi
+DOWNLOAD_TIMEOUT=${SEAPARSER_DOWNLOAD_TIMEOUT_SECONDS:-3600}
+[[ "$DOWNLOAD_TIMEOUT" =~ ^[1-9][0-9]*$ ]] || exit 64
 mkdir -p "$BASE"
 exec 9>"$BASE/download.lock"
 flock -n 9 || exit 75
@@ -13,9 +16,13 @@ printf 'Log: %s\nOutput: %s\n' "$LOG" "$OUT"
 exec >>"$LOG" 2>&1
 finish() { rc=$?; trap - EXIT; printf 'END=%s EXIT_CODE=%s\n' "$(date -u +%FT%TZ)" "$rc"; printf '%s\n' "$rc" >"$BASE/$RUN_ID.exit"; }
 trap finish EXIT
-printf 'START=%s CWD=%s END_DEADLINE=%s\n' "$(date -u +%FT%TZ)" "$WORKTREE" "$(date -u -d '+10 minutes' +%FT%TZ)"
+printf 'START=%s CWD=%s END_DEADLINE=%s\n' "$(date -u +%FT%TZ)" "$WORKTREE" "$(date -u -d "+$DOWNLOAD_TIMEOUT seconds" +%FT%TZ)"
 cd "$WORKTREE"
 # Force saved credential discovery rather than inherited credential values.
 unset COPERNICUSMARINE_SERVICE_USERNAME COPERNICUSMARINE_SERVICE_PASSWORD
-timeout --signal=TERM --kill-after=10s 570s "$WORKTREE/.venv/bin/python" -B -m scripts.download_copernicus --output "$OUT" </dev/null
-timeout --signal=TERM --kill-after=5s 20s "$WORKTREE/.venv/bin/python" -B -m scripts.audit_copernicus "$OUT"
+timeout --signal=TERM --kill-after=10s "${DOWNLOAD_TIMEOUT}s" "$WORKTREE/.venv/bin/python" -B -m scripts.download_copernicus --output "$OUT" "$@" </dev/null
+if (( $# == 0 )); then
+    timeout --signal=TERM --kill-after=5s 20s "$WORKTREE/.venv/bin/python" -B -m scripts.audit_copernicus "$OUT"
+else
+    printf '%s\n' 'CUSTOM_SUBSET_COMPLETE; diagnostic only; full-bundle audit and planning qualification remain separate'
+fi
