@@ -7,7 +7,7 @@ exec 9<>/home/web/seaparser/autonomy/run.lock
 /usr/bin/flock -n 9 || { /usr/bin/printf '%s\n' 'SeaParser work/activation lock is held; retry after the active task ends.' >&2; exit 1; }
 poc_stage="$(cd -- "$(dirname -- "$0")" && pwd)"
 poc_release="$(/usr/bin/python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["release"])' "$poc_stage/manifest.json")"
-cd "$poc_release"
+cd "$poc_stage/release"
 restore_poc_api() {
     trap - ERR
     /usr/bin/python3 -B -m deployment.poc_api restore "$poc_stage"

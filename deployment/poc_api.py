@@ -43,12 +43,12 @@ def prepare(stage):
     stage.mkdir(mode=0o700,parents=True,exist_ok=False)
     release=Path('/home/web/seaparser/releases/poc-'+commit)
     subprocess.run(['git','archive','HEAD','--output='+str(stage/'source.tar')],cwd=ROOT,check=True)
-    release.mkdir(parents=True,exist_ok=False)
-    with tarfile.open(stage/'source.tar') as archive:archive.extractall(release,filter='data')
+    source=stage/'release';source.mkdir()
+    with tarfile.open(stage/'source.tar') as archive:archive.extractall(source,filter='data')
     (stage/'unit-ready.service').write_text(unit_for_release(Path(SYSTEM_FILES['unit']).read_text(),release))
     before=PROXY.read_text();(stage/'proxy-before.conf').write_text(before);(stage/'proxy-ready.conf').write_text(proxy_for_poc(before))
     shutil.copyfile(ROOT/'deployment/activate-poc-api.sh',stage/'activate.sh')
-    m=dict(checkout=str(CHECKOUT),commit=commit,release=str(release),runtime=str(RUNTIME),release_files=tree_hashes(release),
+    m=dict(checkout=str(CHECKOUT),commit=commit,release=str(release),runtime=str(RUNTIME),release_files=tree_hashes(source),
            system_before={k:digest(Path(v)) for k,v in SYSTEM_FILES.items()},public_before=tree_hashes(PUBLIC),prepared={n:digest(stage/n) for n in PREPARED})
     (stage/'manifest.json').write_text(json.dumps(m,indent=2,sort_keys=True)+'\n')
     verify(stage);return {'prepared':True,'started':False,'commit':commit,'release':str(release),'root_command':'/bin/bash '+str(stage/'activate.sh')}
@@ -62,8 +62,8 @@ def verify(stage,*,runtime=True):
         if digest(stage/n)!=h:raise ValueError('Prepared file changed')
     if (stage/'proxy-ready.conf').read_text()!=proxy_for_poc((stage/'proxy-before.conf').read_text()):raise ValueError('Proxy change exceeds PoC namespace')
     if runtime:
-        if tree_hashes(Path(m['release']))!=m['release_files']:raise ValueError('Release changed')
-        if digest(Path(m['release'])/'requirements.lock')!=digest(RUNTIME/'requirements.lock'):raise ValueError('Runtime lock mismatch')
+        if tree_hashes(stage/'release')!=m['release_files']:raise ValueError('Release changed')
+        if digest(stage/'release/requirements.lock')!=digest(RUNTIME/'requirements.lock'):raise ValueError('Runtime lock mismatch')
         runtime_check()
     return m
 
@@ -90,6 +90,9 @@ def root_action(action,stage):
             check_system(m)
             if UNIT.exists() or UNIT.is_symlink():raise ValueError('PoC unit already exists')
             if tree_hashes(PUBLIC)!=m['public_before']:raise ValueError('Public files changed; prepare fresh activation')
+            release=Path(m['release'])
+            if not release.exists():shutil.copytree(stage/'release',release)
+            if tree_hashes(release)!=m['release_files']:raise ValueError('Installed release differs; no service activated')
             atomic_root_copy(stage/'unit-ready.service',UNIT);atomic_root_copy(stage/'proxy-ready.conf',PROXY)
         elif action=='restore':
             if UNIT.is_symlink() or PROXY.is_symlink():raise ValueError('Symlink blocks rollback')

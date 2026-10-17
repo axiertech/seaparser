@@ -26,8 +26,8 @@ class PocActivationTests(unittest.TestCase):
     def test_install_restore_stale_ci_and_external_change_guards(self):
         with tempfile.TemporaryDirectory() as tmp:
             stage=Path(tmp);unit=stage/'poc.service';proxy=stage/'proxy';proxy.write_text('old proxy\n')
-            (stage/'proxy-before.conf').write_bytes(proxy.read_bytes());(stage/'proxy-ready.conf').write_text('new proxy\n');(stage/'unit-ready.service').write_text('reviewed PoC service\n')
-            m={'commit':'a'*40,'system_before':{'proxy':p.digest(proxy)},'prepared':{n:p.digest(stage/n) for n in ('unit-ready.service','proxy-ready.conf')},'public_before':{'old.html':'hash'}}
+            (stage/'proxy-before.conf').write_bytes(proxy.read_bytes());(stage/'proxy-ready.conf').write_text('new proxy\n');(stage/'unit-ready.service').write_text('reviewed PoC service\n');(stage/'release').mkdir()
+            m={'release':str(stage/'installed-release'),'release_files':{'old.html':'hash'},'commit':'a'*40,'system_before':{'proxy':p.digest(proxy)},'prepared':{n:p.digest(stage/n) for n in ('unit-ready.service','proxy-ready.conf')},'public_before':{'old.html':'hash'}}
             (stage/'ci-success.json').write_text(json.dumps({'commit':'wrong','conclusion':'success'}))
             with patch.object(p.os,'geteuid',return_value=0),patch.object(p,'UNIT',unit),patch.object(p,'PROXY',proxy),patch.object(p,'verify',return_value=m) as verify,patch.object(p,'tree_hashes',return_value=m['public_before']),patch.object(p,'check_system'),patch.object(p.subprocess,'check_output',side_effect=lambda args,**kw:'a'*40+'\n' if 'rev-parse' in args else ''):
                 with self.assertRaises(ValueError):p.root_action('install',stage)
