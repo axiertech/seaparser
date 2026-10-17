@@ -10,7 +10,7 @@ def run_obstacle_plan(request, policy=SearchPolicy()):
     plan = None
     if search.candidates:
         plan = json.loads(run_plan(replace(request,candidates=search.candidates)))
-    identity = {'geometry_algorithm':'polygon-box-visibility-simple-paths-v1',
+    identity = {'geometry_algorithm':'polygon-box-visibility-simple-paths-astar-v2',
                 'search':asdict(search),'request':asdict(request)}
     return canonical({'geometry_algorithm':identity['geometry_algorithm'],
                       'geometry_search':asdict(search),'planning':plan,

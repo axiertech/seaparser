@@ -60,7 +60,7 @@ def squared_norm(components):
     return sum((Fraction(v)**2 for v in components), Fraction(0))
 
 
-def certify_weather_segment(dataset, start, start_time, end, end_time, policy):
+def certify_weather_segment(dataset, start, start_time, end, end_time, policy, *, weather_products=('wind', 'waves')):
     """Box proof: clamped component lerps stay in the corner component ranges.
 
     |W|² <= max|u_corner|²+max|v_corner|²; Hs <= max Hs_corner.
@@ -68,10 +68,10 @@ def certify_weather_segment(dataset, start, start_time, end, end_time, policy):
     Failed bounds are NOT observations. Points may prove exceedance, never safety.
     """
     try:
-        dataset.validate_segment(start, start_time, end, end_time)
+        dataset.validate_segment(start, start_time, end, end_time, required_products=('current', *weather_products))
         products = {p.metadata.product: p for p in dataset.products}
         bounds, witness = [], None
-        for name in ('wind', 'waves'):
+        for name in weather_products:
             product = products[name]
             limit = policy.max_wind_m_s if name == 'wind' else policy.max_wave_height_m
             # Entire axis-aligned space/time box encloses the affine segment.

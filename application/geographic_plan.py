@@ -1,9 +1,14 @@
 """Geographic use case composes existing planning; API/UI contain no routing math."""
 from dataclasses import replace, asdict
-from datetime import timedelta
+from datetime import datetime, timedelta
+from .development_weather import load_development_weather
+from .planning import PlanRequest
+from prototype.model import ConstantBoat
+from prototype.forecast import ForecastPolicy
+from prototype.weather import WeatherPolicy
+from prototype.routes import RouteCandidate
 import json
 from infrastructure import land
-from infrastructure.synthetic_forecast import synthetic_snapshot
 from infrastructure.geography import to_local,to_geo,metadata
 from prototype.auto_routing import SearchPolicy
 from prototype.model import Vector
@@ -40,7 +45,7 @@ def obstacle_geometry(shape, convert=to_geo):
     return collection([feature({'type':'Polygon','coordinates':[ring]},properties)])
 
 
-def scene(profile='synthetic'):
+def scene(profile='vinga'):
     if profile == 'vinga':
         return regional_scene()
     if profile != 'synthetic':
@@ -57,9 +62,9 @@ def scene(profile='synthetic'):
 
 
 def calculate_geographic(payload, *, audit_candidate_limit=None):
-    if payload.get('profile','synthetic') not in ('synthetic','vinga'):
+    if payload.get('profile','vinga') not in ('synthetic','vinga'):
         raise ValueError('Okänd region')
-    regional=payload.get('profile','synthetic')=='vinga'
+    regional=payload.get('profile','vinga')=='vinga'
     candidate_limit=2 if regional else 8
     if audit_candidate_limit is not None:
         if not regional or audit_candidate_limit not in (2,4,8):
@@ -71,10 +76,21 @@ def calculate_geographic(payload, *, audit_candidate_limit=None):
     start=local(payload['start']['latitude'],payload['start']['longitude'])
     target=local(payload['target']['latitude'],payload['target']['longitude'])
     shape=obstacle(payload.get('margin_m',2))
-    request=demo_request(scenario=payload.get('scenario','baseline'))
-    snapshot=land.load_land(margin_m=payload.get('margin_m',2)) if regional else None
     if regional:
-        request=replace(request,dataset=synthetic_snapshot(payload.get('scenario','baseline'),regional=True))
+        if payload.get('scenario','baseline') != 'baseline':
+            raise ValueError('Verkligt väder ersätts aldrig med syntetiska marina scenarier')
+        dataset,config,evidence=load_development_weather()
+        request=PlanRequest(dataset=dataset,
+            planning_time=datetime.fromisoformat(config['planning_time'].replace('Z','+00:00')),
+            departures=(datetime.fromisoformat(config['departure'].replace('Z','+00:00')),),
+            position=start,target=target,candidates=(RouteCandidate('direct'),),
+            boat=ConstantBoat(config['boat_speed_knots']),
+            weather_policy=WeatherPolicy(payload.get('max_wind_m_s') if payload.get('max_wind_m_s') is not None else config['max_wind_m_s'],
+                                         payload.get('max_wave_height_m') if payload.get('max_wave_height_m') is not None else config['max_wave_height_m']),
+            forecast_policy=ForecastPolicy(config['max_age_seconds']),max_comfort_extra_seconds=300)
+    else:
+        request=demo_request(scenario=payload.get('scenario','baseline'))
+    snapshot=land.load_land(margin_m=payload.get('margin_m',2)) if regional else None
     shapes=snapshot.obstacles if regional else (shape,)
     waypoints=8 if regional else 4
     offsets=payload.get('departure_offsets_seconds',[0,600])
@@ -83,6 +99,13 @@ def calculate_geographic(payload, *, audit_candidate_limit=None):
                     departures=tuple(request.departures[0]+timedelta(seconds=o) for o in offsets),
                     max_candidates=candidate_limit,max_waypoints=waypoints,max_steps=2000,max_seconds=1800,
                     step_seconds=30 if regional else 10,tolerance_m=.01)
+    if regional:
+        sampled=request.dataset.evaluate(start,request.departures[0])
+        start_weather={'time':request.departures[0].isoformat(),
+                       'wind_m_s':sampled.wind.speed if sampled.wind is not None else None,
+                       'current_m_s':sampled.current.speed if sampled.current is not None else None,
+                       'wave_height_m':sampled.waves.height_m if sampled.waves is not None else None,
+                       'wave_period_seconds':sampled.waves.period_seconds if sampled.waves is not None else None}
     raw=json.loads(run_obstacle_plan(request,SearchPolicy(clearance_m=5,max_candidates=candidate_limit,
                                                         max_waypoints=waypoints,max_expansions=1000,max_nodes=26 if regional else 10)))
     features=[]; alternatives=[]
@@ -92,7 +115,7 @@ def calculate_geographic(payload, *, audit_candidate_limit=None):
             for route in report['candidates']:
                 identifier=f'{index}-{route["candidate"]["name"]}'
                 props={key:route[key] for key in ('status','reason','travel_seconds','arrival_time','comfort_exposure','weather_segment_status','arrival_weather_status')}
-                props.update({'id':identifier,'candidate':route['candidate']['name'],
+                props.update({'qualification':'conditional_on_assumptions' if regional else 'synthetic_reference', 'id':identifier,'candidate':route['candidate']['name'],
                               'departure_time':departure['departure_time'],
                               'fastest':route['candidate']['name']==report['fastest_candidate'],
                               'comfortable':route['candidate']['name']==report['comfortable_candidate']})
@@ -106,24 +129,27 @@ def calculate_geographic(payload, *, audit_candidate_limit=None):
     land_metadata=json.loads(snapshot.source_geojson)['metadata'] | {'sha256':snapshot.sha256} if regional else None
     identity=digest({'routing_input_sha256':raw['input_sha256'],'land_snapshot_sha256':snapshot.sha256,
                      'projection':projection,'geographic_algorithm':'vinga-aeqd-geojson-v1'}) if regional else raw['input_sha256']
-    return {'synthetic':True,'profile':'vinga' if regional else 'synthetic','projection':projection,'geometry_search':raw['geometry_search'],
+    return {'synthetic':not regional,'profile':'vinga' if regional else 'synthetic','projection':projection,'geometry_search':raw['geometry_search'],
             'land':land_metadata,'depth_status':'unknown','navigational_safety':'not_assessed',
-            'data_quality':{'weather':'synthetic_estimated','boat':'synthetic_estimated','land':'unknown' if regional else 'synthetic_estimated'},
+            'data_quality':{'weather':'real_frozen_with_assumptions' if regional else 'synthetic_estimated','boat':'estimated','land':'unknown' if regional else 'synthetic_estimated'},
+            **({'weather_provenance':evidence,'weather_at_start':start_weather,'result_qualification':'conditional_on_assumptions',
+                 'selected_weather_limits':{'wind_m_s':request.weather_policy.max_wind_m_s,'wave_height_m':request.weather_policy.max_wave_height_m}} if regional else {}),
             'input_sha256':identity,'planning':raw['planning'],'routes':collection(features),
             'alternatives':alternatives,'obstacles':collection([f for p in shapes for f in obstacle_geometry(p,convert)['features']]),
-            'notice':raw['limitations']+' Syntetiskt väder, uppskattad polar och syntetisk komfort. Djup och landfullständighet är okända. Ej navigationssäkert.'}
+            'notice':raw['limitations']+(' Verkliga historiska MET/WAV/PHY-data 2026-10-13; beräknad med uttryckliga utvecklingsantaganden, uppskattad konstantfartsbåt och ej validerat komfortmått.' if regional else ' Syntetiska referensdata.')+' Djup och landfullständighet är okända. Ej navigationssäkert.'}
 
 
 def regional_scene():
-    request=demo_request(); dataset=synthetic_snapshot(regional=True)
+    dataset,config,evidence=load_development_weather()
     snapshot=land.load_land(margin_m=10)
-    corners=(Vector(-700,-420),Vector(520,-420),Vector(520,420),Vector(-700,420),Vector(-700,-420))
-    return {'synthetic':True,'profile':'vinga','dataset_version':dataset.version,'dataset_id':dataset.dataset_id,
-            'planning_time':request.planning_time.isoformat(),'departure':request.departures[0].isoformat(),
-            'start':land.to_geo(Vector(-690,0)),'target':land.to_geo(Vector(515,0)),'projection':land.metadata(),
+    corners=(Vector(-450,-420),Vector(520,-420),Vector(520,420),Vector(-450,420),Vector(-450,-420))
+    return {'synthetic':False,'profile':'vinga','dataset_version':dataset.version,'dataset_id':dataset.dataset_id,
+            'planning_time':config['planning_time'],'departure':config['departure'],
+            'weather_provenance':evidence,'weather_limits':{'max_wind_m_s':config['max_wind_m_s'],'max_wave_height_m':config['max_wave_height_m']},
+            'start':land.to_geo(Vector(300,-400)),'target':land.to_geo(Vector(300,400)),'projection':land.metadata(),
             'coverage':collection([feature({'type':'Polygon','coordinates':[[land.to_geo(p) for p in corners]]},{'kind':'forecast_coverage','quality':'estimated'})]),
             'obstacles':collection([f for p in snapshot.obstacles for f in obstacle_geometry(p,land.to_geo)['features']]),
             'land_display':json.loads(snapshot.source_geojson),'land':json.loads(snapshot.source_geojson)['metadata'] | {'sha256':snapshot.sha256},
             'depth_status':'unknown','navigational_safety':'not_assessed','default_margin_m':10,
             'limits':{'max_candidates':2,'max_departures':2,'margin_m':[0,10]},
-            'notice':'Vinga: fryst OSM-land, syntetiskt väder (planeringstid 2026-01-01, ej aktuell prognos) och uppskattad båt. Djup och landfullständighet okända. Ej navigationssäkert.'}
+            'notice':'Vinga: verkliga frysta MET-vind- och Copernicus-våg-/strömdata 2026-10-13. Historisk ruttjämförelse med uttryckliga antaganden och uppskattad konstantfartsbåt. Djup och landfullständighet okända. Ej navigationssäkert.'}

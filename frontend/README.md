@@ -1,4 +1,15 @@
-# Offlinevisning för granskning
+# Grafisk ruttjämförelse med verkliga data
+
+Standard är nu Vinga med verklig fryst MET-vind samt Copernicus-vågor/ström och
+uttryckliga utvecklingsantaganden. Öppna den självförsörjande visningen i
+`artifacts/real-route-review/index.html`, eller se
+[utvecklingsflödet](../docs/development-real-routing.md) för kartklick och egen
+ruttberäkning. Inga syntetiska marina ersättningsvärden används i standardflödet.
+
+Historiska underlag, antaganden och okänd källkvalificering redovisas tydligt.
+Syntetiska referensfall nedan finns kvar för regressionstester.
+
+# Syntetiska referensfall för tester
 
 `make check` verifierar lokala HTML/CSS-resurser och Python-tester för rapport,
 export, säker textåtergivning och kontrollstatus. Den statiska rapportens åtta tester ligger i tests/test_scenario_html.py.
@@ -34,9 +45,10 @@ lågprioriterat. Ingen GPS, övervakning eller kollisionsrådgivning ingår.
 
 ## Interaktiv geografisk teknisk demo
 
-`npm run build` genererar endast publika filer i dist/. Kör sedan från repo:
+`npm run build` genererar endast publika filer i dist/. Generera också regionala
+bundlet med `.venv/bin/python -B -m scripts.land_preview --bundle --output frontend/land-dist`. Kör sedan från repo:
 `.venv/bin/python -B -m scripts.local_demo` och öppna http://127.0.0.1:8765/.
 Kartklick → FastAPI-jobb → beräknad GeoJSON → planerad GPX. Leaflet distribueras
-lokalt; bakgrund och alla prognos-/hinderdata är syntetiska. `npm test` provar
+lokalt; standardprofilen använder verkliga prognosgrid och fryst OSM-land, med explicit konfigurerade metadataantaganden. `npm test` provar
 flödet med verkligt loopback-API och Leaflet i jsdom, inte en visuell browseraudit.
 Se docs/geographic-api-demo.md och deployment/README.md; inget publiceras automatiskt.

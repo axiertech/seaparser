@@ -7,7 +7,7 @@ from .polygon import Polygon, xy
 from .routes import RouteCandidate
 
 SCOPE = ('Endast enkla vägar i grafen av start/mål och utvidgade polygonboxhörn. '
-         'Geometrisk längd ordnar sökningen, inte väderrestid. Ingen global optimalitet; '
+         'A* med euklidiskt kvaravstånd ordnar geometrisk längd, inte väderrestid. Ingen global optimalitet; '
          'inga tidsberoende tillstånd slås ihop. Ingen automatisk kryss eller väntan.')
 
 
@@ -75,9 +75,9 @@ def generate_routes(position, target, obstacles, policy=SearchPolicy()):
                 if not isfinite(length):
                     raise ValueError('Geometrisk längd utanför numeriskt stöd')
                 graph[i].append((j,length)); graph[j].append((i,length))
-    queue = [(0.0,(0,))]; candidates=[]; lengths=[]; expansions=0; depth_cut=False
+    queue = [((target-position).speed,(0,),0.0)]; candidates=[]; lengths=[]; expansions=0; depth_cut=False
     while queue and expansions < policy.max_expansions and len(candidates) < policy.max_candidates:
-        length,path = heappop(queue); expansions += 1
+        _,path,length = heappop(queue); expansions += 1
         if path[-1] == 1:
             candidates.append(RouteCandidate('auto-'+str(len(candidates)),tuple(nodes[i] for i in path[1:-1])))
             lengths.append(length)
@@ -91,7 +91,7 @@ def generate_routes(position, target, obstacles, policy=SearchPolicy()):
             new_length=length+distance
             if not isfinite(new_length):
                 raise ValueError('Geometrisk längd utanför numeriskt stöd')
-            heappush(queue,(new_length,(*path,next_node)))
+            heappush(queue,(new_length+(target-nodes[next_node]).speed,(*path,next_node),new_length))
             # Memory is bounded independently of how many entries have been popped.
             if len(queue) >= policy.max_expansions:
                 return GeneratedRoutes('search_limit',tuple(candidates),tuple(lengths),expansions,len(nodes),True,policy,limit_reason='queue_budget')

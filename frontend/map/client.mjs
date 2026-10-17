@@ -3,9 +3,9 @@ async function json(response) {
   if (!response.ok) throw new Error(`API svarade ${response.status}`);
   return response.json();
 }
-export async function loadScene(fetcher = fetch, profile = 'synthetic') {
+export async function loadScene(fetcher = fetch, profile = 'vinga') {
   if (!['synthetic', 'vinga'].includes(profile)) throw new Error('Okänd region');
-  return json(await fetcher(profile === 'synthetic' ? '/api/scene' : '/api/scene?profile=vinga'));
+  return json(await fetcher('/api/scene?profile=' + profile));
 }
 export async function plan(payload, { fetcher = fetch, pause = ms => new Promise(resolve => setTimeout(resolve, ms)), signal } = {}) {
   const created = await json(await fetcher('/api/plans', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal }));

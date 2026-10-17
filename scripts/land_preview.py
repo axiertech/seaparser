@@ -18,10 +18,7 @@ def build(output):
     regional_html=regional_html.replace('<html lang="sv">','<html lang="sv" data-profile="vinga">')
     regional_html=regional_html.replace("img-src 'self' data:;","img-src 'self' data: https://tile.openstreetmap.org;")
     regional_html=regional_html.replace('<title>', '<meta name="referrer" content="strict-origin-when-cross-origin"><title>')
-    regional_html=regional_html.replace('Uppskattade syntetiska prognoser, båtdata och hinder.', 'Vinga: fryst OSM-land, uppskattad båt och syntetiskt väder. Djup och landfullständighet okända. Ej navigationssäkert.')
-    regional_html=regional_html.replace('Syntetiskt prognosområde: cirka 200 × 100 meter kring 58°N, 11°E.', 'Fryst syntetiskt väderområde: 1220 × 840 meter kring Vinga, 57.633°N 11.605°E.')
-    regional_html=regional_html.replace('Polygon: syntetiskt hinder; linje runt kanten visar marginal.', 'Orange landringar: OSM. Polygonhöljen: konservativt routingsunderlag. Kantlinjens bredd visar ungefärlig vald marginal vid aktuell skala; motorn använder exakt avstånd i lokala meter.')
-    regional_html=regional_html.replace('Bakgrund: lokalt syntetiskt översiktslager, inga sjökort eller verkliga kartbilder.', '<button id="background" type="button">Aktivera separat OSM-bakgrund</button> Bakgrunden är valfri, ingen tile-prefetch. <a href="land.geojson">Fryst landunderlag, ODbL-attribution och version</a>.')
+    regional_html=regional_html.replace('Bakgrund: fryst OSM-land och lokalt översiktslager, inga officiella sjökort.', '<button id="background" type="button">Aktivera separat OSM-bakgrund</button> Bakgrunden är valfri, ingen tile-prefetch. <a href="land.geojson">Fryst landunderlag, ODbL-attribution och version</a>.')
     (output/'vinga.html').write_text(regional_html)
     (output/'land.geojson').write_text(snapshot.source_geojson)
     (output/'routing.geojson').write_text(json.dumps(routing))
@@ -33,9 +30,9 @@ def build(output):
 <p>Granskningsverktyg, inte navigationsunderlag. Djup och landkällans fullständighet: okända.
 Orange: OSM-landringar. Rött: konservativa konvexa routinghöljen med 10 m marginal i motorn.
 Höljen kan stänga vikar och passager. Kartbilder används aldrig av ruttmotorn.</p>
-<p>Den syntetiska planeringsdemonstrationen är oförändrad. Ingen väderrutt beräknas på denna sida.</p>
+<p>Denna sida granskar bara landgeometri. Länken till regional planering använder verkliga väderdata och redovisade utvecklingsantaganden.</p>
 <button id="background">Aktivera OSM-bakgrund för manuell granskning</button>
-<p><a href="land.geojson">Fryst ODbL-landunderlag och källmetadata</a> · <a href="routing.geojson">Routinghöljen</a> · <a href="index.html">Syntetiskt regressionstest</a> · <a href="vinga.html">Regional planering med syntetiskt väder</a></p>
+<p><a href="land.geojson">Fryst ODbL-landunderlag och källmetadata</a> · <a href="routing.geojson">Routinghöljen</a> · <a href="index.html">Utvecklingsplanering</a> · <a href="vinga.html">Regional planering med verkliga väderdata</a></p>
 <div id="map" style="height:65vh"></div><script src="vendor/leaflet.js"></script><script type="module" src="land-review.mjs"></script></html>''')
     (output/'land-review.mjs').write_text((Path(__file__).resolve().parents[1]/'frontend/map/land-review.mjs').read_text())
 

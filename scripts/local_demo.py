@@ -6,7 +6,7 @@ import uvicorn
 from api.main import create_app
 
 
-def review_app(profile='synthetic'):
+def review_app(profile='vinga'):
     if profile not in ('synthetic','vinga'):
         raise ValueError('Okänd granskningsprofil')
     directory=Path(__file__).resolve().parents[1]/'frontend'/('land-dist' if profile=='vinga' else 'dist')
@@ -21,7 +21,7 @@ def regional_app():
 
 def main():
     parser=argparse.ArgumentParser()
-    parser.add_argument('--profile',choices=('synthetic','vinga'),default='synthetic')
+    parser.add_argument('--profile',choices=('synthetic','vinga'),default='vinga')
     parser.add_argument('--port',type=int,default=8765)
     args=parser.parse_args()
     if not 0<=args.port<=65535:

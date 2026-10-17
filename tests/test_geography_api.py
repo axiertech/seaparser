@@ -47,8 +47,8 @@ class ApiTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.store=JobStore();self.app=create_app(self.store)
         self.client=httpx.AsyncClient(transport=httpx.ASGITransport(app=self.app),base_url='http://test')
-        s=scene();a,b=s['start'],s['target']
-        self.payload={'start':{'latitude':a[1],'longitude':a[0]},'target':{'latitude':b[1],'longitude':b[0]},'departure_offsets_seconds':[0]}
+        s=scene('synthetic');a,b=s['start'],s['target']
+        self.payload={'profile':'synthetic','start':{'latitude':a[1],'longitude':a[0]},'target':{'latitude':b[1],'longitude':b[0]},'departure_offsets_seconds':[0]}
 
     async def asyncTearDown(self):
         await self.store.close();await self.client.aclose()

@@ -47,6 +47,7 @@ class ProductMetadata:
     license_url: str | None = None
     source_sha256: str | None = None
     planning_blockers: tuple[str, ...] = ()
+    assumed_fields: tuple[str, ...] = ()
 
     def __post_init__(self):
         specs = {'wind': (('m/s', 'm/s'), 'ground-to-true-east-north'),
@@ -71,6 +72,10 @@ class ProductMetadata:
         if any(not isinstance(value, str) or not value.strip() for value in blockers):
             raise ValueError('Planeringsblockerare kräver explicita orsaker')
         object.__setattr__(self, 'planning_blockers', blockers)
+        assumed=tuple(self.assumed_fields)
+        if any(not isinstance(v,str) or not v.strip() for v in assumed):
+            raise ValueError('Antagna metadatafält kräver explicita namn')
+        object.__setattr__(self,'assumed_fields',assumed)
         for name in ('source_url', 'license_url', 'source_sha256'):
             value = getattr(self, name)
             if value is not None and (not isinstance(value, str) or not value.strip()):

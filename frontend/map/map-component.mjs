@@ -33,7 +33,7 @@ export function createMap(L, element, scene, onPick) {
     marginHandler = drawMargin; map.on('zoomend', drawMargin); drawMargin();
     const selected = { type: 'FeatureCollection', features: result.routes.features.filter(f => identifier === null || f.properties.id === identifier) };
     L.geoJSON(selected, {
-      style: feature => ({ color: feature.properties.kind === 'accepted' ? '#087156' : '#6c59a3', weight: feature.properties.kind === 'accepted' ? 4 : 2, dashArray: feature.properties.kind === 'planned' ? '6 5' : null }),
+      style: feature => ({ color: feature.properties.kind === 'accepted' ? (feature.properties.qualification === 'conditional_on_assumptions' ? '#b78023' : '#087156') : '#6c59a3', weight: feature.properties.kind === 'accepted' ? 4 : 2, dashArray: feature.properties.kind === 'planned' ? '6 5' : null }),
       pointToLayer: (feature, latlng) => L.circleMarker(latlng, { radius: feature.properties.kind === 'waypoint' ? 4 : 2, color: '#66538c' }),
       onEachFeature: (feature, layer) => { const label = document.createElement('span'); label.textContent = `${feature.properties.candidate}: ${feature.properties.status}`; layer.bindTooltip(label); }
     }).addTo(routes);

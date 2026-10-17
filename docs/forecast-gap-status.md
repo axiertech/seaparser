@@ -1,6 +1,13 @@
 # Regional prognos: aktuell gapöversikt 2026-10-17
 
-Detta är aktuell arbetsordning efter metadata-/transportgranskningen, inte ett
+Utvecklingsflödet använder nu verklig vind/vågor/ström som standard och kan
+beräkna rutter med uttryckliga [konfigurerade antaganden](development-real-routing.md).
+Det följer användarbeslutet 2026-10-17. Nedanstående gap gäller fortsatt
+**källkvalificering**, inte ett generellt förbud mot den villkorade
+utvecklingsberäkningen. Saknade/ogiltiga värden, faktisk täckning, land och hårda
+vädergränser får inte antas bort.
+
+Detta är arbetsordning för metadata-/källkvalificering, inte ett
 kvalificeringsbeslut. Äldre försöksresultat i forecast-blockers.md är historik.
 RegionalForecastInputs har verklig fryst native vind och marina produkter;
 inspect_regional_inputs ger fortfarande data_unavailable och inga kandidater.

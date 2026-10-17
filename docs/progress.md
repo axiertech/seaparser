@@ -2743,3 +2743,81 @@ time-axis guard, including rejection of fractional timestamps instead of
 rounding into false matches. Final real-file comparison remained identical.
 Syntax parsing and git diff --check passed. No dependency installation, live
 DB, public deployment or additional weather download was involved.
+
+
+## 2026-10-17: Default real MET/WAV/PHY route comparison with explicit development assumptions
+
+User explicitly authorized joint development routing with real wind, waves and
+current, configured assumptions for missing source metadata, and separation of
+verified evidence from assumptions. The single development environment remains;
+no synthetic marine replacement scenario, purchases, new fetches, DB or public
+deployment are included.
+
+Standard Vinga API/scene/client/local-server now uses the existing frozen real
+MET native wind and Copernicus WAV/PHY snapshots, with actual common validity
+2026-10-13 12–16 UTC. Historical data are clearly labeled; the October 17 WAV
+snapshot was not retimed or mixed with older wind/current. Each comparison
+uses identical immutable inputs. configuration in
+settings/development-weather-assumptions.json requires named explanations for
+issuance/run compatibility, native wind geometry/frame/mask/averaging and
+marine mask/time-support assumptions. Unknown new blockers are not generically
+ignored. Raw source metadata/strict adapters stay unchanged, while conditional
+product copies mark assumed_fields and the original null issuance is retained
+in weather_provenance. Every route and manifest says conditional_on_assumptions;
+source qualification stays unverified. GPX and UI preserve these distinctions.
+
+Native wind stays on its original grid, with full-area support enclosure and
+conservative actual source-component bounds. Marine grids keep their own masks,
+missing nodes and continuous segment checks. Actual data outside coverage,
+invalid values, land/selected margin, chosen wind/Hs limits and arrival checks
+still reject a route. The existing test sail polar does not cover the actual
+wind strength; the explicit estimated constant-speed model defaults to 5 knots,
+without fabricating a new polar or marine weather values. Comfort remains an
+unvalidated exposure metric.
+
+The old default western start lay outside actual marine support. The graphical
+case now runs from Vinga local (300,-400) to (300,400), around real frozen land.
+Uniform-cost geometry enumeration exhausted its queue before reaching the new
+detours. Replaced queue ordering with admissible Euclidean A*, preserving full
+simple paths, both alternatives and the same 1000 queue/expansion, 26 node,
+2 candidate and 8 waypoint budgets. It finds two candidates in 47 expansions;
+subsequent real-weather integration yields four arrived alternatives for 12:00
+and 12:10 departures. Typical model travel time is about 356 seconds. Both
+objectives select auto-0 in this actual case; no synthetic variation was added
+to force a different winner.
+
+Concrete visible artifact: artifacts/real-route-review/index.html, portable,
+self-contained interactive SVG/card comparison with actual start weather and
+all assumption explanations. Matching full result.json, source hashes and
+configuration hash are included. Existing Leaflet UI supports new endpoint
+choices and selected real weather limits; its default cannot switch to a
+synthetic marine scenario. Explicit synthetic profile/reference tests remain.
+See docs/development-real-routing.md for reproduction and limits.
+
+Validation so far: real-value reference assertions, deterministic actual four-
+route result/artifact reproduction, absent-assumption rejection, missing/NaN
+marine nodes, native/marine space-time limits, lower wind and Hs rejection,
+land endpoints/full segments, and unchanged analytic synthetic routing cases.
+Local frontend API/Leaflet/GPX flow passed all 14 existing tests after making
+the synthetic reference scene query explicit; the new offline graphic DOM test
+also passed. Sandbox cannot bind the loopback API, so the integration run used
+authorized local TCP outside the sandbox, without publication. Full Python
+check results and final exact-commit CI are reported on completion below.
+
+
+Final local validation: scripts.check passed 160 domain and 281 integration
+cases. After the final native-source hash clarification and unknown-new-wind-
+blocker guard, all 7 focused real-weather/coverage/mask/assumption/artifact tests
+passed. Frontend check passed; all 15 final frontend tests passed, including
+loopback API/Leaflet/GPX and the standalone SVG selection/reset test. The real
+artifact reproduces byte for byte from current frozen inputs/configuration;
+its four routes arrive in 355.715161, 356.460378, 356.039849 and 356.786339 s.
+Actual start values: wind 12.94228595093238 m/s, current 0.372219587341769 m/s,
+Hs 1.1409889496350858 m, Tm02 2.873840543144118 s. Config/selected weather limits
+and each raw source hash remain in the report. Diff and targeted secret checks
+passed. No publication or new weather download was performed.
+
+Release step: reviewed commit to development/real-map-data and exact-commit CI.
+Next product work: improve source qualification/temporal semantics and boat
+performance while keeping the usable real-data development comparison visible;
+metadata evidence and assumptions must continue to be distinguished.

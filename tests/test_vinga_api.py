@@ -1,4 +1,4 @@
-"""Regional HTTP/process acceptance; real land + estimated frozen weather."""
+"""Regional HTTP/process acceptance; real land and real wind/waves/current, explicit metadata assumptions."""
 import asyncio
 from datetime import datetime,timedelta
 import unittest
@@ -7,7 +7,7 @@ import httpx
 from api.main import create_app
 from infrastructure.planning_jobs import JobStore
 from infrastructure.land import load_land,to_local
-from infrastructure.synthetic_forecast import synthetic_snapshot,PLAN
+from prototype.model import Vector
 from application.geographic_plan import scene
 
 
@@ -40,7 +40,7 @@ class VingaApiTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result['land']['completeness'],'unknown')
         self.assertEqual(result['depth_status'],'unknown')
         self.assertEqual(result['navigational_safety'],'not_assessed')
-        self.assertEqual(result['planning']['manifest']['dataset_id'],'seaparser-estimated-vinga-weather')
+        self.assertEqual(result['planning']['manifest']['dataset_id'],'seaparser-real-meteo-marine')
         shapes=load_land(margin_m=10).obstacles
         start=to_local(**self.payload['start']); target=to_local(**self.payload['target'])
         self.assertTrue(any(p.intersects(start,target) for p in shapes))
@@ -79,9 +79,12 @@ class VingaApiTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(xml.findall('.//g:extensions',ns))
         self.assertIn('Ej navigationssäkert', description)
 
-    async def test_weather_and_gap_rejections_export_denied(self):
-        for scenario,status in (('weather-limit','weather_limit'),('missing-waves','data_unavailable')):
-            key,result=await self.finished(self.payload|{'scenario':scenario})
+    async def test_real_weather_limit_and_coverage_rejections_export_denied(self):
+        from infrastructure.land import to_geo
+        lon,lat=to_geo(Vector(-680,-400))
+        for change,status in (({'max_wind_m_s':10.0},'weather_limit'),
+                              ({'start':{'latitude':lat,'longitude':lon}},'data_unavailable')):
+            key,result=await self.finished(self.payload|change)
             self.assertTrue(result['alternatives'])
             self.assertTrue(all(r['status']==status for r in result['alternatives']))
             identifier=result['alternatives'][0]['id']
@@ -98,15 +101,17 @@ class VingaApiTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(response.status_code,422)
         self.assertEqual(self.store.jobs,{})
 
-    def test_regional_forecast_is_frozen_and_traceable(self):
-        dataset=synthetic_snapshot(regional=True)
-        self.assertEqual(dataset.version,'vinga-v1-baseline')
-        self.assertEqual(dataset.dataset_id,'seaparser-estimated-vinga-weather')
-        for product in dataset.products:
-            self.assertLess(product.metadata.issued_at,PLAN)
-            self.assertEqual(product.metadata.coverage.origin_latitude,57.633)
-            self.assertEqual(product.metadata.coverage.origin_longitude,11.605)
-            self.assertIn('syntetiska',product.metadata.source)
+    async def test_default_uses_frozen_real_sources_and_marks_assumptions(self):
+        from application.development_weather import load_development_weather
+        dataset,config,evidence=load_development_weather()
+        self.assertEqual(dataset.dataset_id,'seaparser-real-meteo-marine')
+        self.assertFalse(self.scene['synthetic'])
+        self.assertTrue(evidence['historical_snapshot'])
+        self.assertIsNone(evidence['actual_source_issued_at']['waves'])
+        for product in dataset.product_metadata:
+            self.assertIn('issued_at',product.assumed_fields)
+            self.assertTrue(product.source_sha256)
+            self.assertNotIn('syntetiska',product.source)
 
     async def test_land_endpoint_is_rejected_without_navigability_claim(self):
         key,result=await self.finished(self.payload|{'start':{'latitude':57.633,'longitude':11.605}})

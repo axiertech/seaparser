@@ -15,15 +15,15 @@ def create_app(store=None):
     async def lifespan(app):
         yield
         await jobs.close()
-    app=FastAPI(title='SeaParser synthetic planning demo',lifespan=lifespan,docs_url=None,redoc_url=None)
+    app=FastAPI(title='SeaParser utvecklingsplanering med verkliga väderdata',lifespan=lifespan,docs_url=None,redoc_url=None)
     app.add_middleware(BodyLimit)
 
     @app.get('/api/health')
     async def health():
-        return {'status':'ok','synthetic':True}
+        return {'status':'ok','synthetic':False}
 
     @app.get('/api/scene')
-    async def get_scene(profile:Literal['synthetic','vinga']='synthetic'):
+    async def get_scene(profile:Literal['synthetic','vinga']='vinga'):
         return scene(profile)
 
     @app.post('/api/plans',status_code=202)

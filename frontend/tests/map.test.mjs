@@ -58,6 +58,7 @@ for (const profile of process.env.SEAPARSER_DEMO_URL && process.env.SEAPARSER_DE
       }
     }
     const dom = new JSDOM(html, { url: api.url, pretendToBeVisual: true });
+    dom.window.document.documentElement.dataset.profile = profile;
     globalThis.window = dom.window; globalThis.document = dom.window.document;
     Object.defineProperty(globalThis, 'navigator', { value: dom.window.navigator, configurable: true });
     dom.window.SVGSVGElement.prototype.createSVGRect = () => ({});
@@ -96,17 +97,14 @@ for (const profile of process.env.SEAPARSER_DEMO_URL && process.env.SEAPARSER_DE
     assert.ok(Number(xml.querySelector('rtept').getAttribute('lat')) > 57);
     if (profile === 'vinga') {
       assert.match(xml.querySelector('metadata desc').textContent, /Ej navigationssäkert/);
-      assert.match(document.getElementById('provenance').textContent, /seaparser-estimated-vinga-weather/);
+      assert.match(document.getElementById('provenance').textContent, /seaparser-real-meteo-marine/);
       assert.match(document.getElementById('provenance').textContent, /"depth": "unknown"/);
-      document.getElementById('scenario').value = 'weather-limit';
+      document.getElementById('wind-limit').value = '10';
       document.getElementById('plan-form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
       await until(() => document.querySelector('.route.exceeded'), 25000);
       assert.equal(document.querySelectorAll('a[download]').length, 0);
-      document.getElementById('scenario').value = 'missing-waves';
-      document.getElementById('plan-form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
-      await until(() => document.querySelector('.route.unknown'), 25000);
-      assert.equal(document.querySelectorAll('a[download]').length, 0);
-      assert.match(document.getElementById('results').textContent, /Otillräckliga data/);
+      assert.match(document.getElementById('assumptions').textContent, /Utfärdandetid antas/);
+      assert.equal(document.getElementById('scenario-label').hidden, true);
     }
     // Changing any input must remove stale results and the old export link.
     document.getElementById('margin').value = '3';
@@ -119,6 +117,7 @@ for (const profile of process.env.SEAPARSER_DEMO_URL && process.env.SEAPARSER_DE
 test('endast fullständigt verifierad ankomst är grön; hårt väderfel rött', () => {
   const safe = { status: 'arrived', weather_segment_status: 'verified', arrival_weather_status: 'passed_at_arrival' };
   assert.equal(category(safe), 'verified');
+  assert.equal(category({ ...safe, qualification: 'conditional_on_assumptions' }), 'assumed');
   assert.equal(category({ ...safe, arrival_weather_status: 'not_checked' }), 'unknown');
   assert.equal(category({ ...safe, weather_segment_status: 'unverified' }), 'unknown');
   assert.equal(category({ status: 'weather_limit' }), 'exceeded');

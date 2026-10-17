@@ -12,15 +12,20 @@ class Position(BaseModel):
 
 class PlanInput(BaseModel):
     model_config=ConfigDict(extra='forbid',strict=True,allow_inf_nan=False)
-    profile: Literal['synthetic','vinga']='synthetic'
+    profile: Literal['synthetic','vinga']='vinga'
     start: Position
     target: Position
     margin_m: float=Field(default=2,ge=0,le=10)
     departure_offsets_seconds: list[int]=Field(default=[0,600],min_length=1,max_length=2)
     scenario: Literal['baseline','weather-limit','unverified','missing-waves']='baseline'
 
+    max_wind_m_s: float | None=Field(default=None,ge=0,le=100)
+    max_wave_height_m: float | None=Field(default=None,ge=0,le=30)
+
     @model_validator(mode='after')
     def departures(self):
+        if self.profile=='vinga' and self.scenario != 'baseline':
+            raise ValueError('Vinga använder verkligt väder; syntetiska marina scenarier är bara referenstester')
         local=vinga_local if self.profile=='vinga' else to_local
         for p in (self.start,self.target):
             local(p.latitude,p.longitude)

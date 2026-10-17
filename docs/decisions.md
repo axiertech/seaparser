@@ -306,3 +306,20 @@ Tm02 förblir saknad. Regional planering avvisas innan motorn. Native gridimport
 är nästa steg, med mask, köridentitet och faktiska referensramar/djup. Inga konton
 eller köp görs. Offlineaudit kan jämföra kandidatbudget 2/8, men API:s budget
 och publika syntetiska demo ändras inte.
+
+
+## 2026-10-17: Verkliga data som standard med explicita utvecklingsantaganden
+
+Användaren tillåter gemensam utvecklingsberäkning med verklig vind, vågor och
+ström där saknad källmetadata hanteras med uttryckliga konfigurerade antaganden.
+Det ersätter tidigare krav på full källkvalificering före varje utvecklingsrutt,
+men kvalificerar inga källuppgifter. Originalens okända run/issued_at bevaras;
+konfiguration, resultat och normaliserade produktmetadata skiljer antaganden
+från källästa uppgifter. Ingen separat syntetisk marin demonstrationsserie byggs.
+
+Ogiltiga värden, verklig rumtids-/interpolationstäckning, landhinder, valda hårda
+vädergränser och ankomstkontroll är fortsatt avvisande. Syntetiska referensfall
+behålls som tester. Standardens grafiska Vinga-rutt använder frysta verkliga
+MET/WAV/PHY-filer med faktisk gemensam giltighet 2026-10-13 12–16 UTC; inget
+påstående om aktuell prognos. En uppskattad konstantfartsbåt används eftersom
+testsegelpolaren inte täcker den verkliga vindstyrkan. Se development-real-routing.md.

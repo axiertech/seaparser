@@ -83,3 +83,22 @@ infrastructure/ kör separata tidsbegränsade processer. application/geographic_
 återanvänder planering, presentation/gpx.py exporterar och frontend/map/
 skiljer layout, kartkomponent och transport. AEQD-transformering ligger utanför
 domänen. Ingen SQL eller offentlig API-deployment ingår. Se geographic-api-demo.md.
+
+
+## Verklig utvecklingsrouting med redovisade antaganden 2026-10-17
+
+Standardens geografiska Vinga-usecase komponerar frysta verkliga MET-native-
+vindnoder och befintliga WAV/PHY-grid. application/development_weather.py läser
+explicit utvecklingskonfiguration och bevarar källmetadata separat från antagna
+fält. infrastructure/development_forecast.py implementerar miljö-/segment-
+gränssnittet utan SQL, HTTP eller filåtkomst under ruttjämförelsen. Både
+produkternas assumed_fields och resultatets övergripande villkor finns med i
+proveniens och identitet. Råkällor och strikta granskningsrapporter ändras inte.
+
+MET samplas på native-grid; ingen gles omgridning till marinens 2x2-grid införs.
+Stöd och ett konservativt verkligt vindnodshölje förbereds före routing. Befintlig
+marin cell-/segmentkontroll återanvänds för ström och vågor. Domänens generella
+certifieringsfunktion kan välja waves separat vid denna komposition, medan
+standardanropet för GridProduct-baserade vind/vågfall är oförändrat. Källan får
+fortfarande status unverified även när modellgränserna uppfylls villkorligt.
+Se development-real-routing.md för parametrar, begränsningar och grafisk leverans.
