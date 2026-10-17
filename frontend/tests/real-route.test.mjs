@@ -45,3 +45,20 @@ test('utökad jämförelse visar 16 alternativ, budget, samma vinnare och klickb
     assert.ok(!/\b(?:src|href)\s*=\s*["']https?:/i.test(html));
   } finally { dom.window.close(); }
 });
+
+test('rörelseramsgranskning visar fysisk fart separat från kartposition och markerar bana', () => {
+  const html = readFileSync(new URL('../../artifacts/motion-route-review/index.html', import.meta.url), 'utf8');
+  const dom = new JSDOM(html, { runScripts: 'dangerously' });
+  try {
+    const doc = dom.window.document;
+    assert.equal(doc.querySelectorAll('.card').length, 16);
+    assert.match(doc.body.textContent, /17 oktober 2026/);
+    assert.match(doc.body.textContent, /fysiska öst\/nord-hastigheter i m\/s/);
+    assert.match(doc.body.textContent, /positionens ändring/);
+    assert.match(doc.body.textContent, /inte kvalificerad navigation/);
+    assert.match(doc.body.textContent, /Beräknad med uttryckliga antaganden/);
+    const card = doc.querySelectorAll('.card')[5]; card.click();
+    assert.equal(doc.querySelector('[data-route][style*="opacity: 1"]').dataset.route, card.dataset.select);
+    assert.ok(!/\b(?:src|href)\s*=\s*["']https?:/i.test(html));
+  } finally { dom.window.close(); }
+});

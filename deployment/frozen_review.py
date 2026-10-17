@@ -22,22 +22,23 @@ ARTIFACT = ROOT / 'artifacts/vinga-frozen-review/index.html'
 
 
 def select_review(kind):
-    """Only two reviewed standalone destinations; never accept arbitrary paths."""
+    """Only fixed reviewed standalone destinations; never accept arbitrary paths."""
     global NAME, URL, ARTIFACT, REVIEW_KIND
-    if kind not in ('forecast', 'routes'):
+    if kind not in ('forecast', 'routes', 'routes-motion'):
         raise ValueError('Unknown standalone review')
     REVIEW_KIND=kind
-    NAME='vinga-ruttjamforelse.html' if kind=='routes' else 'vinga-prognosprov.html'
+    NAME={'forecast':'vinga-prognosprov.html','routes':'vinga-ruttjamforelse.html',
+          'routes-motion':'vinga-ruttjamforelse-ramar.html'}[kind]
     URL='https://seaparser.com/'+NAME
-    ARTIFACT=ROOT/('artifacts/real-route-review/index.html' if kind=='routes'
-                   else 'artifacts/vinga-frozen-review/index.html')
+    ARTIFACT=(ROOT/'artifacts'/({'forecast':'vinga-frozen-review','routes':'real-route-review',
+                    'routes-motion':'motion-route-review'}[kind]))/'index.html'
 
 
 REVIEW_KIND='forecast'
 
 
 def validate_page(data):
-    if REVIEW_KIND=='routes':
+    if REVIEW_KIND in ('routes','routes-motion'):
         result=json.loads(ARTIFACT.with_name('result.json').read_text())
         if (result.get('result_qualification')!='conditional_on_assumptions'
                 or result.get('data_quality',{}).get('weather')!='real_frozen_with_assumptions'
@@ -45,6 +46,8 @@ def validate_page(data):
                 or not result['weather_provenance'].get('assumptions')
                 or not result.get('alternatives')):
             raise ValueError('Historical real-route assumptions and alternatives required')
+        if REVIEW_KIND=='routes-motion' and result['weather_provenance'].get('motion_frame')!='wgs84-aeqd-proj-differential-v1':
+            raise ValueError('Motion review requires explicit physical/projected kinematics')
         if render_real_routes(result).encode()!=data:
             raise ValueError('Unexpected standalone route HTML/assets')
         return
@@ -83,7 +86,7 @@ def prepare(stage):
         ['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip(),
         'public_root': str(PUBLIC), 'url': URL, 'public_before': before,
         'public_files': {NAME: sha256(data).hexdigest()}, 'published': False,
-        'notice': 'Historical real-source routes with explicit assumptions' if REVIEW_KIND=='routes' else 'Historical raw forecast samples; routing remains unqualified'}
+        'notice': 'Historical real-source routes with explicit assumptions' if REVIEW_KIND in ('routes','routes-motion') else 'Historical raw forecast samples; routing remains unqualified'}
     (stage / 'manifest.json').write_text(json.dumps(manifest, indent=2, sort_keys=True) + '\n')
     return manifest
 
@@ -130,7 +133,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=('prepare', 'verify', 'publish'))
     parser.add_argument('stage', type=Path)
-    parser.add_argument('--review', choices=('forecast','routes'), default='forecast')
+    parser.add_argument('--review', choices=('forecast','routes','routes-motion'), default='forecast')
     args = parser.parse_args()
     select_review(args.review)
     try:

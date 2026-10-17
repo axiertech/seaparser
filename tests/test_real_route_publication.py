@@ -40,3 +40,21 @@ class RealRoutePublicationTests(unittest.TestCase):
         page=deploy.ARTIFACT.read_bytes()
         with self.assertRaises(ValueError):deploy.validate_page(page.replace(b'13 oktober 2026',b'aktuella data',1))
         with self.assertRaises(ValueError):deploy.validate_page(page.replace(b'Konfigurerade antaganden',b'Dolda antaganden',1))
+
+
+class MotionRoutePublicationTests(unittest.TestCase):
+    def test_motion_page_preserves_all_previous_pages(self):
+        deploy.select_review('routes-motion')
+        self.addCleanup(deploy.select_review,'forecast')
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);public=root/'public';public.mkdir();stage=root/'stage'
+            for name in ('index.html','vinga-prognosprov.html','vinga-ruttjamforelse.html'):
+                (public/name).write_text('preserved '+name)
+            before=deploy.tree_hashes(public)
+            with patch.object(deploy,'PUBLIC',public),patch.object(deploy.subprocess,'check_output',
+                 side_effect=lambda args,**kwargs:'' if 'status' in args else 'a'*40):
+                manifest=deploy.prepare(stage)
+                self.assertEqual(set(manifest['public_files']),{'vinga-ruttjamforelse-ramar.html'})
+                with patch.object(deploy,'atomic_public_copy',side_effect=lambda src,dst,attrs:shutil.copyfile(src,dst)):
+                    deploy.publish(stage)
+                self.assertEqual(deploy.tree_hashes(public),before|manifest['public_files'])

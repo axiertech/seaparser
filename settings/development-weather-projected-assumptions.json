@@ -1,0 +1,23 @@
+{
+  "mode": "development_assumptions",
+  "planning_time": "2026-10-17T01:00:00Z",
+  "departure": "2026-10-17T01:00:00Z",
+  "assumed_issued_at": "2026-10-17T00:00:00Z",
+  "max_age_seconds": 86400,
+  "support_radius_m": 900,
+  "max_wind_m_s": 18,
+  "max_wave_height_m": 3,
+  "boat_speed_knots": 5,
+  "assumptions": {
+    "model_issue_time_unverified": "Utfärdandetid antas enligt assumed_issued_at i konfigurationen för ålderskontroll; inte källverifierad.",
+    "cross_product_model_run_compatibility_unverified": "Frysta MET/WAV/PHY kombineras inom gemensamma giltigheter; körförenlighet antas, inte verifierad.",
+    "current_native_wet_mask_unverified": "Finita strömnoder antas giltiga där alla egna interpolationsnoder finns. Ingen vågmask överförs.",
+    "wind_native_geometry_unqualified": "Vinga WGS84-position till MET:s LCC-sfär antas användbar med 1 m stödsmarginal inom 900 m; datumekvivalens är inte källverifierad.",
+    "wind_vector_frame_unqualified": "MET:s FRÅN-riktning antas sann nord i WGS84:s lokala tangentrum. Vind, ström och båthastighet behålls som fysiska öst/nord-komponenter i m/s; endast positionens derivata avbildas till AEQD. Källans ram-/datumekvivalens är inte verifierad.",
+    "wind_validity_mask_unverified": "Finita native vindnoder med giltig styrka/riktning antas giltiga; landfraktion används inte som giltighetsmask.",
+    "wind_mean_window_unverified": "10-minutersvinden behandlas vid märkta giltigheter med linjär komponentinterpolation; medelfönstrets placering är antagen.",
+    "marine_time_support_unverified": "Producentens ursprungliga WAV-tidsetiketter och PHY-etiketter antas användbara för utvecklingsinterpolation. Fysisk tidsmedelsplacering och run-förenlighet är inte verifierade; ingen ARCO-offset tillämpas."
+  },
+  "source_bundle": "vinga-expanded-20261017",
+  "motion_frame": "wgs84-aeqd-proj-differential-v1"
+}

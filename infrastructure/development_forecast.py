@@ -99,3 +99,26 @@ class DevelopmentForecast:
             return WeatherSegmentCheck('verified',method='native-wind-envelope-and-marine-grid-v1',bounds=(*waves.bounds,bound))
         except ValueError as error:
             return WeatherSegmentCheck('unverified',str(error),failure_kind='data_unavailable')
+
+
+@dataclass(frozen=True)
+class ProjectedDevelopmentForecast(DevelopmentForecast):
+    """Explicit alternate composition; legacy snapshots/identities unchanged."""
+    def __post_init__(self):
+        super().__post_init__()
+        expected = {
+            'wind': (('m/s', 'm/s'), 'ground-to-true-east-north'),
+            'current': (('m/s', 'm/s'), 'ground-to-true-east-north'),
+            'waves': (('m', 's', '1', '1'), 'ground-from-true-east-north-tm02'),
+        }
+        for metadata in self.product_metadata:
+            if (metadata.units, metadata.reference_frame) != expected.get(metadata.product):
+                raise ValueError('Projected motion requires physical true E/N vectors and SI units')
+
+    def position_rate(self,position,physical_velocity):
+        from infrastructure.motion_frame import AeqdMotionFrame
+        return AeqdMotionFrame(self.support_radius_m).position_rate(position,physical_velocity)
+
+    def physical_direction(self,position,local_direction):
+        from infrastructure.motion_frame import AeqdMotionFrame
+        return AeqdMotionFrame(self.support_radius_m).physical_direction(position,local_direction)

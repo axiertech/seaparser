@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from functools import lru_cache
 
-from infrastructure.development_forecast import DevelopmentForecast
+from infrastructure.development_forecast import DevelopmentForecast,ProjectedDevelopmentForecast
 from prototype.forecast_metadata import ProductMetadata, Coverage
 from prototype.forecast import utc_time
 from scripts.regional_forecast import load_regional_inputs,load_expanded_native_inputs
@@ -48,7 +48,11 @@ def load_development_weather(config_path=None, fixtures=None):
     wm=ProductMetadata('wind','MET-native-frozen',inputs.wind.model_reference_time.strftime('%Y%m%d'),'MET Nordic frysta verkliga vindnoder',issued,
         inputs.wind.times[0],inputs.wind.times[-1],Coverage(-radius,-radius,radius,radius,57.633,11.605),
         ('m/s','m/s'),'ground-to-true-east-north',source_sha256=dict(inputs.wind.source_hashes)['native-wind-land.txt'],assumed_fields=('issued_at',*sorted(REQUIRED)))
-    dataset=DevelopmentForecast('seaparser-real-meteo-marine','development-'+digest(config)[:16],
+    frame=config.get('motion_frame')
+    if frame not in (None,'wgs84-aeqd-proj-differential-v1'):
+        raise ValueError('Unknown motion frame')
+    forecast=ProjectedDevelopmentForecast if frame is not None else DevelopmentForecast
+    dataset=forecast('seaparser-real-meteo-marine','development-'+digest(config)[:16],
         inputs.wind,marine,wm,assumptions,radius)
     evidence={'mode':'development_assumptions','source_qualification':'unverified',
         'verified':{'wind_model_reference_time':inputs.wind.model_reference_time.isoformat(),
@@ -58,4 +62,5 @@ def load_development_weather(config_path=None, fixtures=None):
         'assumptions':dict(assumptions),'assumed_issued_at':issued.isoformat(),
         'configuration_sha256':digest(config),
         'historical_snapshot':True,'actual_source_issued_at':{'wind':None,'current':None,'waves':None}}
+    if frame is not None:evidence['motion_frame']=frame
     return dataset,config,json.loads(canonical(evidence))

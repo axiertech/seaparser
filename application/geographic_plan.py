@@ -2,6 +2,7 @@
 from dataclasses import replace, asdict
 from datetime import datetime, timedelta
 from .development_weather import load_development_weather
+from infrastructure.development_forecast import ProjectedDevelopmentForecast
 from .geographic_budget import validate_budget, VINGA_OFFSETS, MAX_EVALUATIONS
 from .planning import PlanRequest
 from prototype.model import ConstantBoat
@@ -135,7 +136,7 @@ def calculate_geographic(payload, *, audit_candidate_limit=None, weather_config=
         nodes=audit_node_limit
     raw=json.loads(run_obstacle_plan(request,SearchPolicy(clearance_m=5,max_candidates=candidate_limit,
                                                         max_waypoints=waypoints,max_expansions=1000,max_nodes=nodes),
-                    node_radius_m=dataset.support_radius_m if native else None))
+                    node_radius_m=dataset.support_radius_m if native or (regional and isinstance(dataset,ProjectedDevelopmentForecast)) else None))
     features=[]; alternatives=[]
     if raw['planning']:
         for index,departure in enumerate(raw['planning']['comparison']['departures']):

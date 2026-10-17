@@ -71,6 +71,12 @@ class SegmentEnvironment(Environment, Protocol):
                          end_time: datetime, *, required_products: tuple[str, ...]) -> None: ...
 
 
+class MotionEnvironment(Environment, Protocol):
+    """Optional pure kinematic mapping; weather and boat vectors stay physical."""
+    def position_rate(self, position: Vector, physical_velocity: Vector) -> Vector: ...
+    def physical_direction(self, position: Vector, local_direction: Vector) -> Vector: ...
+
+
 @dataclass(frozen=True)
 class SyntheticEnvironment:
     field: Callable[[Vector, datetime], Conditions]

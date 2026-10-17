@@ -3032,3 +3032,26 @@ Ny explicit enumprofil vinga-native binder fasta17-oktober-antaganden/väder och
 Audit2/4/8×4 på3,533/2,829/4,339s; samma vinnare auto-0 kl04:00,136,813299s och60,3404exponering. Sekventiella kalla STANDARDarbetare2×4/4×4/8×2 på6,921/10,673/8,089s, alla under20s/8MB. Artefakter artifacts/supported-native-routes/{index.html,audit.json,result.json,workers.json}; docs/supported-native-routing.md. Fulla segment, absoluta valda gränser, datastöd och ankomst bevarade. Källor unverified, resultat conditional_on_assumptions, antagna fält separat; uppskattad båt/ej validerad komfort.
 
 Riktat API-/geometriprov fångade först1e-9m skillnad från WGS84-rundresa i jämförelsetest; testet rättat att använda samma transformerade ändpunkter. Det kända TCP-hindret gör lokal fullfrontendintegration otillförlitlig; bred frontendtestkörning exit1 i mapfil, ingen publik ersättning. JSsyntax/build/check och riktad DOM-budgettest passerar; full API-/Leaflet-/GPX-integration med native ingår i ordinarieCI. Samlade låsta kontroller godkända:162+313=475tester, syntax/lås/domängränser; omverifierade40npmversioner motlåset. Logg /tmp/seaparser-supported-native-check.log. Efter korrigerad rundresejämförelse passerar även riktat grafprov. ExaktCI ska verifieras efter push. Nästa geografiska mål: helt kombinerat större rumtids-/land-/rörelseramsstöd före900m-höjning.
+
+
+## 2026-10-17: återhämtad rörelseram och grafisk jämförelse
+
+Alla fem föregående commits (63a15cb, f6773f9, a3cb75e, d640f46, cb1600e)
+verifierade som redan pushade via arbetsbranchens faktiska GitHub-SHA cb1600e.
+Usage-avbrutna nio filer granskade och bevarade. Gemensamt körlås hålls under
+återhämtning; senaste worker avslutad, inget nytt autonomipass.
+
+Fysisk E/N-vind/ström/vattenfart i m/s separeras från WGS84-AEQD-positionsrate.
+Inverse differential används för strömkompenserad fysisk kurs; J används vid
+förutsagd och faktisk mittpunkt för positionsändring. SI-/ramkrav valideras.
+Oberoende geodetiska, analytiska och konvergensregressioner godkända.
+Alternativet kopplat till export med --motion-frame, explicit källantagande
+och algoritmidentitet; äldre profiler/artefakter bevaras.
+
+artifacts/motion-route-review visar verkliga 17-oktober-data, 24 hinder och
+16 alternativ, rörelseramsförklaring och fortsatt villkorad kvalificering.
+Se motion-frames.md. Befintligt atomiskt publiceringsflöde utökat med fast
+ny adress /vinga-ruttjamforelse-ramar.html; äldre sidor skrivs inte över.
+Leveranskontroller och exakt CI/publiceringskvitto redovisas efter verifiering.
+SSH-konfiguration/DNS blockerade terminalens remoteåtkomst; GitHub-anslutningen
+fungerar och används utan systemändring eller visning av hemligheter.

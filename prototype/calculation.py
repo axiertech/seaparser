@@ -107,17 +107,18 @@ def forecast_step_seconds(sample, start, seconds):
     return seconds
 
 
-def forecast_step(first, position, time, seconds, midpoint):
+def forecast_step(first, position, time, seconds, midpoint, position_rate=None):
+    rate=position_rate or (lambda p,v:v)
     seconds = forecast_step_seconds(first, time, seconds)
     # Nya gränser vid mittpunkten kräver omräkning av både tid och position.
     for _ in range(100):
         if seconds < 1e-6:
             raise ValueError("Strömdata saknas: prognosgränsen är närmare än tidsupplösningen")
-        middle = midpoint(position + first.ground.scaled(seconds / 2),
+        middle = midpoint(position + rate(position,first.ground).scaled(seconds / 2),
                           time + timedelta(seconds=seconds / 2))
         bounded = forecast_step_seconds(middle, time, seconds)
         if bounded == seconds:
-            return seconds, middle, position + middle.ground.scaled(seconds)
+            return seconds, middle, position + rate(middle.position,middle.ground).scaled(seconds)
         seconds = bounded
     raise ValueError("Strömdata saknas: prognosgränserna kunde inte lösas för tidssteget")
 
@@ -160,7 +161,8 @@ def simulate(boat: BoatModel, environment: Environment, start, duration, step_se
         first = evaluate(boat, environment, position, time, allow_missing_current, weather_policy, forecast_policy, planning_time)
         dt, middle, end = forecast_step(
             first, position, time, dt,
-            lambda p, t: evaluate(boat, environment, p, t, allow_missing_current, weather_policy, forecast_policy, planning_time))
+            lambda p, t: evaluate(boat, environment, p, t, allow_missing_current, weather_policy, forecast_policy, planning_time),
+            getattr(environment,'position_rate',None))
         check_segment(position, end, obstacles)
         segment_check = check_forecast_segment(environment, position, time, end, time+timedelta(seconds=dt), weather_policy)
         position = end
@@ -200,6 +202,9 @@ class Voyage:
 
 def compensated_evaluation(boat: BoatPerformance, direction, environment, position, time,
                            min_progress_m_s, weather_policy=None, forecast_policy=None, planning_time=None):
+    direction_mapper=getattr(environment,'physical_direction',None)
+    if direction_mapper is not None:
+        direction=direction_mapper(position,direction)
     weather = environment.evaluate(position, time)
     check_planning_metadata(weather)
     if forecast_policy is not None:
@@ -241,6 +246,9 @@ def sail_to_target(environment: Environment, start, target: Vector, *, speed_kno
         raise ValueError("Ogiltiga gränser för målfärd")
     if start.tzinfo is None or start.utcoffset() is None:
         raise ValueError("Starttid måste ha tidszon")
+    if (callable(getattr(environment, 'position_rate', None)) !=
+            callable(getattr(environment, 'physical_direction', None))):
+        raise ValueError('Rörelseramen kräver både hastighets- och riktningsavbildning')
     planning_time = capture_planning_time(clock, forecast_policy)
     boat = boat if boat is not None else ConstantBoat(speed_knots=speed_knots, leeway=0)
     start = start.astimezone(timezone.utc)
@@ -293,14 +301,18 @@ def sail_to_target(environment: Environment, start, target: Vector, *, speed_kno
                                            position, time, min_progress_m_s, weather_policy, forecast_policy, planning_time)
             remaining = (target - position).dot(direction)
             # Startfarten begränsar predikterad mittpunkt till före målet.
-            dt = min(step_seconds, max_seconds - elapsed,
-                     remaining / first.ground.dot(direction))
+            rate=getattr(environment,'position_rate',lambda p,v:v)
+            progress=rate(position,first.ground).dot(direction)
+            if not isfinite(progress) or progress<=min_progress_m_s:
+                raise CourseUnavailable('Otillräcklig framdrift i positionens koordinatram')
+            dt = min(step_seconds, max_seconds - elapsed, remaining / progress)
 
             def trial(seconds):
                 return forecast_step(
                     first, position, time, seconds,
                     lambda p, t: compensated_evaluation(
-                        boat, direction, environment, p, t, min_progress_m_s, weather_policy, forecast_policy, planning_time))
+                        boat, direction, environment, p, t, min_progress_m_s, weather_policy, forecast_policy, planning_time),
+                    getattr(environment,'position_rate',None))
 
             dt, middle, end = trial(dt)
             if (end - target).dot(direction) > 0:

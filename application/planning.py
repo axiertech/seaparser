@@ -2,7 +2,7 @@
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from decimal import Decimal
-from infrastructure.development_forecast import DevelopmentForecast
+from infrastructure.development_forecast import DevelopmentForecast,ProjectedDevelopmentForecast
 from infrastructure.native_marine import NativeMarineDataset
 from hashlib import sha256
 import json
@@ -69,7 +69,7 @@ class PlanRequest:
     selection_criterion: str | None = None
 
     def __post_init__(self):
-        if (type(self.dataset) not in (ForecastDataset, DevelopmentForecast) or type(self.boat) not in (ConstantBoat, PolarBoat)
+        if (type(self.dataset) not in (ForecastDataset, DevelopmentForecast, ProjectedDevelopmentForecast) or type(self.boat) not in (ConstantBoat, PolarBoat)
                 or type(self.weather_policy) is not WeatherPolicy or type(self.forecast_policy) is not ForecastPolicy
                 or type(self.target) is not Vector or type(self.position) is not Vector):
             raise ValueError('Planeringen kräver fryst dataset, känd fryst båtmodell, positioner och båda policyerna')
@@ -108,9 +108,15 @@ def run_plan(request: PlanRequest) -> str:
     algorithm_version='real-native-wind-marine-conditional-v1' if real else ALGORITHM_VERSION
     native_marine=real and isinstance(request.dataset.marine,NativeMarineDataset)
     if native_marine:algorithm_version='real-native-wind-geographic-marine-conditional-v1'
+    if isinstance(request.dataset,ProjectedDevelopmentForecast):
+        algorithm_version='real-native-wind-marine-projected-motion-conditional-v1'
     algorithm_settings = {'forecast_segment_interval_limit': MAX_SEGMENT_INTERVALS,
                           'weather_segment_method': 'native-wind-envelope-and-geographic-marine-disk-v1' if native_marine else 'native-wind-envelope-and-marine-grid-v1' if real else WEATHER_SEGMENT_METHOD,
                           'weather_certificate_cell_limit': MAX_WEATHER_CELLS}
+    if isinstance(request.dataset,ProjectedDevelopmentForecast):
+        algorithm_settings['motion_frame']={'method':'wgs84-aeqd-proj-differential-v1',
+            'velocity_frame':'physical-true-east-north','position_frame':'vinga-wgs84-aeqd-metres',
+            'derivatives':'numerical-PROJ-factors','accepted_segments':'affine-midpoint-integration'}
     identity = {'algorithm_settings': algorithm_settings, 'schema_version': REPORT_SCHEMA_VERSION, 'algorithm_version': algorithm_version,
                 'request': inputs, 'boat_model': boat['model']}
     parameters = {key: value for key, value in inputs.items() if key not in ('dataset', 'boat')}
