@@ -2954,3 +2954,63 @@ samt större landunderlag, sedan helt rumtids-/segmentstöd före höjt routingo
 Återanvänd den nu frysta 17-oktober-bunten; hämta inte om dessa subset. Fortsatta
 källgap: egna ström-/vindmasker, tidsmedelssemantik, run-/utfärdandeevidens.
 Inga databasoperationer, privata konfigurationsändringar eller publiceringar.
+
+## 2026-10-17: native marin geometri, större land och konkret startblockering
+
+Utgångspunkt f6773f9ec6ecdfdb5fc3365d23da4cd2a9bf7888, exakt CI success run
+39031990979. Arbetsrot /tmp/seaparser-real-map-data, development/real-map-data.
+CopernicusMarineAdapter har nu ett explicit native-läge som återanvänder samma
+fält-/djup-/mask-/metadatanormalisering. Egna lat/lon-axlar, direkt punktinterpolation
+och konservativ hel-disk-/tidskontroll ersätter inte standardens 1 m-läge.
+Ingen andra adapter, omgridning eller ny marin hämtning. NativeMarineDataset är
+en fryst representation/miljö, utan transport, SQL, filåtkomst eller callbacks.
+
+Analytiskt WGS84-diskhölje använder M,N>6300000 m, utåtrundning och 1 m numerisk
+stödreserv. Alla hörn i berörda nativeceller över hela boxen/tiden krävs; luckor
+kan ge konservativt avslag utanför banan. Hs certifieras mot exakt källhörnsmaximum,
+inte provpunkter eller komfort. Komponentprov för marinen: 2000 m-disk, ett
+3000 m långt lokalt segment under 1200 s. Källornas mask-/tids-/run-blockerare
+och issued_at=None kvarstår. Ingen käll- eller fysisk tidskvalificering.
+
+Ett enda avgränsat OSM-uttag gav 3298228 byte under 5 MB/30 s-gränsen. Offline
+assembly gav 24 slutna ringar/höljen för 1500 m granskning plus 10 m urvalsmarginal;
+3 öppna kedjor ligger utanför ytan. Relevanta öppna kedjor, saknade noder eller
+ambigua identiteter avvisas. Källa/ODbL/versionsdata/hash/urvalsyta och okänt
+fullständighet/djup bevaras. Källa i /tmp/seaparser-expanded-land-20261017;
+fryst relevant geometri fixtures/vinga-land-expanded-20261017.geojson.
+Ingen ny betald resurs, global installation eller privat konfigurationsändring.
+
+Viktigt fynd: gamla startpunkten (300,-400) ligger i nya höljet osm-23053759.
+Ny 17-oktober-komposition använder därför nya landunderlaget och ger
+endpoint_blocked, inga kandidater och ingen plan. Den får inte fortsätta på
+äldre sexpolygonutdraget för att visa ankomst. Explicit landgranskningsprojektion
+för större lagrade höljen är separat; gamla ruttkoordinaters gränser tas inte bort.
+
+Separat angivet kompositionsprov (500,0)→(500,350), alla 24 landhöljen, samma
+ruttmotor och verkliga MET/WAV/PHY: villkorad ankomst 144,521 s, segmentgränser
+uppfyllda inom modellen och ankomst kontrollerad. Detta är ett specificerat
+segment, inte automatisk sökning eller navigationsråd. Uppskattad båt/ej validerad
+komfort. Båda exemplen använder namngiven development-weather-native-assumptions.json
+med support_radius_m=900. Originalfakta och assumed_fields hålls åtskilda;
+source_qualification=unverified/result_qualification=conditional_on_assumptions.
+Ordinarie API:s historiska konfiguration och 900 m-taket oförändrade; publik
+tjänst/webbrot orörd.
+
+Artefakt artifacts/native-marine-review/index.html, report.json, result.json och
+specified-route.json. Offlinekommando: python -B -m scripts.native_marine_review
+--output artifacts/native-marine-review. Datum i grafiken kommer nu från
+faktiska indata; befintlig 13-oktober-visning är byteidentisk i regressionstestet.
+Dokument: docs/native-marine-geometry.md med bevis, källor och begränsningar.
+
+Verifierat: 30 riktade adapter-/kompositions-/land-/utvecklingsvädertester; samlad
+scripts.check 160+307=467 tester, låsta beroenden och domängränser godkända.
+Riktat linjärt referensprov efter läsbarhetsrefaktor och slutlig riktad kontroll
+av blockerad presentation/landidentiteter. Lokal känd TCP-blockering kringgås
+inte; exakt GitHub CI verifieras efter push. Loggar /tmp/seaparser-native-marine-check.log,
+/tmp/seaparser-native-composition-targeted-final.log och /tmp/seaparser-native-last-targeted.log.
+
+Nästa funktion: tillåtna ändpunkter och uppmätt begränsad nod-/kandidatgenerering
+med alla nya hinder kvar som hårda segmentkontroller, därefter samlat vind-/marin-/
+land-/rörelseramsstöd före större routing. Ingen allmän optimalitet, inga borttagna
+process-/sök-/väder-/mask-/ankomstskydd och ingen höjning av 900 m för att passera.
+Återanvänd frysta 17-oktober-data och nytt land; hämta inte om dem.

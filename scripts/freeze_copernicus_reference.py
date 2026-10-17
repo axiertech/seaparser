@@ -32,16 +32,8 @@ def _grid(values):
     return [[[_json_value(value) for value in row] for row in plane] for plane in values]
 
 
-def freeze_with_audit(directory):
-    """Create payload and report together; no detached audit input is accepted."""
+def _materialize_products(sources, entries, audit_products):
     import xarray as xr
-
-    directory = Path(directory)
-    report, manifest, sources = audit_snapshot(directory)
-    by_label = {entry['product']: entry for entry in manifest['files']}
-    static_entry = by_label.get('static') or by_label.get('wave-mask')
-    entries = {'waves': by_label['waves'], 'current': by_label['current'], 'static': static_entry}
-    audit_products = {'waves': report['waves'], 'current': report['current']}
     products = {}
     for label, entry in entries.items():
         if entry is None:
@@ -80,6 +72,20 @@ def freeze_with_audit(directory):
                                            for row in ds[name].transpose('latitude', 'longitude').values]
                                     for name in ('deptho', 'mask')}
         products[label] = metadata
+    return products
+
+
+def freeze_with_audit(directory):
+    """Create payload and report together; no detached audit input is accepted."""
+    import xarray as xr
+
+    directory = Path(directory)
+    report, manifest, sources = audit_snapshot(directory)
+    by_label = {entry['product']: entry for entry in manifest['files']}
+    static_entry = by_label.get('static') or by_label.get('wave-mask')
+    entries = {'waves': by_label['waves'], 'current': by_label['current'], 'static': static_entry}
+    audit_products = {'waves': report['waves'], 'current': report['current']}
+    products = _materialize_products(sources, entries, audit_products)
     payload = {
         'schema': 1,
         'bundle_id': 'copernicus-baltic-vinga-reference',
@@ -88,6 +94,39 @@ def freeze_with_audit(directory):
     }
     CopernicusMarineAdapter().normalize(payload)
     return payload, report
+
+
+def freeze_native_with_audit(directory, *, radius_m):
+    """Reuse the field materializer for the larger, independently hashed bundle.
+
+    This does not apply development metadata assumptions or enable routing.
+    """
+    from hashlib import sha256
+    from scripts.inspect_expanded_forecast import inspect
+    from scripts.manifest_json import manifest_json
+    directory=Path(directory)
+    report=inspect(directory)
+    hashes=report['source_hashes'];sources={}
+    for filename in ('waves.nc','current.nc','wave-mask.nc'):
+        with (directory/filename).open('rb') as stream:data=stream.read(10_000_001)
+        if len(data)>10_000_000 or sha256(data).hexdigest()!=hashes[filename]:
+            raise ValueError('Captured native marine bytes differ from frozen bundle')
+        sources[filename]=data
+    with (directory/'marine-download-manifest.json').open('rb') as stream:download_data=stream.read(512001)
+    with (directory/'wave-subset-manifest.json').open('rb') as stream:wave_data=stream.read(512001)
+    with (directory/'parent-wave-original-manifest.json').open('rb') as stream:parent_data=stream.read(512001)
+    for name,data in (('marine-download-manifest.json',download_data),('wave-subset-manifest.json',wave_data),('parent-wave-original-manifest.json',parent_data)):
+        if len(data)>512000 or sha256(data).hexdigest()!=hashes[name]:raise ValueError('Native source manifest changed')
+    downloaded=manifest_json(download_data);wave=manifest_json(wave_data);parent=manifest_json(parent_data)
+    by_name={e['product']:e for e in downloaded['files']}
+    entries={'waves':dict(filename='waves.nc',dataset_id=parent['dataset_id'],version=parent['dataset_version'],
+        retrieved_at=wave['retrieved_at'],sha256=wave['sha256']),
+        'current':by_name['current'],'static':by_name['wave-mask']}
+    products=_materialize_products(sources,entries,{'waves':{'issued_at':None},'current':{'issued_at':None}})
+    payload=dict(schema=1,bundle_id='copernicus-baltic-vinga-expanded-reference',
+        bundle_version='original-waves-202311_current-202411_static-202311',products=products)
+    CopernicusMarineAdapter().normalize(payload,native_radius_m=radius_m)
+    return payload,report
 
 
 def freeze(directory):

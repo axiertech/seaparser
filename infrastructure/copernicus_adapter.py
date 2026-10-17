@@ -11,6 +11,7 @@ from pyproj import CRS, Transformer
 from prototype.forecast import utc_time
 from prototype.forecast_data import ForecastDataset, GridProduct
 from prototype.forecast_metadata import Coverage, ProductMetadata
+from .native_marine import NativeMarineDataset,NativeMarineProduct
 from .copernicus_fields import BATHY_FIELDS, CURRENT_FIELDS, WAVE_FIELDS, current_node, validate_fields, wave_node
 
 
@@ -72,30 +73,31 @@ class CopernicusMarineAdapter:
     obstacles; the static mask is used only to preserve missing wave cells.
     """
 
-    def normalize(self, payload):
+    def normalize(self, payload, *, native_radius_m=None):
         try:
             if payload['schema'] != 1:
                 raise ValueError('Unsupported Copernicus fixture schema')
             wave = payload['products']['waves']
             current = payload['products']['current']
             static = payload['products']['static']
-            wave_product = self._waves(wave, static)
-            current_product = self._current(current)
+            wave_product = self._waves(wave, static, native_radius_m=native_radius_m)
+            current_product = self._current(current, native_radius_m=native_radius_m)
             if wave_product.times != current_product.times:
                 raise ValueError('Wave/current validity differs; common support must be explicit')
             if (wave_product.metadata.coverage.origin_latitude,
                     wave_product.metadata.coverage.origin_longitude) != VINGA_ORIGIN:
                 raise ValueError('Unexpected projection origin')
-            return ForecastDataset(payload['bundle_id'], payload['bundle_version'],
-                                   (current_product, wave_product))
+            dataset_type=ForecastDataset if native_radius_m is None else NativeMarineDataset
+            return dataset_type(payload['bundle_id'], payload['bundle_version'],(current_product, wave_product))
         except (KeyError, TypeError, IndexError) as error:
             raise ValueError('Incomplete or malformed Copernicus CF fixture') from error
 
-    def _waves(self, raw, static):
+    def _waves(self, raw, static, *, native_radius_m=None):
         validate_fields(raw['variables'], WAVE_FIELDS)
         validate_fields(static['variables'], BATHY_FIELDS)
-        latitude = _axis(raw['latitude'], 'wave latitude', VINGA_BBOX[1], VINGA_BBOX[3])
-        longitude = _axis(raw['longitude'], 'wave longitude', VINGA_BBOX[0], VINGA_BBOX[2])
+        bbox=VINGA_BBOX if native_radius_m is None else (11.55,57.60,11.66,57.67)
+        latitude = _axis(raw['latitude'], 'wave latitude', bbox[1], bbox[3])
+        longitude = _axis(raw['longitude'], 'wave longitude', bbox[0], bbox[2])
         if tuple(static['latitude']) != latitude or tuple(static['longitude']) != longitude:
             raise ValueError('Static mask grid differs from wave grid; no mask interpolation is allowed')
         mask = _matrix(static['data']['mask'], len(latitude), len(longitude), 'mask')
@@ -107,19 +109,23 @@ class CopernicusMarineAdapter:
                               for plane in raw['data'][name]) for name in WAVE_FIELDS}
         if any(len(planes) != len(times) for planes in fields.values()):
             raise ValueError('Wave time axis and samples disagree')
-        east, north = _local_axes(latitude, longitude)
         values = tuple(tuple(tuple(wave_node(fields['VHM0'][k][j][i],
                                               fields['VTM02'][k][j][i],
                                               fields['VMDR'][k][j][i], mask[j][i])
-                                   for i in range(len(east)))
-                             for j in range(len(north))) for k in range(len(times)))
+                                   for i in range(len(longitude)))
+                             for j in range(len(latitude))) for k in range(len(times)))
+        if native_radius_m is not None:
+            return self._native_product(raw,'waves',latitude,longitude,times,values,native_radius_m,
+                ('m','s','1','1'),'ground-from-true-east-north-tm02')
+        east,north=_local_axes(latitude,longitude)
         return self._product(raw, 'waves', east, north, times, values,
                              ('m', 's', '1', '1'), 'ground-from-true-east-north-tm02')
 
-    def _current(self, raw):
+    def _current(self, raw, *, native_radius_m=None):
         validate_fields(raw['variables'], CURRENT_FIELDS)
-        latitude = _axis(raw['latitude'], 'current latitude', VINGA_BBOX[1], VINGA_BBOX[3])
-        longitude = _axis(raw['longitude'], 'current longitude', VINGA_BBOX[0], VINGA_BBOX[2])
+        bbox=VINGA_BBOX if native_radius_m is None else (11.55,57.60,11.66,57.67)
+        latitude = _axis(raw['latitude'], 'current latitude', bbox[1], bbox[3])
+        longitude = _axis(raw['longitude'], 'current longitude', bbox[0], bbox[2])
         depth = tuple(raw['depth_m'])
         if (len(depth) != 1 or isinstance(depth[0], bool) or not isinstance(depth[0], (int, float))
                 or not isfinite(depth[0]) or depth[0] <= 0 or depth[0] > 2):
@@ -135,10 +141,13 @@ class CopernicusMarineAdapter:
             # NetCDF depth has already been selected to one near-surface layer.
             fields[name] = tuple(_matrix(plane, len(latitude), len(longitude), name)
                                  for plane in planes)
-        east, north = _local_axes(latitude, longitude)
         values = tuple(tuple(tuple(current_node(fields['uo'][k][j][i], fields['vo'][k][j][i])
-                                   for i in range(len(east)))
-                             for j in range(len(north))) for k in range(len(times)))
+                                   for i in range(len(longitude)))
+                             for j in range(len(latitude))) for k in range(len(times)))
+        if native_radius_m is not None:
+            return self._native_product(raw,'current',latitude,longitude,times,values,native_radius_m,
+                ('m/s','m/s'),'ground-to-true-east-north')
+        east,north=_local_axes(latitude,longitude)
         return self._product(raw, 'current', east, north, times, values,
                              ('m/s', 'm/s'), 'ground-to-true-east-north')
 
@@ -146,16 +155,30 @@ class CopernicusMarineAdapter:
     def _product(raw, name, east, north, times, values, units, reference_frame):
         if len(east) < 2 or len(north) < 2:
             raise ValueError('At least a 2×2 native grid is required')
-        metadata = ProductMetadata(
+        metadata=CopernicusMarineAdapter._metadata(raw,name,times,Coverage(east[0],north[0],east[-1],north[-1],*VINGA_ORIGIN),units,reference_frame)
+        return GridProduct(metadata,east,north,times,values)
+
+    @staticmethod
+    def _metadata(raw,name,times,coverage,units,reference_frame):
+        return ProductMetadata(
             product=name, dataset_id=raw['dataset_id'], version=raw['version'],
             # This adapter has no source-bound issuance verifier. A detached
             # payload date cannot establish issuance, even if it parses as UTC.
             source=raw['source'], issued_at=None,
             valid_from=times[0], valid_until=times[-1],
-            coverage=Coverage(east[0], north[0], east[-1], north[-1], *VINGA_ORIGIN),
+            coverage=coverage,
             units=units, reference_frame=reference_frame,
             retrieved_at=_time(raw['retrieved_at']), source_url=raw['source_url'],
             license_url=raw['license_url'], source_sha256=raw['source_sha256'],
             planning_blockers=('cross_product_model_run_compatibility_unverified',
                                'model_issue_time_unverified'))
-        return GridProduct(metadata, east, north, times, values)
+
+
+    @staticmethod
+    def _native_product(raw,name,latitude,longitude,times,values,radius,units,reference_frame):
+        from dataclasses import replace
+        metadata=CopernicusMarineAdapter._metadata(raw,name,times,Coverage(-radius,-radius,radius,radius,*VINGA_ORIGIN),units,reference_frame)
+        blockers=metadata.planning_blockers+('marine_time_support_unverified',)
+        if name=='current':blockers+=('current_native_wet_mask_unverified',)
+        metadata=replace(metadata,planning_blockers=blockers)
+        return NativeMarineProduct(metadata,tuple(longitude),tuple(latitude),times,values,radius)

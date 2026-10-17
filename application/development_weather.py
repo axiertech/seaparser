@@ -8,7 +8,7 @@ from functools import lru_cache
 from infrastructure.development_forecast import DevelopmentForecast
 from prototype.forecast_metadata import ProductMetadata, Coverage
 from prototype.forecast import utc_time
-from scripts.regional_forecast import load_regional_inputs
+from scripts.regional_forecast import load_regional_inputs,load_expanded_native_inputs
 from application.planning import canonical, digest
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -18,8 +18,10 @@ REQUIRED=frozenset(('model_issue_time_unverified','cross_product_model_run_compa
 
 
 @lru_cache(maxsize=2)
-def _inputs(root):
-    return load_regional_inputs(root)
+def _inputs(root, source_bundle=None, radius_m=None):
+    if source_bundle is None:return load_regional_inputs(root)
+    if source_bundle!='vinga-expanded-20261017':raise ValueError('Okänd fryst utvecklingsbunt')
+    return load_expanded_native_inputs(root/source_bundle,radius_m=radius_m)
 
 
 def load_development_weather(config_path=None, fixtures=None):
@@ -28,7 +30,8 @@ def load_development_weather(config_path=None, fixtures=None):
         raise ValueError('Alla specifika utvecklingsantaganden måste vara explicit konfigurerade')
     if any(not isinstance(v,str) or not v.strip() for v in config['assumptions'].values()):
         raise ValueError('Antaganden kräver en förklaring')
-    inputs=_inputs(fixtures or ROOT/'fixtures')
+    root=fixtures or ROOT/'fixtures'
+    inputs=_inputs(root,config['source_bundle'],config['support_radius_m']) if config.get('source_bundle') is not None else _inputs(root)
     if not set(inputs.wind.planning_blockers) <= REQUIRED:
         raise ValueError('Nytt vindproblem kräver ett specifikt antagande')
     assumptions=tuple(sorted(config['assumptions'].items()))
@@ -42,7 +45,7 @@ def load_development_weather(config_path=None, fixtures=None):
         products.append(replace(product,metadata=replace(product.metadata,issued_at=issued,planning_blockers=(),assumed_fields=('issued_at',*sorted(REQUIRED)))))
     marine=replace(inputs.marine,products=tuple(products))
     radius=config['support_radius_m']
-    wm=ProductMetadata('wind','MET-native-frozen','20261013','MET Nordic frysta verkliga vindnoder',issued,
+    wm=ProductMetadata('wind','MET-native-frozen',inputs.wind.model_reference_time.strftime('%Y%m%d'),'MET Nordic frysta verkliga vindnoder',issued,
         inputs.wind.times[0],inputs.wind.times[-1],Coverage(-radius,-radius,radius,radius,57.633,11.605),
         ('m/s','m/s'),'ground-to-true-east-north',source_sha256=dict(inputs.wind.source_hashes)['native-wind-land.txt'],assumed_fields=('issued_at',*sorted(REQUIRED)))
     dataset=DevelopmentForecast('seaparser-real-meteo-marine','development-'+digest(config)[:16],

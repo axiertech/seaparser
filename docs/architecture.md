@@ -102,3 +102,11 @@ certifieringsfunktion kan välja waves separat vid denna komposition, medan
 standardanropet för GridProduct-baserade vind/vågfall är oförändrat. Källan får
 fortfarande status unverified även när modellgränserna uppfylls villkorligt.
 Se development-real-routing.md för parametrar, begränsningar och grafisk leverans.
+
+Native-läget i samma CopernicusMarineAdapter materialiserar NativeMarineDataset
+med produktens egna geografiska axlar. infrastructure/native_marine.py sköter
+punktinterpolation och konservativ hel-disk-/tidsomslutning utan transport,
+SQL eller UI. Legacy GridProduct-läget och 1 m-gränsen är oförändrade. Samma
+NetCDF-fältmaterialisering används. Namngiven utvecklingskomposition kan
+använda native-läget med oförändrat 900 m-tak och separat käll-/antagandeproveniens.
+Se native-marine-geometry.md; större landgranskning är separat från kartbakgrund.

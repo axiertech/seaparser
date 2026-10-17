@@ -353,3 +353,16 @@ landunderlag saknas. Ingen tolerans, mask, geografi, fysisk tidssemantik eller
 källkvalificering antas bort. Samma koordinattider är inte verifierat gemensamt
 fysiskt tidsstöd. Befintlig adapter/MET-läsare återanvänds; ingen andra adapter.
 Se expanded-forecast-support.md för bytebudgetar, faktisk data och nästa hinder.
+
+## 2026-10-17: Native marin representation och nytt landfynd
+
+Utöka befintlig CopernicusMarineAdapter med explicit native-representation,
+inte högre räta-axlar-tolerans eller en andra adapter. Egna lat/lon-grid, ett
+analytiskt WGS84-diskhölje, full tids-/hörnkontroll och konservativ Hs-gräns
+utgör komponentstödet. Källspärrar och okända fakta bevaras.
+
+Nytt OSM-utdrag ger 24 slutna höljen för en 1500 m-granskningsyta och blockerar
+den gamla startpunkten. Ny väderkomposition får därför inte återgå till det
+äldre sexpolygonutdraget. Endast ett separat specificerat segment används som
+kompositionsprov. Ordinarie API:s historiska konfiguration, 900 m och publik
+tjänst är oförändrade. Se native-marine-geometry.md för prov, bevis och nästa steg.

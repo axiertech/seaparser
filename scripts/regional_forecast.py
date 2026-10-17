@@ -68,3 +68,16 @@ if __name__ == '__main__':
     except (ValueError, TypeError, KeyError, OSError) as error:
         print(f'REGIONAL_INPUTS_UNAVAILABLE {type(error).__name__}', file=sys.stderr)
         sys.exit(1)
+
+
+def load_expanded_native_inputs(root, *, radius_m):
+    """Same adapter and detached field reader for the explicit larger fixture."""
+    from scripts.freeze_copernicus_reference import freeze_native_with_audit
+    from scripts.audit_met_metadata import read_wind_sample
+    root=Path(root)
+    payload,report=freeze_native_with_audit(root,radius_m=radius_m)
+    expected=Decimal(int(datetime.fromisoformat(report['wind']['model_reference_time']).timestamp()))
+    wind=native_wind_from_snapshot(read_wind_sample(root/'met-nordic-wind-sample',root/'met-nordic-metadata',expected_reference=expected))
+    marine=CopernicusMarineAdapter().normalize(payload,native_radius_m=radius_m)
+    hashes=tuple((name,report['source_hashes'][name]) for name in ('waves.nc','current.nc','wave-mask.nc'))
+    return RegionalForecastInputs(wind,marine,(('waves',None),('current',None)),hashes)

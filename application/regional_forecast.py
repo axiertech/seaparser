@@ -4,6 +4,7 @@ from hashlib import sha256
 import json
 
 from infrastructure.native_wind import NativeWindSample
+from infrastructure.native_marine import NativeMarineDataset
 from prototype.forecast import utc_time
 from prototype.forecast_data import ForecastDataset
 
@@ -11,7 +12,7 @@ from prototype.forecast_data import ForecastDataset
 @dataclass(frozen=True)
 class RegionalForecastInputs:
     wind: NativeWindSample
-    marine: ForecastDataset
+    marine: ForecastDataset | NativeMarineDataset
     # Source-read CF model reference, not catalogue version or issuance.
     marine_model_references: tuple[tuple[str, str | None], ...]
     marine_source_hashes: tuple[tuple[str, str], ...]

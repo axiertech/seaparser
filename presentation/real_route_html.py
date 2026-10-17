@@ -1,5 +1,6 @@
 """Self-contained graphical review of an existing real-data route result."""
 from html import escape
+from datetime import datetime
 from infrastructure.land import FORWARD
 
 
@@ -9,6 +10,8 @@ def render(result):
     def path(coordinates):
         return ' '.join(f'{x:.3f},{-y:.3f}' for x,y in (FORWARD.transform(*p) for p in coordinates))
     shapes=''.join(f'<polygon points="{path(f["geometry"]["coordinates"][0])}"/>' for f in result['obstacles']['features'])
+    planning=result.get('planning')
+    boat_label=('Uppskattad konstantfartsbåt, '+str(planning['manifest']['boat']['configuration']['speed_knots'])+' knop.') if planning else 'Ingen färd beräknad.'
     comparison=result['alternative_comparison']
     budget=result['search_budget']; search=result['geometry_search']
     feasible=[r for r in result['alternatives'] if r['status']=='arrived' and r['travel_seconds'] is not None and r['comfort_exposure'] is not None]
@@ -31,7 +34,7 @@ def render(result):
         chart=f'<svg class="exposure" viewBox="0 0 620 280" role="img" aria-label="Restid mot komfortexponering för genomförda alternativ"><path d="M60 30V220H560" fill="none" stroke="#173640"/><text x="70" y="250">Restid: {low_t:.1f}–{high_t:.1f} s →</text><text x="70" y="22">Komfortexponering: {low_c:.1f}–{high_c:.1f} (lägre är bättre)</text>'+''.join(dots)+'</svg>'
     else:
         chart='<p>Inga genomförda alternativ att visa i diagrammet.</p>'
-    search_text=f"Budget: {budget['candidate_limit']} kandidater × {len(budget['departure_offsets_seconds'])} avgångar = högst {budget['evaluation_limit']} simuleringar. Graf: {search['node_count']} noder, {search['expansions']}/{search['policy']['max_expansions']} expansioner. Trunkerad: {'ja' if search['truncated'] else 'nej'} ({search['limit_reason'] or 'grafen uttömd'})."
+    search_text=f"Budget: {budget['candidate_limit']} kandidater × {len(budget['departure_offsets_seconds'])} avgångar = högst {budget['evaluation_limit']} simuleringar. Graf: {search['node_count']} noder, {search['expansions']}/{search['policy']['max_expansions']} expansioner. Trunkerad: {'ja' if search['truncated'] else 'nej'} ({search['limit_reason'] or search['status']})."
     routes=[];cards=[]
     colors=('#037e83','#b36118','#6552a4','#b33e69')
     for index,route in enumerate(result['alternatives']):
@@ -52,6 +55,9 @@ def render(result):
             x,y=FORWARD.transform(*point)
             endpoints+=f'<circle cx="{x:.3f}" cy="{-y:.3f}" r="9" fill="#163c49"/><text x="{x+18:.3f}" y="{-y+7:.3f}" font-size="24" fill="#163c49">{label}</text>'
     sampled=result['weather_at_start']
+    day=datetime.fromisoformat(sampled['time'])
+    month=('januari','februari','mars','april','maj','juni','juli','augusti','september','oktober','november','december')[day.month-1]
+    snapshot_label=f'{day.day} {month} {day.year}'
     sample_text=' · '.join(f'{label} {sampled[key]:.2f} {unit}' if sampled[key] is not None else f'{label}: okänd'
                           for label,key,unit in (('Vind','wind_m_s','m/s'),('Ström','current_m_s','m/s'),
                                                 ('Hs','wave_height_m','m'),('Tm02','wave_period_seconds','s')))
@@ -61,8 +67,8 @@ def render(result):
 <title>SeaParser · verkliga data vid Vinga</title><style>
 *{box-sizing:border-box}body{margin:0;background:#eef4f5;color:#173640;font:16px system-ui}main{max-width:1200px;margin:auto;padding:32px}h1{font-size:2.3rem;margin:8px 0}h2{font-size:1.15rem}.eyebrow{color:#197c80;letter-spacing:.1em;font-size:.8rem;font-weight:700}.notice{border-left:4px solid #b78023;background:#fff5db;padding:16px;line-height:1.6}.grid{display:grid;grid-template-columns:1.6fr 1fr;gap:24px;margin:24px 0}svg{width:100%;height:520px;background:#d5e9ec;border-radius:12px}polygon{fill:#d6c9ad;stroke:#8a7351;stroke-width:3}polyline{fill:none;stroke-linejoin:round}button{font:inherit;cursor:pointer}.card{display:block;text-align:left;width:100%;background:white;border:1px solid #c3d2d5;border-left:6px solid;padding:16px;border-radius:8px;margin-bottom:12px;color:inherit}.card span,.card small{display:block;margin-top:8px}.card small{line-height:1.5;color:#50646b}.selected{outline:3px solid #16777e}details{background:white;padding:18px;border-radius:8px;line-height:1.7}li{margin:12px 0}code{overflow-wrap:anywhere}.exposure{height:auto;max-height:300px;background:#f3f8f8}.exposure [data-select]{cursor:pointer}#cards{max-height:640px;overflow:auto}.legend{font-size:.85rem;line-height:1.6}.meta{background:white;padding:16px;border-radius:8px}.muted{color:#526b72}footer{margin-top:24px;font-size:.85rem}@media(max-width:800px){main{padding:16px}.grid{grid-template-columns:1fr}svg{height:400px}}
 </style><main><div class="eyebrow">SEAPARSER / UTVECKLINGSMILJÖ</div><h1>Ruttjämförelse vid Vinga</h1>
-<p class="muted">MET-vind + Copernicus-vågor och ström · frysta verkliga data 13 oktober 2026 · '''+str(len(budget['departure_offsets_seconds']))+''' undersökta avgångar</p>
-<div class="notice"><strong>Beräknad med uttryckliga antaganden.</strong> Källornas köridentitet, utfärdandetid och delar av tids-/masksemantiken är fortfarande overifierade. Resultatet gäller den konfigurerade modellen. Uppskattad konstantfartsbåt, '''+str(result['planning']['manifest']['boat']['configuration']['speed_knots'])+''' knop. Ingen aktuell prognos eller navigationsgaranti.</div>
+<p class="muted">MET-vind + Copernicus-vågor och ström · frysta verkliga data '''+escape(snapshot_label)+''' · '''+str(len(budget['departure_offsets_seconds']))+''' undersökta avgångar</p>
+<div class="notice"><strong>Beräknad med uttryckliga antaganden.</strong> Källornas köridentitet, utfärdandetid och delar av tids-/masksemantiken är fortfarande overifierade. Resultatet gäller den konfigurerade modellen. '''+escape(boat_label)+''' Ingen aktuell prognos eller navigationsgaranti.</div>
 <p class="meta">Vid start, '''+escape(sampled['time'][11:16])+''' UTC: '''+escape(sample_text)+'''</p>
 <section class="meta"><h2>Jämförelse över undersökta avgångar</h2>'''+summary+chart+'''<p>'''+escape(search_text)+'''</p><p>Geometrisk ordning är inte väderoptimalitet. Ingen global optimalitet.</p></section><div class="grid"><section><svg viewBox="-740 -470 1450 970" role="img" aria-label="Verkligt OSM-land och beräknade ruttalternativ vid Vinga">'''+shapes+''.join(routes)+endpoints+'''</svg><p class="legend">Brunt: fryst OSM-land med konservativa routinghöljen och vald marginal. Streckat: planerade kandidatben. Heldraget: accepterade integrerade färdsegment. Klicka på ett alternativ för att markera dess bana.</p><button id="all">Visa alla alternativ</button></section><section><h2>Undersökta rutter och avgångar</h2><div id="cards">'''+''.join(cards)+'''</div></section></div>
 <div class="meta">Valda hårda gränser: vind '''+str(result['selected_weather_limits']['wind_m_s'])+''' m/s · Hs '''+str(result['selected_weather_limits']['wave_height_m'])+''' m. Alla alternativ använder samma gränser. Komfortkostnaden är ett ej validerat exponeringsmått.</div>

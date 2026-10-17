@@ -3,6 +3,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from decimal import Decimal
 from infrastructure.development_forecast import DevelopmentForecast
+from infrastructure.native_marine import NativeMarineDataset
 from hashlib import sha256
 import json
 
@@ -105,8 +106,10 @@ def run_plan(request: PlanRequest) -> str:
     dataset = inputs['dataset']
     real=isinstance(request.dataset,DevelopmentForecast)
     algorithm_version='real-native-wind-marine-conditional-v1' if real else ALGORITHM_VERSION
+    native_marine=real and isinstance(request.dataset.marine,NativeMarineDataset)
+    if native_marine:algorithm_version='real-native-wind-geographic-marine-conditional-v1'
     algorithm_settings = {'forecast_segment_interval_limit': MAX_SEGMENT_INTERVALS,
-                          'weather_segment_method': 'native-wind-envelope-and-marine-grid-v1' if real else WEATHER_SEGMENT_METHOD,
+                          'weather_segment_method': 'native-wind-envelope-and-geographic-marine-disk-v1' if native_marine else 'native-wind-envelope-and-marine-grid-v1' if real else WEATHER_SEGMENT_METHOD,
                           'weather_certificate_cell_limit': MAX_WEATHER_CELLS}
     identity = {'algorithm_settings': algorithm_settings, 'schema_version': REPORT_SCHEMA_VERSION, 'algorithm_version': algorithm_version,
                 'request': inputs, 'boat_model': boat['model']}

@@ -10,6 +10,7 @@ from math import isfinite
 
 from infrastructure.met_wind_segments import NativeMetWind, VingaRouteSegment, direction_from_to_components
 from infrastructure.native_wind import NativeWindSample
+from infrastructure.native_marine import NativeMarineDataset
 from infrastructure.land import to_geo
 from prototype.forecast_data import ForecastDataset, DataUnavailable
 from prototype.forecast_metadata import ProductMetadata
@@ -23,7 +24,7 @@ class DevelopmentForecast:
     dataset_id: str
     version: str
     wind: NativeWindSample
-    marine: ForecastDataset
+    marine: ForecastDataset | NativeMarineDataset
     wind_metadata: ProductMetadata
     assumptions: tuple[tuple[str,str], ...]
     support_radius_m: float
@@ -74,8 +75,9 @@ class DevelopmentForecast:
     def certify_weather_segment(self,start,start_time,end,end_time,policy):
         try:
             self.validate_segment(start,start_time,end,end_time)
-            waves=certify_weather_segment(self.marine,start,start_time,end,end_time,policy,
-                                          weather_products=('waves',))
+            waves=(self.marine.certify_waves_segment(start,start_time,end,end_time,policy)
+                   if isinstance(self.marine,NativeMarineDataset) else
+                   certify_weather_segment(self.marine,start,start_time,end,end_time,policy,weather_products=('waves',)))
             if waves.status != 'verified':
                 return waves
             upper=sum((Fraction(max(abs(low),abs(high)))**2 for low,high in self.component_bounds),Fraction(0))

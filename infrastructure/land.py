@@ -38,7 +38,10 @@ class LandSnapshot:
     completeness: str='unknown'
 
 
-def load_land(path=None,margin_m=10):
+def load_land(path=None,margin_m=10,*,review_bounds=None):
+    bounds=(11.593,57.629,11.614,57.637) if review_bounds is None else tuple(review_bounds)
+    if len(bounds)!=4 or not (11.55<=bounds[0]<bounds[2]<=11.66 and 57.60<=bounds[1]<bounds[3]<=57.67):
+        raise ValueError('Utanför granskat Vinga-landområde')
     payload=(path or Path(__file__).resolve().parents[1]/'fixtures/vinga-land.geojson').read_bytes()
     data=json.loads(payload); meta=data['metadata']
     if meta.get('license')!='ODbL-1.0' or meta.get('completeness')!='unknown' or meta.get('depth')!='unknown':
@@ -50,7 +53,7 @@ def load_land(path=None,margin_m=10):
             raise ValueError('Endast fullständiga slutna landringar utan hål stöds')
         points=[]
         for lon,lat in rings[0][:-1]:
-            if not (11.593<=lon<=11.614 and 57.629<=lat<=57.637):
+            if not (bounds[0]<=lon<=bounds[2] and bounds[1]<=lat<=bounds[3]):
                 raise ValueError('Land utanför fryst testtäckning')
             x,y=FORWARD.transform(lon,lat,errcheck=True); points.append(Vector(x,y))
         polygons.append(Polygon(feature['properties']['id'],hull(points),margin_m,
@@ -78,3 +81,15 @@ def metadata():
     from .geography import metadata as base_metadata
     return base_metadata() | {'definition':FRAME,'origin':[11.605,57.633],'max_radius_m':1500,
                               'limitations':'Endast Vinga-testområdet. Okänt djup och okänd landfullständighet.'}
+
+
+def review_to_geo(position):
+    """Project stored larger land-hull vertices for review only, never route input.
+
+    Route coordinates retain to_local/to_geo limits. This explicit path is
+    bounded to the separately acquired source bbox and carries no navigation claim.
+    """
+    lon,lat=INVERSE.transform(position.east,position.north,errcheck=True)
+    if not (11.55<=lon<=11.66 and 57.60<=lat<=57.67):
+        raise ValueError('Landgranskningspunkt utanför hämtat källområde')
+    return [lon,lat]

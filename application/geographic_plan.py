@@ -62,7 +62,7 @@ def scene(profile='vinga'):
             'notice':'Uppskattade syntetiska testdata. Ingen GPS/AIS. Kartbakgrund är inte routingsunderlag.'}
 
 
-def calculate_geographic(payload, *, audit_candidate_limit=None):
+def calculate_geographic(payload, *, audit_candidate_limit=None, weather_config=None):
     if payload.get('profile','vinga') not in ('synthetic','vinga'):
         raise ValueError('Okänd region')
     regional=payload.get('profile','vinga')=='vinga'
@@ -81,7 +81,7 @@ def calculate_geographic(payload, *, audit_candidate_limit=None):
     if regional:
         if payload.get('scenario','baseline') != 'baseline':
             raise ValueError('Verkligt väder ersätts aldrig med syntetiska marina scenarier')
-        dataset,config,evidence=load_development_weather()
+        dataset,config,evidence=load_development_weather(weather_config)
         request=PlanRequest(dataset=dataset,
             planning_time=datetime.fromisoformat(config['planning_time'].replace('Z','+00:00')),
             departures=(datetime.fromisoformat(config['departure'].replace('Z','+00:00')),),
@@ -92,8 +92,14 @@ def calculate_geographic(payload, *, audit_candidate_limit=None):
             forecast_policy=ForecastPolicy(config['max_age_seconds']),max_comfort_extra_seconds=300)
     else:
         request=demo_request(scenario=payload.get('scenario','baseline'))
-    snapshot=land.load_land(margin_m=payload.get('margin_m',2)) if regional else None
+    if regional and config.get('source_bundle')=='vinga-expanded-20261017':
+        from pathlib import Path
+        snapshot=land.load_land(Path(__file__).resolve().parents[1]/'fixtures/vinga-land-expanded-20261017.geojson',
+            margin_m=payload.get('margin_m',2),review_bounds=(11.55,57.60,11.66,57.67))
+    else:
+        snapshot=land.load_land(margin_m=payload.get('margin_m',2)) if regional else None
     shapes=snapshot.obstacles if regional else (shape,)
+    obstacle_convert=land.review_to_geo if regional and config.get('source_bundle')=='vinga-expanded-20261017' else convert
     waypoints=8 if regional else 4
     if regional:
         valid_from=max(p.valid_from for p in dataset.product_metadata)
@@ -145,8 +151,8 @@ def calculate_geographic(payload, *, audit_candidate_limit=None):
             'alternatives':alternatives,'alternative_comparison':compare_alternatives(alternatives,request.max_comfort_extra_seconds),
             'search_budget':{'candidate_limit':candidate_limit,'departure_offsets_seconds':offsets,
                              'evaluation_limit':candidate_limit*len(offsets),'max_interactive_evaluations':MAX_EVALUATIONS,
-                             'offline_audit':audit_candidate_limit is not None},'obstacles':collection([f for p in shapes for f in obstacle_geometry(p,convert)['features']]),
-            'notice':raw['limitations']+(' Verkliga historiska MET/WAV/PHY-data 2026-10-13; beräknad med uttryckliga utvecklingsantaganden, uppskattad konstantfartsbåt och ej validerat komfortmått.' if regional else ' Syntetiska referensdata.')+' Djup och landfullständighet är okända. Ej navigationssäkert.'}
+                             'offline_audit':audit_candidate_limit is not None},'obstacles':collection([f for p in shapes for f in obstacle_geometry(p,obstacle_convert)['features']]),
+            'notice':raw['limitations']+(f' Verkliga historiska MET/WAV/PHY-data {request.departures[0].date().isoformat()}; beräknad med uttryckliga utvecklingsantaganden, uppskattad konstantfartsbåt och ej validerat komfortmått.' if regional else ' Syntetiska referensdata.')+' Djup och landfullständighet är okända. Ej navigationssäkert.'}
 
 
 def regional_scene():
