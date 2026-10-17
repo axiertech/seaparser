@@ -2902,3 +2902,55 @@ område och tidsstöd med egna grid samt landunderlag. Kontrollera disk och
 överföringsestimat separat från resultatstorlek, återanvänd hashmanifest/cache,
 ingen dubbelextraktion och ingen andra adapter. Höj inte 900 m före verifierat
 helt rumtidsstöd. Kvarvarande marina proveniens-/mask-/utfärdandegap är oförändrade.
+
+## 2026-10-17: större fryst vind-/marinbunt med cacheåteranvändning
+
+Arbetsrot /tmp/seaparser-real-map-data, development/real-map-data, utgångspunkt
+63a15cb6d013e543b12f2045b4485602067963cd (exakt CI success run 39030709333).
+Nästa begränsade dataleverans: fixtures/vinga-expanded-20261017, med MET-native-
+vind 132 noder och WAV/PHY på egna 4×4-grid, tolv timnoder 17 oktober 01–12 UTC.
+Vågmask på exakt vågornas egna koordinater. Granskningsartefakt
+artifacts/expanded-forecast-support/report.json. Befintlig adapter och MET-
+materialisering återanvänds; ingen andra adapter och ingen syntetisk marin serie.
+
+WAV-originalets befintliga 113 MB-cache återanvändes lokalt, utan nytt WAV-uttag.
+Ny lokal vågfil 36 890 byte; exakt värde-/koordinatbevarande, inga tidsförskjutningar.
+Efter separat estimat hämtades nya geografiskt/tids-/djup-/variabelavgränsade
+PHY-/masksubset: uppskattad överföring 113 387 904 + 4 736 800 = 118 124 704 byte,
+faktiska filer 27 546 + 17 928 byte. Befintliga 10/20 GB-överföringstak och
+1 GB diskreserv kvar; filbudget nedåtbegränsad till 0,05 GB. /tmp hade cirka
+2 GB ledigt, /home cirka 72 GB före uttaget. MET:s sex begränsade svar blev
+88 399 byte totalt. Befintliga cacheposter/hashmanifest bevarade; inget identiskt
+subsetuttag upprepades. Ingen installation eller ny betald resurs.
+
+PROJECT_BLOCKER (löst): första PHY-estimatet gav TypeError eftersom katalogens
+djup är en explicit lista utan minimum_value. Skrivskyddad koordinatdiagnostik
+identifierade orsaken; hämtaren hanterar nu källästa listor med finita, entydiga
+och förenliga nivåer och avvisar flera nivåer i ytintervallet. Nytt separat
+estimat passerade före hämtning. Ytligaste källästa nivå är 0,5016462206840515 m.
+--estimate-only hämtar/kopierar aldrig väderfiler. Ingen blind återkörning.
+
+Verifierat: samlad scripts.check med låsta beroenden, 160 + 298 = 458 tester.
+Därefter åtta riktade tester efter manifest-/bytebudgethärdning och ett riktat
+reproducerbarhetsprov efter förtydligad blockerarkod. Kända referensfall kontrollerar
+exakta nativevärden/tider, korrupt cache, ofullständigt tidsstöd, saknat hörn,
+egen maskgeometri och förbud mot att ge ström vågmask. Ny verklig fryst bunt
+kontrolleras offline; standardens 13-oktober-referenspin avvisar 17-oktober-data.
+Oförändrad standardrouting och dess API-/process-/ankomsttester passerade.
+Lokal frontendintegration upprepas inte mot känt TCP-bindningshinder; exakt CI
+ska verifiera hela frontendflödet efter push. Ingen publik demo används som ersättning.
+
+Större routing är INTE aktiverad. 900 m-taket, lokal 1 m-representationsgräns,
+hårda väder-/land-/datastöd-/ankomstkontroller och befintliga antaganden oförändrade.
+De nya stora marina griden avvisas av befintlig räta-axlar-representation.
+Alla nio celler per produkt har kompletta granskade värden vid samtliga timnoder,
+men detta är inte mask-/tids-/navigerbarhetsbevis. Endast gemensamma koordinat-
+etiketter 01–12 UTC redovisas; original-WAV och ARCO:s time:mean jämställs inte.
+Källor unverified, utfärdandetider okända. Det nya resultatet är diagnostic_only;
+standardens routing förblir conditional_on_assumptions med assumed_fields separat.
+
+Nästa funktion: verifierad native-geometrirepresentation i befintlig marinadapter
+samt större landunderlag, sedan helt rumtids-/segmentstöd före höjt routingområde.
+Återanvänd den nu frysta 17-oktober-bunten; hämta inte om dessa subset. Fortsatta
+källgap: egna ström-/vindmasker, tidsmedelssemantik, run-/utfärdandeevidens.
+Inga databasoperationer, privata konfigurationsändringar eller publiceringar.

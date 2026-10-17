@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "scope": "local_original_native_subset",
+  "source_qualification": "unverified",
+  "result_qualification": "diagnostic_only",
+  "issued_at": null,
+  "model_run_id": null,
+  "arco_lineage_verified": false,
+  "parent_manifest_sha256": "cc0e14f996ccbb8467d27fe39c5ab663da3025fccbc0760d093fd5fef0046375",
+  "parent_original_sha256": "de195d6a8ecdc9b02621c838cb0afd87adb85f0c241a066f9aa8b4703e856401",
+  "parent_cache_key": "247ff2fc4215c30711a7f1e327e2231d2dd0de23528fa8b29c24518dfd649d58",
+  "retrieved_at": "2026-10-17T10:18:49.350172+00:00",
+  "derived_at": "2026-10-17T12:04:48.797939+00:00",
+  "bbox": [
+    11.55,
+    57.6,
+    11.66,
+    57.67
+  ],
+  "start": "2026-10-17T01:00:00Z",
+  "end": "2026-10-17T12:00:00Z",
+  "variables": [
+    "VHM0",
+    "VTM02",
+    "VMDR"
+  ],
+  "dimensions": {
+    "time": 12,
+    "latitude": 4,
+    "longitude": 4
+  },
+  "filename": "waves.nc",
+  "sha256": "7cb2e2c7ca5873a5b105ccfc6a6b6d3de2cb699754ba16b2ce48496b43346622",
+  "actual_result_bytes": 36890,
+  "estimated_transfer_bytes_this_run": 0,
+  "time_label_policy": "Unchanged producer CF time coordinates; no ARCO offset or issue time inferred",
+  "attribution": "Generated using E.U. Copernicus Marine Service Information; DOI: 10.48670/moi-00010",
+  "license_url": "https://marine.copernicus.eu/user-corner/service-commitments-and-license"
+}

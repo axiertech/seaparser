@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "scope": "raw_native_wind_sample_not_routing_qualified",
+  "filename": "native-wind-land.txt",
+  "url": "https://thredds.met.no/thredds/dodsC/metpparchive/2026/10/17/met_forecast_1_0km_nordic_20261017T00Z.nc.ascii?wind_speed_10m%5B1%3A1%3A12%5D%5B507%3A1%3A518%5D%5B690%3A1%3A700%5D,wind_direction_10m%5B1%3A1%3A12%5D%5B507%3A1%3A518%5D%5B690%3A1%3A700%5D,land_area_fraction%5B507%3A1%3A518%5D%5B690%3A1%3A700%5D,forecast_reference_time",
+  "bytes": 30973,
+  "sha256": "8b9586e820882fa9050523b984758fef26ba04a8ccd43bb09f26e7c7788a16fd",
+  "observed_at": "2026-10-17T12:11:16.173507+00:00",
+  "subset": {
+    "x_first": 690,
+    "x_last": 700,
+    "y_first": 507,
+    "y_last": 518,
+    "time_first": 1,
+    "time_last": 12
+  },
+  "issued_at": null,
+  "attribution": "Norwegian Meteorological Institute, met.no",
+  "license_url": "https://www.met.no/en/free-meteorological-data/Licensing-and-crediting"
+}

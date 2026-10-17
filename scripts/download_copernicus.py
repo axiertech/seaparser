@@ -65,9 +65,26 @@ def selection(catalogue, dataset_id, fields):
                   for c in v.coordinates if c.coordinate_id == 'depth']
         if len(depths) != 2 or any(c.coordinate_unit != 'm' for c in depths):
             raise ValueError('Surface depth coordinate unavailable')
-        shallow = [float(c.minimum_value) for c in depths]
-        if shallow[0] != shallow[1] or not isfinite(shallow[0]) or shallow[0] < 0:
-            raise ValueError('Unverified surface depth')
+        shallow = []
+        explicit_axes = []
+        for coordinate in depths:
+            values = getattr(coordinate, 'values', None)
+            minimum = getattr(coordinate, 'minimum_value', None)
+            if values is not None:
+                if (not values or len(values) > 1000 or any(type(v) not in (int,float) or not isfinite(v) or v < 0 for v in values)
+                        or len(set(values)) != len(values)):
+                    raise ValueError('Invalid explicit depth axis')
+                explicit_axes.append(tuple(sorted(values)))
+                if minimum is not None and minimum != min(values):
+                    raise ValueError('Conflicting depth coordinate metadata')
+                minimum = min(values)
+            if type(minimum) not in (int,float) or not isfinite(minimum) or minimum < 0:
+                raise ValueError('Unverified surface depth')
+            shallow.append(float(minimum))
+        if shallow[0] != shallow[1] or (explicit_axes and (len(explicit_axes) != 2 or explicit_axes[0] != explicit_axes[1])):
+            raise ValueError('Incompatible current depth coordinates')
+        if explicit_axes and len(explicit_axes[0])>1 and explicit_axes[0][1] <= shallow[0]+.5:
+            raise ValueError('Surface selection would include multiple native depth levels')
         kwargs.update(minimum_depth=shallow[0], maximum_depth=shallow[0] + .5,
                       vertical_axis='depth')
     return kwargs
@@ -76,6 +93,7 @@ def selection(catalogue, dataset_id, fields):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--estimate-only', action='store_true', help='Validate cache and budgets, report estimates; never download or copy weather files')
     parser.add_argument('--products', nargs='+', choices=[r[0] for r in REQUESTS],
                         default=[r[0] for r in REQUESTS])
     parser.add_argument('--bbox', type=float, nargs=4, metavar=('WEST', 'SOUTH', 'EAST', 'NORTH'),
@@ -155,6 +173,25 @@ def main(argv=None):
         with (cached / 'lock').open('a') as lock:
             fcntl.flock(lock, fcntl.LOCK_EX)
             cache_record = cached_entry(cached, request, args.cache_max_age_hours * 3600)
+            if args.estimate_only:
+                if cache_record is None:
+                    estimate = marine.subset(**request, dry_run=True)
+                    file_bytes, transfer_bytes = budget.check(estimate, transferred_bytes, (args.output, cached))
+                    hit = False
+                else:
+                    file_bytes, transfer_bytes = cache_record['estimated_result_bytes'], 0
+                    if cache_record['bytes'] > budget.file_gb * 1e9:
+                        raise BudgetError('Cached result exceeds file GB budget')
+                    if shutil.disk_usage(args.output).free < cache_record['bytes'] + budget.reserve_gb * 1e9:
+                        raise BudgetError('Insufficient output disk space including reserve')
+                    hit = True
+                transferred_bytes += transfer_bytes
+                manifest['files'].append({'product':label,'status':'estimate_only','cache_hit':hit,'cache_key':key,
+                    'estimated_result_bytes':file_bytes,'estimated_transfer_bytes_this_run':transfer_bytes,
+                    'request':{k:v for k,v in request.items() if k != 'output_directory'}})
+                (args.output/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
+                print(f'PLANNED {label} cache_hit={hit} result_bytes={file_bytes:.0f} transfer_bytes={transfer_bytes:.0f}',flush=True)
+                continue
             if cache_record is None:
                 estimate = marine.subset(**request, dry_run=True)
                 print(f'ESTIMATE {label} toolbox_result_mb={estimate.file_size} '
@@ -207,7 +244,7 @@ def main(argv=None):
                  'request': {k: v for k, v in request.items() if k != 'output_directory'}}
         manifest['files'].append(entry)
         (args.output / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
-    print(f'DOWNLOAD_COMPLETE estimated_weather_transfer_bytes_this_run={transferred_bytes:.0f}; '
+    print(f"{'ESTIMATE_COMPLETE' if args.estimate_only else 'DOWNLOAD_COMPLETE'} estimated_weather_transfer_bytes_this_run={transferred_bytes:.0f}; "
           'diagnostic only; audit and source qualification required before planning')
 
 

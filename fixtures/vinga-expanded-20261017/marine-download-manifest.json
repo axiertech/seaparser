@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "toolbox_version": "2.5.0",
+  "bbox": {
+    "minimum_longitude": 11.55,
+    "maximum_longitude": 11.66,
+    "minimum_latitude": 57.6,
+    "maximum_latitude": 57.67
+  },
+  "start": "2026-10-17T01:00:00Z",
+  "end": "2026-10-17T12:00:00Z",
+  "files": [
+    {
+      "product": "current",
+      "dataset_id": "cmems_mod_bal_phy_anfc_PT1H-i",
+      "version": "202411",
+      "part": "default",
+      "service": "arco-geo-series",
+      "filename": "current.nc",
+      "sha256": "197894704b6c48d39a53bc2ff07b4eaf55a845f60b369314be726f3a7345223d",
+      "retrieved_at": "2026-10-17T12:07:32.067448+00:00",
+      "cache_hit": false,
+      "cache_key": "92232bce2ff0bd70f5038faa38984d0d1b90612f05b088beaf9217ed63f76b0a",
+      "estimated_result_bytes": 15327.999999999998,
+      "estimated_transfer_bytes": 113387904.0,
+      "estimated_transfer_bytes_this_run": 113387904.0,
+      "actual_result_bytes": 27546,
+      "source_url": "https://data.marine.copernicus.eu/product/BALTICSEA_ANALYSISFORECAST_PHY_003_006/description",
+      "license_url": "https://marine.copernicus.eu/user-corner/service-commitments-and-license",
+      "request": {
+        "dataset_id": "cmems_mod_bal_phy_anfc_PT1H-i",
+        "dataset_version": "202411",
+        "dataset_part": "default",
+        "service": "arco-geo-series",
+        "variables": [
+          "uo",
+          "vo"
+        ],
+        "minimum_depth": 0.5016462206840515,
+        "maximum_depth": 1.0016462206840515,
+        "vertical_axis": "depth",
+        "minimum_longitude": 11.55,
+        "maximum_longitude": 11.66,
+        "minimum_latitude": 57.6,
+        "maximum_latitude": 57.67,
+        "coordinates_selection_method": "strict-inside",
+        "output_filename": "current.nc",
+        "file_format": "netcdf",
+        "disable_progress_bar": true,
+        "raise_if_updating": true,
+        "start_datetime": "2026-10-17T01:00:00Z",
+        "end_datetime": "2026-10-17T12:00:00Z"
+      }
+    },
+    {
+      "product": "wave-mask",
+      "dataset_id": "cmems_mod_bal_wav_anfc_static",
+      "version": "202311",
+      "part": "bathy",
+      "service": "static-arco",
+      "filename": "wave-mask.nc",
+      "sha256": "a8208d2b4b9e06b8abf2562a5415786d6cdabcbec2748df0a6e0a94bef9d37e9",
+      "retrieved_at": "2026-10-17T12:07:50.203079+00:00",
+      "cache_hit": false,
+      "cache_key": "71376d59a6352fe4fa05ceb507688f801814ef1caeba14c34b3437c9ebfc699e",
+      "estimated_result_bytes": 13767.999999999998,
+      "estimated_transfer_bytes": 4736800.0,
+      "estimated_transfer_bytes_this_run": 4736800.0,
+      "actual_result_bytes": 17928,
+      "source_url": "https://data.marine.copernicus.eu/product/BALTICSEA_ANALYSISFORECAST_WAV_003_010/description",
+      "license_url": "https://marine.copernicus.eu/user-corner/service-commitments-and-license",
+      "request": {
+        "dataset_id": "cmems_mod_bal_wav_anfc_static",
+        "dataset_version": "202311",
+        "dataset_part": "bathy",
+        "service": "static-arco",
+        "variables": [
+          "deptho",
+          "mask"
+        ],
+        "minimum_longitude": 11.55,
+        "maximum_longitude": 11.66,
+        "minimum_latitude": 57.6,
+        "maximum_latitude": 57.67,
+        "coordinates_selection_method": "strict-inside",
+        "output_filename": "wave-mask.nc",
+        "file_format": "netcdf",
+        "disable_progress_bar": true,
+        "raise_if_updating": true
+      }
+    }
+  ],
+  "budgets_gb": {
+    "file": 0.05,
+    "transfer": 10.0,
+    "total_transfer": 20.0,
+    "disk_reserve": 1
+  },
+  "attribution": "Generated using E.U. Copernicus Marine Service Information; DOI: 10.48670/moi-00010, 10.48670/moi-00011",
+  "forecast_issued_at": null,
+  "issuance_status": "unknown; valid times do not identify the model run"
+}

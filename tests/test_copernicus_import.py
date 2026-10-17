@@ -35,6 +35,18 @@ class RequestSelectionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             selection(self.catalogue(CURRENT_FIELDS, (depth,)), 'test', CURRENT_FIELDS)
 
+    def test_explicit_descending_native_depths_without_minimum(self):
+        depth=NS(coordinate_id='depth',coordinate_unit='m',minimum_value=None,
+                 values=[712.024658203125,1.5159924030303955,0.5016462206840515])
+        request=selection(self.catalogue(CURRENT_FIELDS,(depth,)),'test',CURRENT_FIELDS)
+        self.assertEqual(request['minimum_depth'],0.5016462206840515)
+        self.assertLess(request['maximum_depth'],1.5159924030303955)
+        for values in ([1,float('nan')],[-1,1],[1,1],[]):
+            depth.values=values
+            with self.assertRaises(ValueError):selection(self.catalogue(CURRENT_FIELDS,(depth,)),'test',CURRENT_FIELDS)
+        depth.values=[.5,1.5];depth.minimum_value=0
+        with self.assertRaises(ValueError):selection(self.catalogue(CURRENT_FIELDS,(depth,)),'test',CURRENT_FIELDS)
+
     def test_ambiguous_part_and_missing_field_rejected(self):
         catalogue = self.catalogue(WAVE_FIELDS)
         version = catalogue.products[0].datasets[0].versions[0]

@@ -67,7 +67,7 @@ def field_metadata(das):
         reviewed_attributes(das, name, expected, 'Unambiguous reviewed DAS field attributes required')
 
 
-def time_metadata(dds, das, ascii_text):
+def time_metadata(dds, das, ascii_text, *, expected_reference=Decimal(1791849600)):
     """Validate only the frozen DAP layout, not arbitrary DAP datasets."""
     for text in (dds, ascii_text.split('---------------------------------------------')[0]):
         if (re.findall(r'^    Float64 time[^\n]*$', text, re.M) != ['    Float64 time[time = 59];']
@@ -88,7 +88,7 @@ def time_metadata(dds, das, ascii_text):
     if len(references) != 1:
         raise ValueError('Unambiguous ASCII model reference required')
     reference = numbers(references[0], 1)[0]
-    if reference != Decimal(1791849600):
+    if reference != expected_reference:
         raise ValueError('Model reference differs from reviewed source value')
     return reference
 
@@ -146,7 +146,7 @@ def matrix(text, name, rows, columns):
     return result
 
 
-def _read_metadata_snapshot(directory):
+def _read_metadata_snapshot(directory, *, expected_reference=Decimal(1791849600)):
     """Return diagnostics and the exact bounded, hashed source texts used."""
     directory = Path(directory)
     manifest = read_manifest(directory)
@@ -171,7 +171,7 @@ def _read_metadata_snapshot(directory):
         hashes[entry['filename']] = digest
     das = texts['met-forecast.das']
     field_metadata(das)
-    reference = time_metadata(texts['met-forecast.dds'], das, texts['met-time-coordinates.txt'])
+    reference = time_metadata(texts['met-forecast.dds'], das, texts['met-time-coordinates.txt'], expected_reference=expected_reference)
     geometry_metadata(das)
     axes = {name: axis(texts['native-axes.txt'], name, count)
             for name, count in (('x', 1796), ('y', 2321))}
@@ -179,7 +179,7 @@ def _read_metadata_snapshot(directory):
         if any(b - a != 1000 for a, b in zip(values, values[1:])):
             raise ValueError('Exact 1000 metre increasing native axis required')
     times = axis(texts['met-time-coordinates.txt'], 'time', 59)
-    if (times[0] != 1791849600 or times[-1] != 1792058400
+    if (times[0] != expected_reference or times[-1] != expected_reference+58*3600
             or any(b - a != 3600 for a, b in zip(times, times[1:]))):
         raise ValueError('Reviewed exact hourly validity required')
     subset = manifest.get('coordinate_subset')
@@ -252,9 +252,9 @@ def audit(directory):
     return report
 
 
-def read_wind_sample(directory, metadata_directory):
+def read_wind_sample(directory, metadata_directory, *, expected_reference=Decimal(1791849600)):
     """Materialize validated native samples without a routing qualification."""
-    metadata, metadata_texts = _read_metadata_snapshot(metadata_directory)
+    metadata, metadata_texts = _read_metadata_snapshot(metadata_directory,expected_reference=expected_reference)
     directory = Path(directory)
     manifest = read_manifest(directory)
     if (type(manifest) is not dict or type(manifest.get('schema')) is not int
@@ -269,28 +269,38 @@ def read_wind_sample(directory, metadata_directory):
     if len(references) != 1 or numbers(references[0], 1)[0] != Decimal(metadata['model_reference']['epoch_seconds']):
         raise ValueError('Wind sample model reference differs from frozen metadata')
     native_axes = metadata_texts['native-axes.txt']
-    expected_axes = {'x': axis(native_axes, 'x', 1796)[692:699],
-                     'y': axis(native_axes, 'y', 2321)[509:517]}
-    expected_times = axis(metadata_texts['met-time-coordinates.txt'], 'time', 59)[12:17]
+    subset=manifest.get('subset',{})
+    keys=('x_first','x_last','y_first','y_last','time_first','time_last')
+    if any(type(subset.get(k)) is not int for k in keys):raise ValueError('Explicit integer wind subset required')
+    xf,xl,yf,yl,tf,tl=(subset[k] for k in keys)
+    if (not 0<=xf<xl<1796 or not 0<=yf<yl<2321 or not 0<=tf<tl<59 or tl-tf+1>25
+            or (xl-xf+1)*(yl-yf+1)>1024):raise ValueError('Wind subset exceeds bounded source axes')
+    expected_axes = {'x': axis(native_axes, 'x', 1796)[xf:xl+1],
+                     'y': axis(native_axes, 'y', 2321)[yf:yl+1]}
+    expected_times = axis(metadata_texts['met-time-coordinates.txt'], 'time', 59)[tf:tl+1]
+    rows,columns,count=len(expected_axes['y']),len(expected_axes['x']),len(expected_times)
+    for name,expected in expected_axes.items():
+        if axis(metadata_texts['vinga-latlon.txt'],'latitude.'+name,len(expected)) != expected:
+            raise ValueError('Wind and metadata subset indices differ')
     values = {}
     for name in ('wind_speed_10m', 'wind_direction_10m', 'land_area_fraction'):
         for coordinate, expected in expected_axes.items():
             if axis(text, name + '.' + coordinate, len(expected)) != expected:
                 raise ValueError('Wind sample maps differ from frozen native axes')
         if name == 'land_area_fraction':
-            values[name] = tuple(value for row in matrix(text, name, 8, 7) for value in row)
+            values[name] = tuple(value for row in matrix(text, name, rows, columns) for value in row)
             continue
-        if axis(text, name + '.time', 5) != expected_times:
+        if axis(text, name + '.time', count) != expected_times:
             raise ValueError('Wind sample times differ from frozen validity')
-        blocks = re.findall(r'^' + name + r'\.' + name + r'\[5\]\[8\]\[7\]\n(.*?)\n\n', text, re.M | re.S)
-        if len(blocks) != 1 or len(blocks[0].splitlines()) != 40:
-            raise ValueError('Reviewed five-plane wind sample required')
+        blocks = re.findall(r'^' + name + r'\.' + name + rf'\[{count}\]\[{rows}\]\[{columns}\]\n(.*?)\n\n', text, re.M | re.S)
+        if len(blocks) != 1 or len(blocks[0].splitlines()) != count*rows:
+            raise ValueError('Reviewed bounded wind planes required')
         nodes = []
         for index, line in enumerate(blocks[0].splitlines()):
             label, separator, row = line.partition(',')
-            if not separator or label != f'[{index // 8}][{index % 8}]':
+            if not separator or label != f'[{index // rows}][{index % rows}]':
                 raise ValueError('Ordered wind sample rows required')
-            nodes.extend(numbers(row, 7))
+            nodes.extend(numbers(row, columns))
         values[name] = tuple(nodes)
     if (min(values['wind_speed_10m']) < 0 or min(values['wind_direction_10m']) < 0
             or max(values['wind_direction_10m']) > 360 or min(values['land_area_fraction']) < 0
@@ -303,8 +313,8 @@ def audit_wind_sample(directory, metadata_directory):
     """Describe frozen raw values; no normalization, masks or routing import."""
     metadata, digest, axes, times, values = read_wind_sample(directory, metadata_directory)
     return {'scope': 'raw_native_sample_not_routing_qualified', 'sha256': digest,
-            'metadata_source_hashes': metadata['source_hashes'], 'native_node_count': 56,
-            'time_count': 5, 'value_ranges': {name: {'count': len(nodes), 'min': str(min(nodes)),
+            'metadata_source_hashes': metadata['source_hashes'], 'native_node_count': len(axes['x'])*len(axes['y']),
+            'time_count': len(times), 'value_ranges': {name: {'count': len(nodes), 'min': str(min(nodes)),
                                                    'max': str(max(nodes))} for name, nodes in values.items()},
             'land_fraction_nonzero_nodes': sum(value != 0 for value in values['land_area_fraction']),
             'native_cell_inventory': {

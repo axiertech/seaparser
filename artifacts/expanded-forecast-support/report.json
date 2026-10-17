@@ -1,0 +1,940 @@
+{
+  "acquisition": {
+    "new_marine_estimated_transfer_bytes": 118124704,
+    "new_met_response_bytes": 88399,
+    "new_wave_transfer_bytes": 0,
+    "total_frozen_bytes": 182385
+  },
+  "blockers": [
+    "larger_area_local_rectilinear_geometry_unverified",
+    "larger_area_land_underlay_missing",
+    "current_own_validity_mask_unverified",
+    "wind_own_validity_mask_unverified",
+    "original_wave_time_semantics_unqualified",
+    "model_issue_time_unverified",
+    "cross_product_model_run_compatibility_unverified"
+  ],
+  "common_coordinate_window": {
+    "first_label": "2026-10-17T01:00:00+00:00",
+    "last_label": "2026-10-17T12:00:00+00:00",
+    "temporal_support_qualified": false
+  },
+  "current": {
+    "all_time_value_complete_cells": 9,
+    "blockers": [
+      "validity_masks_not_qualified",
+      "temporal_support_unverified",
+      "model_issue_time_unverified",
+      "cross_product_model_run_compatibility_unverified",
+      "wind_and_land_route_support_not_expanded",
+      "local_rectilinear_representation_exceeds_existing_tolerance"
+    ],
+    "cell_count": 9,
+    "cell_methods": {
+      "uo": null,
+      "vo": null
+    },
+    "cells": {
+      "features": [
+        {
+          "geometry": {
+            "coordinates": [
+              [
+                [
+                  11.569350242614746,
+                  57.608219146728516
+                ],
+                [
+                  11.597127914428711,
+                  57.608219146728516
+                ],
+                [
+                  11.597127914428711,
+                  57.62488555908203
+                ],
+                [
+                  11.569350242614746,
+                  57.62488555908203
+                ],
+                [
+                  11.569350242614746,
+                  57.608219146728516
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "properties": {
+            "all_time_values_complete": true,
+            "native_cell": [
+              0,
+              0
+            ],
+            "navigability": "not_assessed",
+            "product": "current",
+            "validity_mask_qualified": false,
+            "wave_mask_all_corners_wet": null
+          },
+          "type": "Feature"
+        },
+        {
+          "geometry": {
+            "coordinates": [
+              [
+                [
+                  11.597127914428711,
+                  57.608219146728516
+                ],
+                [
+                  11.624905586242676,
+                  57.608219146728516
+                ],
+                [
+                  11.624905586242676,
+                  57.62488555908203
+                ],
+                [
+                  11.597127914428711,
+                  57.62488555908203
+                ],
+                [
+                  11.597127914428711,
+                  57.608219146728516
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "properties": {
+            "all_time_values_complete": true,
+            "native_cell": [
+              0,
+              1
+            ],
+            "navigability": "not_assessed",
+            "product": "current",
+            "validity_mask_qualified": false,
+            "wave_mask_all_corners_wet": null
+          },
+          "type": "Feature"
+        },
+        {
+          "geometry": {
+            "coordinates": [
+              [
+                [
+                  11.624905586242676,
+                  57.608219146728516
+                ],
+                [
+                  11.65268325805664,
+                  57.608219146728516
+                ],
+                [
+                  11.65268325805664,
+                  57.62488555908203
+                ],
+                [
+                  11.624905586242676,
+                  57.62488555908203
+                ],
+                [
+                  11.624905586242676,
+                  57.608219146728516
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "properties": {
+            "all_time_values_complete": true,
+            "native_cell": [
+              0,
+              2
+            ],
+            "navigability": "not_assessed",
+            "product": "current",
+            "validity_mask_qualified": false,
+            "wave_mask_all_corners_wet": null
+          },
+          "type": "Feature"
+        },
+        {
+          "geometry": {
+            "coordinates": [
+              [
+                [
+                  11.569350242614746,
+                  57.62488555908203
+                ],
+                [
+                  11.597127914428711,
+                  57.62488555908203
+                ],
+                [
+                  11.597127914428711,
+                  57.64155197143555
+                ],
+                [
+                  11.569350242614746,
+                  57.64155197143555
+                ],
+                [
+                  11.569350242614746,
+                  57.62488555908203
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "properties": {
+            "all_time_values_complete": true,
+            "native_cell": [
+              1,
+              0
+            ],
+            "navigability": "not_assessed",
+            "product": "current",
+            "validity_mask_qualified": false,
+            "wave_mask_all_corners_wet": null
+          },
+          "type": "Feature"
+        },
+        {
+          "geometry": {
+            "coordinates": [
+              [
+                [
+                  11.597127914428711,
+                  57.62488555908203
+                ],
+                [
+                  11.624905586242676,
+                  57.62488555908203
+                ],
+                [
+                  11.624905586242676,
+                  57.64155197143555
+                ],
+                [
+                  11.597127914428711,
+                  57.64155197143555
+                ],
+                [
+                  11.597127914428711,
+                  57.62488555908203
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "properties": {
+            "all_time_values_complete": true,
+            "native_cell": [
+              1,
+              1
+            ],
+            "navigability": "not_assessed",
+            "product": "current",
+            "validity_mask_qualified": false,
+            "wave_mask_all_corners_wet": null
+          },
+          "type": "Feature"
+        },
+        {
+          "geometry": {
+            "coordinates": [
+              [
+                [
+                  11.624905586242676,
+                  57.62488555908203
+                ],
+                [
+                  11.65268325805664,
+                  57.62488555908203
+                ],
+                [
+                  11.65268325805664,
+                  57.64155197143555
+                ],
+                [
+                  11.624905586242676,
+                  57.64155197143555
+                ],
+                [
+                  11.624905586242676,
+                  57.62488555908203
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "properties": {
+            "all_time_values_complete": true,
+            "native_cell": [
+              1,
+              2
+            ],
+            "navigability": "not_assessed",
+            "product": "current",
+            "validity_mask_qualified": false,
+            "wave_mask_all_corners_wet": null
+          },
+          "type": "Feature"
+        },
+        {
+          "geometry": {
+            "coordinates": [
+              [
+                [
+                  11.569350242614746,
+                  57.64155197143555
+                ],
+                [
+                  11.597127914428711,
+                  57.64155197143555
+                ],
+                [
+                  11.597127914428711,
+                  57.65821838378906
+                ],
+                [
+                  11.569350242614746,
+                  57.65821838378906
+                ],
+                [
+                  11.569350242614746,
+                  57.64155197143555
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "properties": {
+            "all_time_values_complete": true,
+            "native_cell": [
+              2,
+              0
+            ],
+            "navigability": "not_assessed",
+            "product": "current",
+            "validity_mask_qualified": false,
+            "wave_mask_all_corners_wet": null
+          },
+          "type": "Feature"
+        },
+        {
+          "geometry": {
+            "coordinates": [
+              [
+                [
+                  11.597127914428711,
+                  57.64155197143555
+                ],
+                [
+                  11.624905586242676,
+                  57.64155197143555
+                ],
+                [
+                  11.624905586242676,
+                  57.65821838378906
+                ],
+                [
+                  11.597127914428711,
+                  57.65821838378906
+                ],
+                [
+                  11.597127914428711,
+                  57.64155197143555
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "properties": {
+            "all_time_values_complete": true,
+            "native_cell": [
+              2,
+              1
+            ],
+            "navigability": "not_assessed",
+            "product": "current",
+            "validity_mask_qualified": false,
+            "wave_mask_all_corners_wet": null
+          },
+          "type": "Feature"
+        },
+        {
+          "geometry": {
+            "coordinates": [
+              [
+                [
+                  11.624905586242676,
+                  57.64155197143555
+                ],
+                [
+                  11.65268325805664,
+                  57.64155197143555
+                ],
+                [
+                  11.65268325805664,
+                  57.65821838378906
+                ],
+                [
+                  11.624905586242676,
+                  57.65821838378906
+                ],
+                [
+                  11.624905586242676,
+                  57.64155197143555
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "properties": {
+            "all_time_values_complete": true,
+            "native_cell": [
+              2,
+              2
+            ],
+            "navigability": "not_assessed",
+            "product": "current",
+            "validity_mask_qualified": false,
+            "wave_mask_all_corners_wet": null
+          },
+          "type": "Feature"
+        }
+      ],
+      "type": "FeatureCollection"
+    },
+    "depth_m": 0.5016462206840515,
+    "existing_adapter_geometry_compatible": false,
+    "field_counts": {
+      "uo": {
+        "missing_or_invalid": 0,
+        "total": 192
+      },
+      "vo": {
+        "missing_or_invalid": 0,
+        "total": 192
+      }
+    },
+    "issued_at": null,
+    "latitude": [
+      57.608219146728516,
+      57.62488555908203,
+      57.64155197143555,
+      57.65821838378906
+    ],
+    "longitude": [
+      11.569350242614746,
+      11.597127914428711,
+      11.624905586242676,
+      11.65268325805664
+    ],
+    "model_run_id": null,
+    "node_count": 16,
+    "product": "current",
+    "result_qualification": "diagnostic_only",
+    "routing_enabled": false,
+    "schema": 1,
+    "scope": "native_value_completeness_only",
+    "source_qualification": "unverified",
+    "source_sha256": "197894704b6c48d39a53bc2ff07b4eaf55a845f60b369314be726f3a7345223d",
+    "time_bounds": null,
+    "time_count": 12,
+    "time_end": "2026-10-17T12:00:00Z",
+    "time_start": "2026-10-17T01:00:00Z",
+    "wave_mask_native_alignment_verified": false,
+    "wave_mask_sha256": null,
+    "wave_mask_wet_nodes": null
+  },
+  "full_space_time_support_verified": false,
+  "result_qualification": "diagnostic_only",
+  "routing_enabled": false,
+  "schema": 1,
+  "scope": "expanded_frozen_source_inventory_not_routing_qualification",
+  "source_hashes": {
+    "current.nc": "197894704b6c48d39a53bc2ff07b4eaf55a845f60b369314be726f3a7345223d",
+    "marine-download-manifest.json": "fb19f5fd479547c2f24245b86ebed7d8d44349c44ad48557f2358a2752dc6c13",
+    "marine-estimate-manifest.json": "5c598997bb720eb0dd8f46f9e808ebdbf3420b0c49ffb2cf755c06ef3faa95be",
+    "met-nordic-metadata/manifest.json": "40f269642aa89dd09afc94fd7107567d69489feda3403fe81bb8af16ee50d692",
+    "met-nordic-metadata/met-forecast.das": "fb2fcc22fa60f1a289c8862721efceebc5740496819a59bff534b293c0840378",
+    "met-nordic-metadata/met-forecast.dds": "7228b1ebe176c6cfa7155a667bd45b315a0c470e010c0fee53d27012cf240377",
+    "met-nordic-metadata/met-time-coordinates.txt": "96c38a2abc8f2c12d6c106469357de4e1f4c98428f749d78630ddbfe4bf2e765",
+    "met-nordic-metadata/native-axes.txt": "eed6288b51d3d2e81c5b19096fd0cacf1cce4319bf6a86cf42cdb419295c0836",
+    "met-nordic-metadata/vinga-latlon.txt": "7b2cb3b4ee87781414866a177fa1b26852f9b27c4c6011a973ec1e69d1bffa32",
+    "met-nordic-wind-sample/manifest.json": "84a737ea8f25448a7e7e891ff871fec44ebe934dfb076967353243bcf37be250",
+    "met-nordic-wind-sample/native-wind-land.txt": "8b9586e820882fa9050523b984758fef26ba04a8ccd43bb09f26e7c7788a16fd",
+    "parent-wave-original-manifest.json": "cc0e14f996ccbb8467d27fe39c5ab663da3025fccbc0760d093fd5fef0046375",
+    "wave-mask.nc": "a8208d2b4b9e06b8abf2562a5415786d6cdabcbec2748df0a6e0a94bef9d37e9",
+    "wave-subset-manifest.json": "0d2e89d46f3e5271d55209242eec3215f10cfc8e45a38dc842027fc28685d523",
+    "waves.nc": "7cb2e2c7ca5873a5b105ccfc6a6b6d3de2cb699754ba16b2ce48496b43346622"
+  },
+  "source_issued_at": {
+    "current": null,
+    "waves": null,
+    "wind": null
+  },
+  "source_qualification": "unverified",
+  "unchanged_runtime": {
+    "configuration_sha256": "fd16b0c3a7ce6e77a7b6294d2fbce68d4b7bf5a4ffe59b07153edf8e7abcaee3",
+    "default_snapshot": "2026-10-13",
+    "development_support_radius_m": 900,
+    "result_qualification": "conditional_on_assumptions",
+    "source_configuration": "settings/development-weather-assumptions.json",
+    "source_qualification": "unverified"
+  },
+  "waves": {
+    "all_time_value_complete_cells": 9,
+    "blockers": [
+      "validity_masks_not_qualified",
+      "temporal_support_unverified",
+      "model_issue_time_unverified",
+      "cross_product_model_run_compatibility_unverified",
+      "wind_and_land_route_support_not_expanded",
+      "local_rectilinear_representation_exceeds_existing_tolerance"
+    ],
+    "cell_count": 9,
+    "cell_methods": {
+      "VHM0": null,
+      "VMDR": null,
+      "VTM02": null
+    },
+    "cells": {
+      "features": [
+        {
+          "geometry": {
+            "coordinates": [
+              [
+                [
+                  11.569371223449707,
+                  57.60810470581055
+                ],
+                [
+                  11.597147941589355,
+                  57.60810470581055
+                ],
+                [
+                  11.597147941589355,
+                  57.62477111816406
+                ],
+                [
+                  11.569371223449707,
+                  57.62477111816406
+                ],
+                [
+                  11.569371223449707,
+                  57.60810470581055
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "properties": {
+            "all_time_values_complete": true,
+            "native_cell": [
+              0,
+              0
+            ],
+            "navigability": "not_assessed",
+            "product": "waves",
+            "validity_mask_qualified": false,
+            "wave_mask_all_corners_wet": true
+          },
+          "type": "Feature"
+        },
+        {
+          "geometry": {
+            "coordinates": [
+              [
+                [
+                  11.597147941589355,
+                  57.60810470581055
+                ],
+                [
+                  11.62492561340332,
+                  57.60810470581055
+                ],
+                [
+                  11.62492561340332,
+                  57.62477111816406
+                ],
+                [
+                  11.597147941589355,
+                  57.62477111816406
+                ],
+                [
+                  11.597147941589355,
+                  57.60810470581055
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "properties": {
+            "all_time_values_complete": true,
+            "native_cell": [
+              0,
+              1
+            ],
+            "navigability": "not_assessed",
+            "product": "waves",
+            "validity_mask_qualified": false,
+            "wave_mask_all_corners_wet": true
+          },
+          "type": "Feature"
+        },
+        {
+          "geometry": {
+            "coordinates": [
+              [
+                [
+                  11.62492561340332,
+                  57.60810470581055
+                ],
+                [
+                  11.652702331542969,
+                  57.60810470581055
+                ],
+                [
+                  11.652702331542969,
+                  57.62477111816406
+                ],
+                [
+                  11.62492561340332,
+                  57.62477111816406
+                ],
+                [
+                  11.62492561340332,
+                  57.60810470581055
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "properties": {
+            "all_time_values_complete": true,
+            "native_cell": [
+              0,
+              2
+            ],
+            "navigability": "not_assessed",
+            "product": "waves",
+            "validity_mask_qualified": false,
+            "wave_mask_all_corners_wet": true
+          },
+          "type": "Feature"
+        },
+        {
+          "geometry": {
+            "coordinates": [
+              [
+                [
+                  11.569371223449707,
+                  57.62477111816406
+                ],
+                [
+                  11.597147941589355,
+                  57.62477111816406
+                ],
+                [
+                  11.597147941589355,
+                  57.64143753051758
+                ],
+                [
+                  11.569371223449707,
+                  57.64143753051758
+                ],
+                [
+                  11.569371223449707,
+                  57.62477111816406
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "properties": {
+            "all_time_values_complete": true,
+            "native_cell": [
+              1,
+              0
+            ],
+            "navigability": "not_assessed",
+            "product": "waves",
+            "validity_mask_qualified": false,
+            "wave_mask_all_corners_wet": true
+          },
+          "type": "Feature"
+        },
+        {
+          "geometry": {
+            "coordinates": [
+              [
+                [
+                  11.597147941589355,
+                  57.62477111816406
+                ],
+                [
+                  11.62492561340332,
+                  57.62477111816406
+                ],
+                [
+                  11.62492561340332,
+                  57.64143753051758
+                ],
+                [
+                  11.597147941589355,
+                  57.64143753051758
+                ],
+                [
+                  11.597147941589355,
+                  57.62477111816406
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "properties": {
+            "all_time_values_complete": true,
+            "native_cell": [
+              1,
+              1
+            ],
+            "navigability": "not_assessed",
+            "product": "waves",
+            "validity_mask_qualified": false,
+            "wave_mask_all_corners_wet": true
+          },
+          "type": "Feature"
+        },
+        {
+          "geometry": {
+            "coordinates": [
+              [
+                [
+                  11.62492561340332,
+                  57.62477111816406
+                ],
+                [
+                  11.652702331542969,
+                  57.62477111816406
+                ],
+                [
+                  11.652702331542969,
+                  57.64143753051758
+                ],
+                [
+                  11.62492561340332,
+                  57.64143753051758
+                ],
+                [
+                  11.62492561340332,
+                  57.62477111816406
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "properties": {
+            "all_time_values_complete": true,
+            "native_cell": [
+              1,
+              2
+            ],
+            "navigability": "not_assessed",
+            "product": "waves",
+            "validity_mask_qualified": false,
+            "wave_mask_all_corners_wet": true
+          },
+          "type": "Feature"
+        },
+        {
+          "geometry": {
+            "coordinates": [
+              [
+                [
+                  11.569371223449707,
+                  57.64143753051758
+                ],
+                [
+                  11.597147941589355,
+                  57.64143753051758
+                ],
+                [
+                  11.597147941589355,
+                  57.658103942871094
+                ],
+                [
+                  11.569371223449707,
+                  57.658103942871094
+                ],
+                [
+                  11.569371223449707,
+                  57.64143753051758
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "properties": {
+            "all_time_values_complete": true,
+            "native_cell": [
+              2,
+              0
+            ],
+            "navigability": "not_assessed",
+            "product": "waves",
+            "validity_mask_qualified": false,
+            "wave_mask_all_corners_wet": true
+          },
+          "type": "Feature"
+        },
+        {
+          "geometry": {
+            "coordinates": [
+              [
+                [
+                  11.597147941589355,
+                  57.64143753051758
+                ],
+                [
+                  11.62492561340332,
+                  57.64143753051758
+                ],
+                [
+                  11.62492561340332,
+                  57.658103942871094
+                ],
+                [
+                  11.597147941589355,
+                  57.658103942871094
+                ],
+                [
+                  11.597147941589355,
+                  57.64143753051758
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "properties": {
+            "all_time_values_complete": true,
+            "native_cell": [
+              2,
+              1
+            ],
+            "navigability": "not_assessed",
+            "product": "waves",
+            "validity_mask_qualified": false,
+            "wave_mask_all_corners_wet": true
+          },
+          "type": "Feature"
+        },
+        {
+          "geometry": {
+            "coordinates": [
+              [
+                [
+                  11.62492561340332,
+                  57.64143753051758
+                ],
+                [
+                  11.652702331542969,
+                  57.64143753051758
+                ],
+                [
+                  11.652702331542969,
+                  57.658103942871094
+                ],
+                [
+                  11.62492561340332,
+                  57.658103942871094
+                ],
+                [
+                  11.62492561340332,
+                  57.64143753051758
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "properties": {
+            "all_time_values_complete": true,
+            "native_cell": [
+              2,
+              2
+            ],
+            "navigability": "not_assessed",
+            "product": "waves",
+            "validity_mask_qualified": false,
+            "wave_mask_all_corners_wet": true
+          },
+          "type": "Feature"
+        }
+      ],
+      "type": "FeatureCollection"
+    },
+    "depth_m": null,
+    "existing_adapter_geometry_compatible": false,
+    "field_counts": {
+      "VHM0": {
+        "missing_or_invalid": 0,
+        "total": 192
+      },
+      "VMDR": {
+        "missing_or_invalid": 0,
+        "total": 192
+      },
+      "VTM02": {
+        "missing_or_invalid": 0,
+        "total": 192
+      }
+    },
+    "issued_at": null,
+    "latitude": [
+      57.60810470581055,
+      57.62477111816406,
+      57.64143753051758,
+      57.658103942871094
+    ],
+    "longitude": [
+      11.569371223449707,
+      11.597147941589355,
+      11.62492561340332,
+      11.652702331542969
+    ],
+    "model_run_id": null,
+    "node_count": 16,
+    "product": "waves",
+    "result_qualification": "diagnostic_only",
+    "routing_enabled": false,
+    "schema": 1,
+    "scope": "native_value_completeness_only",
+    "source_qualification": "unverified",
+    "source_sha256": "7cb2e2c7ca5873a5b105ccfc6a6b6d3de2cb699754ba16b2ce48496b43346622",
+    "time_bounds": null,
+    "time_count": 12,
+    "time_end": "2026-10-17T12:00:00Z",
+    "time_start": "2026-10-17T01:00:00Z",
+    "wave_mask_native_alignment_verified": true,
+    "wave_mask_sha256": "a8208d2b4b9e06b8abf2562a5415786d6cdabcbec2748df0a6e0a94bef9d37e9",
+    "wave_mask_wet_nodes": 16
+  },
+  "wind": {
+    "issued_at": null,
+    "land_fraction_is_validity_mask": false,
+    "marine_native_point_checks": 352,
+    "model_reference_time": "2026-10-17T00:00:00+00:00",
+    "native_node_count": 132,
+    "planning_blockers": [
+      "wind_native_geometry_unqualified",
+      "wind_vector_frame_unqualified",
+      "model_issue_time_unverified",
+      "cross_product_model_run_compatibility_unverified"
+    ],
+    "point_checks_scope": "Points only; not whole segments or an area proof",
+    "time_count": 12
+  }
+}

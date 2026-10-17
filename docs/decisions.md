@@ -339,3 +339,17 @@ komfortexponering med samma 300 s tillåtna extra restid. Per-avgångsurvalen
 behålls separat. Identiska vinnare visas uttryckligen; ingen marin serie
 konstrueras för att skilja dem. Källa unverified, beräkning villkorad av
 antaganden och båt/komfort ej validerade. Se development-real-routing.md.
+
+## 2026-10-17: Större fryst källunderlag före större routingområde
+
+En separat hashbunden rådatabunt för 17 oktober återanvänder befintligt WAV-
+original lokalt och hämtar enbart nya avgränsade PHY-/masksubset samt MET-native-
+vind. 132 vindnoder och 4×4 egna marina noder, tolv timnoder 01–12 UTC.
+Separat estimat före hämtning: 118,1 MB ny marin överföring; inget nytt WAV-uttag.
+
+Det nya underlaget är diagnostiskt och ändrar inte standardrouting eller 900 m.
+Större marina grid klarar inte befintlig lokal 1 m-axelrepresentation och större
+landunderlag saknas. Ingen tolerans, mask, geografi, fysisk tidssemantik eller
+källkvalificering antas bort. Samma koordinattider är inte verifierat gemensamt
+fysiskt tidsstöd. Befintlig adapter/MET-läsare återanvänds; ingen andra adapter.
+Se expanded-forecast-support.md för bytebudgetar, faktisk data och nästa hinder.

@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "scope": "original_file_diagnostic",
+  "toolbox_version": "2.5.0",
+  "dataset_id": "cmems_mod_bal_wav_anfc_PT1H-i",
+  "dataset_version": "202311",
+  "dataset_part": "default",
+  "filename": "BAL-WAM_WAV2026101700.nc",
+  "source": {
+    "s3_object": "s3://mdl-native-11/native/BALTICSEA_ANALYSISFORECAST_WAV_003_010/cmems_mod_bal_wav_anfc_PT1H-i_202311/2026/10/BAL-WAM_WAV2026101700.nc",
+    "etag": "\"b191864c0fe788aa5e14f5188a8cb56d-14\"",
+    "bytes": 113263050.0,
+    "last_modified_datetime": "2026-10-17T08:02:01.166000+00:00"
+  },
+  "sha256": "de195d6a8ecdc9b02621c838cb0afd87adb85f0c241a066f9aa8b4703e856401",
+  "actual_result_bytes": 113263050,
+  "retrieved_at": "2026-10-17T10:18:49.350172+00:00",
+  "cache_key": "247ff2fc4215c30711a7f1e327e2231d2dd0de23528fa8b29c24518dfd649d58",
+  "cache_hit": false,
+  "estimated_result_bytes": 113263050.0,
+  "estimated_transfer_bytes": 113263050.0,
+  "estimated_transfer_bytes_this_run": 113263050.0,
+  "budgets_gb": {
+    "file": 2,
+    "transfer": 10,
+    "total_transfer": 20,
+    "disk_reserve": 1
+  },
+  "model_run_id": null,
+  "issued_at": null,
+  "arco_lineage_verified": false
+}

@@ -24,16 +24,17 @@ def load_native_wind(root):
 def native_wind_from_snapshot(snapshot):
     """Materialize the exact already validated snapshot; never reopen source files."""
     metadata, digest, axes, epochs, values = snapshot
+    rows,columns,count=len(axes['y']),len(axes['x']),len(epochs)
     def planes(flat):
-        return tuple(tuple(tuple(flat[k * 56 + j * 7:k * 56 + (j + 1) * 7])
-                           for j in range(8)) for k in range(5))
+        return tuple(tuple(tuple(flat[(k*rows+j)*columns:(k*rows+j+1)*columns])
+                           for j in range(rows)) for k in range(count))
     def instant(epoch):
         return datetime.fromtimestamp(int(Decimal(epoch)), timezone.utc)
     hashes = dict(metadata['source_hashes'], **{'native-wind-land.txt': digest})
     return NativeWindSample(
         PROJ4, axes['x'], axes['y'], tuple(instant(epoch) for epoch in epochs),
         planes(values['wind_speed_10m']), planes(values['wind_direction_10m']),
-        tuple(tuple(values['land_area_fraction'][j * 7:(j + 1) * 7]) for j in range(8)),
+        tuple(tuple(values['land_area_fraction'][j * columns:(j + 1) * columns]) for j in range(rows)),
         instant(metadata['model_reference']['epoch_seconds']), tuple(sorted(hashes.items())))
 
 
