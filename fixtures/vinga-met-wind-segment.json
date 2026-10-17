@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "purpose": "one frozen Vinga route-segment wind diagnostic; not a navigable plan",
+  "dataset": "MET Nordic operational forecast archive 2026-10-13T00Z",
+  "start_local_east_north_m": [-100, 0],
+  "end_local_east_north_m": [100, 0],
+  "start_time": "2026-10-13T12:20:00Z",
+  "end_time": "2026-10-13T12:30:00Z",
+  "test_wind_limits_m_s": [10, 18],
+  "boat_model": "not used",
+  "current": "not used",
+  "waves": "not used",
+  "depth_and_land_completeness": "unknown"
+}

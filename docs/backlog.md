@@ -17,7 +17,7 @@ progress.md är arbetslogg, inte en aktuell komplett backlog.
 | Automatisk polygonomväg i lokalt plan | Klar, CI godkänd på 3573814 | Exakta segment-/marginalpredikat och begränsad graf; kompletta tidsberoende kandidater |
 | Geografiska koordinater, API och kartvisning | Implementerad teknisk demo, verifieras i leveransen | WGS84 AEQD, tunt API med separata processer, Leaflet-klick och GeoJSON; syntetisk bakgrund/hinder |
 | Export av planerade vägpunkter | Implementerad GPX 1.1-demonstration | Planerade rtept, ordning/lat/lon och roundtrip testas; verklig plotterimport återstår |
-| Verkliga kart-/hinder-/prognoskällor | Vinga-land/bakgrund och regional syntetisk väderplanering implementerade för granskning | Fryst ODbL-land, konservativa routinghöljen och opt-in OSM raster; okänt djup/fullständighet. Regionalt fryst syntetiskt väder/API/karta/GPX; SMHI/MET punktreferenser och offlineadaptrar granskade; verklig regional routing avvisas tills native maskat grid/Tm02/utfärdande finns. Befintligt Copernicus-bundle och gemensam adapter verifierade offline; explicit planeringsspärr för okänd utfärdandetid/run-förenlighet. Regional vind, marin run-proveniens och strömmask återstår. Ingen publik ändring |
+| Verkliga kart-/hinder-/prognoskällor | Vinga-land/bakgrund och regional syntetisk väderplanering implementerade för granskning; fryst MET-vind kan nu provtas och segmentgränser diagnostiseras offline | Fryst ODbL-land, konservativa routinghöljen och opt-in OSM raster; okänt djup/fullständighet. Vinga MET-diagnostiken använder verklig fryst vind men skapar ingen kvalificerad rutt. Kvar: vindgiltighetsmask, averaging-fönstrets placering, utfärdandetid och förenlighet med marina prognoskörningar. Befintliga marina spärrar kvarstår. Ingen publik ändring |
 | Djupgående och säkerhetsmarginal | [Offline acceptanskontrakt](depth-acceptance.md), implementation återstår | Explicit okänt djup; kompatibla vertikala datum krävs för tidvatten/djup |
 | Tidvatten och stationsström | Adapter-/region-/licensbeslut återstår | Separata vattenståndsdatum och strömriktning/djup; ingen områdesextrapolation utan verifierad modell |
 | Fler spårbara båtprofiler och manövrer | Beslut behövs före verkliga profiler | Polarrättigheter, representativa båtar och manövermodell; automatisk kryss ingår inte i nuvarande prototyp |
@@ -58,5 +58,29 @@ segmentcertifiering: källans topp/mask avvisas trots att glesare målfält
 certifieras. Detta kvalificerar ingen verklig omvandlingsmetod.
 
 Regional vind: begränsad faktisk MET-native råsubset (56 noder, fem timmar)
-fryst och verifierbar offline. Ingen routingimport; geometri, maskstöd,
-utfärdandetid och run-förenlighet återstår. Se met-nordic-metadata-review.md.
+fryst och verifierbar offline. `met_wind_segments.py` transformerar Vinga-lokal
+ruttgeometri till native LCC, interpolerar markrelativa E/N-komponenter och
+beräknar konservativa gränser för ett helt segment. `within_interpolation_model`
+är en diagnostisk modellgräns, inte godkänd väder- eller ruttkvalitet. Mask,
+tidsmedlets exakta placering, issued_at och run-förenlighet kvarstår. Se
+`docs/native-met-wind-segments.md` och `met-nordic-metadata-review.md`.
+
+## 2026-10-17: fryst MET-vind på Vinga-segment
+
+Ett nytt offlineprov binder den befintliga MET-råfixturen till ett uttryckligt
+Vinga-lokalt segment. LCC-koordinaterna valideras mot den oberoende analytiska
+referensen och de 56 frysta leverantörsnoderna; rapporten redovisar 1 m
+konservativt stödsmarginal mot uppmätt maxavvikelse 0,2491 m. MET:s FROM-bäring
+omvandlas till verkliga öst/nord-komponenter, interpoleras vektorvis i rum/tid,
+och vindgränsen över hela segmentet får endast godkänt modellresultat när
+hörnens konvexa hölje ryms under gränsen. En punkt över gränsen ger bevisat
+överskridande; ett högt hörn utanför banan ger otillräckligt underlag.
+
+Reproducerbart exempel: `fixtures/vinga-met-wind-segment.json` och
+`artifacts/native-met-wind-segment/report.json`. Testgränsen 10 m/s avvisas av
+fryst faktisk vind (~13,1 m/s vid segmentmitt); 18 m/s ligger inom denna
+interpolationsmodells omslutning. Båda resultaten är diagnostic-only eftersom
+utfärdandetid, källans vindmask, 10-minutersmedlets placering och förenlighet
+med marina körningar inte är verifierade. Varken polar, ström, vågor, land- eller
+djupbedömning används. Därför tillkommer ingen planeringskandidat och ingen
+publik ändring.

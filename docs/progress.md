@@ -2526,3 +2526,31 @@ frontend statisk kontroll samt DOM-/landtester godkända. Befintligt karttest
 kan inte starta sin lokala API-process i denna hanterade miljö; exakt
 socketdiagnos och full logg sparas utanför repositoryt. CI verifierar
 hela körningen före leverans; ingen ny full lokal körning utan ändring.
+
+## 2026-10-17: Native MET-vind kopplad till ett fryst Vinga-segment
+
+Infört en avgränsad offlineadapter över befintlig hashfryst MET-native-fixture.
+Den bevarar source-LCC-axlarna, omvandlar CF `wind_from_direction` till
+geografiska E/N-komponenter, interpolerar komponenterna i rum och tid och
+mappar vindvektorn till Vingas WGS84-AEQD-ruttkoordinater. Hela lokala segmentet
+omsluts med geodetiska intervallgränser, därefter en rationell LCC-box och alla
+tangerande native cellhörn. En punkt över testgränsen bevisar överskridande;
+hörnhöljet måste rymmas under gränsen för `within_interpolation_model`; annars
+redovisas otillräckligt underlag.
+
+Reproducerbart fall: `fixtures/vinga-met-wind-segment.json`, rapport
+`artifacts/native-met-wind-segment/report.json`. Den frysta faktiska vinden ger
+13,13 m/s vid segmentmitt: testgräns 10 m/s överskrids; konservativ gräns
+18 m/s ryms inom den definierade interpolationsmodellen. Uppmätt koordinatstöd
+vid 56 källnoder har maxavvikelse 0,2491 m; segmenthöljet lägger till 1 m.
+Det är inte global datum-/källnoggrannhet. Utfärdandetid, vindmask,
+tidsmedlets exakta placering och förenlighet med marina körningar är fortfarande
+okända. Därför finns ingen kvalificerad rutt eller planeringskandidat. Ingen
+syntetisk ström, våg eller polar användes; djup/landfullständighet okända.
+
+Verifiering: `tests.test_met_wind_segments` (14) och den fulla `scripts.check`-
+sviten (160 domän- och 258 integrationstester), låsfiler, arkitektur och
+beroenden godkända. Frontendens
+statiska kontroll och samtliga 14 frontendtester passerade; karttesterna kördes
+utanför sandboxen eftersom de startar en lokal API-process. Ingen publik demo
+eller databas ändrad. CI kontrolleras efter push.

@@ -1,0 +1,150 @@
+{
+  "coordinate_mapping": {
+    "alignment_check_nodes": 56,
+    "applied_support_margin_m": 1.0,
+    "global_datum_accuracy": "not established",
+    "observed_max_alignment_error_m": 0.24907657108681355,
+    "operation": "preserve geographic lon/lat values into the MET CF geographic CRS, then apply its declared spherical LCC; no datum shift is implied"
+  },
+  "dataset": "MET Nordic native frozen wind; no live fetch",
+  "depth": "unknown",
+  "hard_wind_checks": {
+    "10": {
+      "coordinate_mapping_tolerance_m": 1.0,
+      "intersecting_cells": 2,
+      "overall_planning_qualification": "blocked",
+      "provider_averaging_window": "unverified",
+      "provider_mask": "unknown",
+      "reason": "on-segment query exceeds limit",
+      "remaining_gates": [
+        "wind_validity_mask_unverified",
+        "wind_mean_window_unverified",
+        "model_issue_time_unverified",
+        "cross_product_model_run_compatibility_unverified"
+      ],
+      "source_grid_enclosure_m": {
+        "x": [
+          "-202948.529262837673626512197598053498",
+          "-202735.537917569321796896063299885241"
+        ],
+        "y": [
+          "-592372.748416405020006060674210057759",
+          "-592158.483028494413847910072307829796"
+        ]
+      },
+      "source_nodes": 12,
+      "status": "observed_exceedance",
+      "upper_bound_m_s": "13.442178",
+      "wind_limit_m_s": 10
+    },
+    "18": {
+      "coordinate_mapping_tolerance_m": 1.0,
+      "intersecting_cells": 2,
+      "overall_planning_qualification": "blocked",
+      "provider_averaging_window": "unverified",
+      "provider_mask": "unknown",
+      "reason": null,
+      "remaining_gates": [
+        "wind_validity_mask_unverified",
+        "wind_mean_window_unverified",
+        "model_issue_time_unverified",
+        "cross_product_model_run_compatibility_unverified"
+      ],
+      "source_grid_enclosure_m": {
+        "x": [
+          "-202948.529262837673626512197598053498",
+          "-202735.537917569321796896063299885241"
+        ],
+        "y": [
+          "-592372.748416405020006060674210057759",
+          "-592158.483028494413847910072307829796"
+        ]
+      },
+      "source_nodes": 12,
+      "status": "within_interpolation_model",
+      "upper_bound_m_s": "13.442178",
+      "wind_limit_m_s": 18
+    }
+  },
+  "interpolation": "bilinear native LCC E/N components, then linear time components",
+  "issued_at": null,
+  "land_completeness": "unknown",
+  "limitations": [
+    "one diagnostic segment, not full route comparison",
+    "a within-interpolation-model bound is not source-quality qualification",
+    "overall planning remains blocked by missing mask, averaging placement, issued_at and marine run compatibility"
+  ],
+  "marine_run_compatibility": "unverified",
+  "model_reference_time": "2026-10-13T00:00:00+00:00",
+  "navigational_safety": "not_assessed",
+  "provider_wind_mask": "unknown",
+  "retrieved_at": "2026-10-13T22:45:13.691914+00:00",
+  "schema": 1,
+  "segment": {
+    "end_east_north_m": {
+      "east": 100,
+      "north": 0
+    },
+    "end_time": "2026-10-13T12:30:00+00:00",
+    "start_east_north_m": {
+      "east": -100,
+      "north": 0
+    },
+    "start_time": "2026-10-13T12:20:00+00:00"
+  },
+  "source_hashes": {
+    "met-forecast.das": "e5900e5e61f5c6101a7f39b41f6d43c04f3e43a35e5b829a0f95c40ac454a8df",
+    "met-forecast.dds": "0f9def84356801e3578aef42cfb46cbc624de088a8d44951301fd8ca1f986c09",
+    "met-time-coordinates.txt": "8814dac572cc1b4b3218bf490db6ffee0f7e639d3c8b8baabae037a039d4302f",
+    "native-axes.txt": "4dd5aba4db24e4534dcc548f29eebba2dc91414d46db87fda06b486ccd76e041",
+    "native-wind-land.txt": "52ca1126d058bd98bdee8107b865c2e454fc192e524f41ffa6204c4f5123504d",
+    "vinga-latlon.txt": "60e6a0fab997c372f7366c493c725f488d7df1f1ae0ddb96e1572c005bc4d9f4"
+  },
+  "source_url": "https://thredds.met.no/thredds/dodsC/metpparchive/2026/10/13/met_forecast_1_0km_nordic_20261013T00Z.nc.ascii",
+  "status": "diagnostic_only",
+  "synthetic_components": {
+    "boat_polar": "not used",
+    "current": "not used",
+    "waves": "not used"
+  },
+  "validity": [
+    "2026-10-13T12:00:00+00:00",
+    "2026-10-13T16:00:00+00:00"
+  ],
+  "wind_average_window_placement": "unverified",
+  "wind_observations": [
+    {
+      "fraction": 0.0,
+      "latitude": 57.63299998892093,
+      "longitude": 11.60332598549061,
+      "route_east_m_s": -4.550841414811817,
+      "route_north_m_s": 12.27603850279665,
+      "time": "2026-10-13T12:20:00+00:00",
+      "wind_east_m_s": -4.551144358974614,
+      "wind_north_m_s": 12.275926193048095,
+      "wind_speed_m_s": 13.092413027146323
+    },
+    {
+      "fraction": 0.5,
+      "latitude": 57.63300000000001,
+      "longitude": 11.605,
+      "route_east_m_s": -4.583384976365292,
+      "route_north_m_s": 12.307408270895786,
+      "time": "2026-10-13T12:25:00+00:00",
+      "wind_east_m_s": -4.583384976362599,
+      "wind_north_m_s": 12.307408269877692,
+      "wind_speed_m_s": 13.133153321384784
+    },
+    {
+      "fraction": 1.0,
+      "latitude": 57.63299998892093,
+      "longitude": 11.606674014509391,
+      "route_east_m_s": -4.616107210982877,
+      "route_north_m_s": 12.339247645094042,
+      "time": "2026-10-13T12:30:00+00:00",
+      "wind_east_m_s": -4.61580270412397,
+      "wind_north_m_s": 12.339361555405238,
+      "wind_speed_m_s": 13.174425156279531
+    }
+  ]
+}
