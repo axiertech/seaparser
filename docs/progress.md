@@ -2678,3 +2678,68 @@ small diagnostic/UTC-normalization refinements; focused tests rechecked after
 them. See copernicus-download-budgets.md for commands and remaining limits.
 Next: reviewed commit/push and exact-commit CI, then source-backed run and
 time-support evidence rather than bypassing planning gates.
+
+
+## 2026-10-17: WAV original retrieved and compared with existing ARCO snapshot
+
+Scope from user: start at 3e40452, reuse download/cache, obtain a relevant
+producer original and source metadata within configured budgets, inspect run,
+reference/issue/publication times and time semantics, compare without claiming
+lineage from numerical similarity, preserve all planning gates. No subset was
+repeated and no external support message was sent.
+
+Current metadata-only catalogue/listing identified BAL-WAM_WAV2026101700.nc.
+A one-file get dry-run and actual get retrieved 113263050 bytes within default
+2/10/20 decimal GB file/per-request/session budgets and 1 GB disk reserve.
+Object ETag, last-modified metadata, local SHA-256 and retrieval time are
+recorded in docs/wav-original-review.md and docs/evidence/wav-original-arco-20261017.json.
+Private source catalogue/list/headers/traceback/original/manifest remain under
+/tmp/seaparser-wav-original-20261017. Original cache admission/integrity was
+verified; identity includes remote ETag/size/mtime and uses the existing
+budget/cache helper. No second original download was used as a cache test.
+
+Added a narrowly scoped WAV-original downloader around Toolbox get; no new
+adapter or dependency. It rejects wildcard filenames, multiple candidates,
+budget/disk violations and mismatched source metadata, then stages and hashes
+before cache admission. The first preflight rejected Toolbox's quoted ETag;
+fixed the format validator and added quoted-ETag coverage before retrying.
+No weather bytes were fetched by that rejected preflight.
+
+Added an offline comparison CLI restricted to reviewed unpacked float32 fields,
+exact native coordinate matches and explicit equal-time/+3600s hypotheses.
+Original: 12x775x764, valid 2026-10-17 01–12 UTC, 22 variables; creation_date
+2026-10-17 05:06:46 has no timezone or established issuance meaning. No run ID,
+forecast_reference_time/forecast_period, revision or actual publication time.
+Original wave variables have no cell_methods/bounds; PUM and CF-1.0 intensive
+field defaults support point interpretation, but cannot override ARCO's mean.
+
+At common times 01–04 UTC, 48/48 values across 3 variables and 4 exactly matched
+nodes are identical. ARCO 00 is outside this original's valid-time range.
+The +1-hour comparison has 0/60 exact matches, so this case does not support
+an assumed shift. Equality is a local content witness, not source-certified
+run/revision lineage. Numeric report flags all qualifications false; no
+planning code, frozen fixtures, DB or deployment changed.
+
+Provider clarification is now concrete: exact run/reference/revision/status for
+this object/ETag; creation_date timezone/meaning and actual publication records;
+why ARCO has time: mean vs instantaneous producer semantics, including bounds
+or a corrected attribute; historical ARCO-to-original lineage per variable/time
+including 00 UTC; exact forcing-run identities and valid temporal support rules.
+
+Verification: focused budget/original/cache/comparison tests include exact-file
+selection, no download after budget rejection, changed-object rejection,
+quoted ETags, cache reuse, missing-value exclusion, nearby-node rejection and
+both independent temporal witnesses. Final real-file offline comparison
+reproduces every base field of the versioned evidence. Full Python project
+checks and final focused results recorded below after completion.
+Next: commit/push and exact-commit CI; source/provider evidence is needed to
+resolve run/issuance/ARCO-mean ambiguities. Do not derive these from file names,
+creation_date, S3 mtime, matching values or general production schedules.
+
+
+Final local verification for this delivery: scripts.check passed 160 domain
+and 274 integration tests; 17 focused tests passed after the final whole-second
+time-axis guard, including rejection of fractional timestamps instead of
+rounding into false matches. Final real-file comparison remained identical.
+Syntax parsing and git diff --check passed. No dependency installation, live
+DB, public deployment or additional weather download was involved.

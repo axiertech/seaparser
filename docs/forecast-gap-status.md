@@ -161,3 +161,24 @@ Filen saknar fortsatt run-ID/modellreferens, issued_at, revision och tidsbounds;
 alla tre vågvariabler anger time: mean. Käll-/tidsstödsblockerarna och samtliga
 planeringsspärrar kvarstår. Den nya filen ersätter inte befintliga frysta
 planeringsfixtures och ger inget kvalificerat blandat Vinga-fall.
+
+
+## Uppföljning: WAV-original granskat 2026-10-17
+
+En relevant producentfil är nu hämtad inom GB-budgeten: BAL-WAM_WAV2026101700.nc,
+113 263 050 byte. [Originalgranskningen](wav-original-review.md) och dess
+versionshanterade evidensfil skiljer objektidentitet, lokal innehållslikhet och
+saknad run-/ARCO-lineage. Ingen ny subsethämtning gjordes.
+
+Originalets giltigheter är 01–12 UTC. Vid samma tider 01–04 är 48/48 värden
+exakt lika med befintligt ARCO-uttag; en +1-timmes jämförelse ger 0/60 exakta
+träffar. ARCO 00 finns inte i denna originalfil. Originalet saknar
+cell_methods och har creation_date=2026-10-17 05:06:46 utan angiven tidszon,
+men fortfarande ingen modellreferenstid, run-ID/revision eller faktisk
+utfärdandetid/publicering. ARCO:s time: mean utan bounds kvarstår i konflikt
+med originalets/PUM:s stöd för punktvärden; ingen automatisk korrigering införs.
+
+Granskningen listar exakta leverantörsfrågor om run/revision, creation_date,
+faktisk original-/ARCO-publicering, time: mean/bounds och historisk lineage
+per variabel/giltighet, särskilt ARCO 00. Ingen kontakt skickades. Alla
+planeringsspärrar förblir oförändrade.

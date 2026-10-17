@@ -1,0 +1,185 @@
+{
+  "schema": 1,
+  "scope": "offline_original_arco_comparison",
+  "original_sha256": "de195d6a8ecdc9b02621c838cb0afd87adb85f0c241a066f9aa8b4703e856401",
+  "arco_sha256": "9030a4d3cb945410e3ec7d69018886e43f859d3696e973360eea96b4b65bf279",
+  "exact_native_coordinate_match": true,
+  "original_indices": {
+    "lat": [
+      277,
+      278
+    ],
+    "lon": [
+      93,
+      94
+    ]
+  },
+  "metadata": {
+    "original": {
+      "dimensions": {
+        "time": 12,
+        "lat": 775,
+        "lon": 764
+      },
+      "time_start": "2026-10-17T01:00:00",
+      "time_end": "2026-10-17T12:00:00",
+      "creation_date": "2026-10-17 05:06:46",
+      "time_bounds": null,
+      "cell_methods": {
+        "VHM0": null,
+        "VTM02": null,
+        "VMDR": null
+      },
+      "reference_variables": [],
+      "global_attribute_names": [
+        "Conventions",
+        "source",
+        "institution",
+        "title",
+        "cmems_product_id",
+        "westernmost_longitude",
+        "easternmost_longitude",
+        "southernmost_latitude",
+        "northernmost_latitude",
+        "grid_resolution",
+        "creation_date"
+      ]
+    },
+    "arco": {
+      "dimensions": {
+        "time": 5,
+        "latitude": 2,
+        "longitude": 2
+      },
+      "time_start": "2026-10-17T00:00:00",
+      "time_end": "2026-10-17T04:00:00",
+      "creation_date": null,
+      "time_bounds": null,
+      "cell_methods": {
+        "VHM0": "time: mean",
+        "VTM02": "time: mean",
+        "VMDR": "time: mean"
+      },
+      "reference_variables": [],
+      "global_attribute_names": [
+        "Conventions",
+        "cmems_product_id",
+        "easternmost_longitude",
+        "grid_resolution",
+        "institution",
+        "northernmost_latitude",
+        "source",
+        "southernmost_latitude",
+        "title",
+        "westernmost_longitude",
+        "copernicusmarine_version"
+      ]
+    }
+  },
+  "hypotheses": [
+    {
+      "original_time_minus_arco_seconds": 0,
+      "matched_times": [
+        {
+          "arco": "2026-10-17T01:00:00",
+          "original": "2026-10-17T01:00:00"
+        },
+        {
+          "arco": "2026-10-17T02:00:00",
+          "original": "2026-10-17T02:00:00"
+        },
+        {
+          "arco": "2026-10-17T03:00:00",
+          "original": "2026-10-17T03:00:00"
+        },
+        {
+          "arco": "2026-10-17T04:00:00",
+          "original": "2026-10-17T04:00:00"
+        }
+      ],
+      "complete_time_coverage": false,
+      "fields": {
+        "VHM0": {
+          "compared_valid_values": 16,
+          "exact_equal_values": 16,
+          "excluded_missing_values": 0,
+          "max_absolute_difference": 0.0
+        },
+        "VTM02": {
+          "compared_valid_values": 16,
+          "exact_equal_values": 16,
+          "excluded_missing_values": 0,
+          "max_absolute_difference": 0.0
+        },
+        "VMDR": {
+          "compared_valid_values": 16,
+          "exact_equal_values": 16,
+          "excluded_missing_values": 0,
+          "max_absolute_difference": 0.0
+        }
+      }
+    },
+    {
+      "original_time_minus_arco_seconds": 3600,
+      "matched_times": [
+        {
+          "arco": "2026-10-17T00:00:00",
+          "original": "2026-10-17T01:00:00"
+        },
+        {
+          "arco": "2026-10-17T01:00:00",
+          "original": "2026-10-17T02:00:00"
+        },
+        {
+          "arco": "2026-10-17T02:00:00",
+          "original": "2026-10-17T03:00:00"
+        },
+        {
+          "arco": "2026-10-17T03:00:00",
+          "original": "2026-10-17T04:00:00"
+        },
+        {
+          "arco": "2026-10-17T04:00:00",
+          "original": "2026-10-17T05:00:00"
+        }
+      ],
+      "complete_time_coverage": true,
+      "fields": {
+        "VHM0": {
+          "compared_valid_values": 20,
+          "exact_equal_values": 0,
+          "excluded_missing_values": 0,
+          "max_absolute_difference": 0.055827945470809937
+        },
+        "VTM02": {
+          "compared_valid_values": 20,
+          "exact_equal_values": 0,
+          "excluded_missing_values": 0,
+          "max_absolute_difference": 0.1443333625793457
+        },
+        "VMDR": {
+          "compared_valid_values": 20,
+          "exact_equal_values": 0,
+          "excluded_missing_values": 0,
+          "max_absolute_difference": 18.36383056640625
+        }
+      }
+    }
+  ],
+  "original_model_run_verified": false,
+  "publication_time_verified": false,
+  "arco_lineage_verified": false,
+  "time_support_qualified": false,
+  "qualification": "diagnostic evidence only; equality does not identify run or revision",
+  "original_source": {
+    "s3_object": "s3://mdl-native-11/native/BALTICSEA_ANALYSISFORECAST_WAV_003_010/cmems_mod_bal_wav_anfc_PT1H-i_202311/2026/10/BAL-WAM_WAV2026101700.nc",
+    "etag": "\"b191864c0fe788aa5e14f5188a8cb56d-14\"",
+    "bytes": 113263050.0,
+    "last_modified_datetime": "2026-10-17T08:02:01.166000+00:00"
+  },
+  "original_retrieved_at": "2026-10-17T10:18:49.350172+00:00",
+  "original_filename": "BAL-WAM_WAV2026101700.nc",
+  "original_bytes": 113263050,
+  "original_cache_integrity_verified": true,
+  "arco_retrieved_at": "2026-10-17T08:33:55.944186+00:00"
+}
