@@ -23,7 +23,7 @@ def create_app(store=None):
         return {'status':'ok','synthetic':False}
 
     @app.get('/api/scene')
-    async def get_scene(profile:Literal['synthetic','vinga','vinga-native']='vinga'):
+    async def get_scene(profile:Literal['synthetic','vinga','vinga-native','vinga-poc']='vinga'):
         return scene(profile)
 
     @app.post('/api/plans',status_code=202)

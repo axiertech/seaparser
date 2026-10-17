@@ -13,12 +13,13 @@ class Position(BaseModel):
 
 class PlanInput(BaseModel):
     model_config=ConfigDict(extra='forbid',strict=True,allow_inf_nan=False)
-    profile: Literal['synthetic','vinga','vinga-native']='vinga'
+    profile: Literal['synthetic','vinga','vinga-native','vinga-poc']='vinga'
     start: Position
     target: Position
     margin_m: float=Field(default=2,ge=0,le=10)
     departure_offsets_seconds: list[int]=Field(default=[0,600],min_length=1,max_length=4)
     candidate_limit: int | None=Field(default=None,ge=2,le=8)
+    boat_profile: Literal['constant-5kn'] | None=None
     scenario: Literal['baseline','weather-limit','unverified','missing-waves']='baseline'
 
     max_wind_m_s: float | None=Field(default=None,ge=0,le=100)
@@ -26,9 +27,10 @@ class PlanInput(BaseModel):
 
     @model_validator(mode='after')
     def departures(self):
-        if self.profile in ('vinga','vinga-native') and self.scenario != 'baseline':
+        if self.profile in ('vinga','vinga-native','vinga-poc') and self.scenario != 'baseline':
             raise ValueError('Vinga använder verkligt väder; syntetiska marina scenarier är bara referenstester')
-        local=vinga_local if self.profile in ('vinga','vinga-native') else to_local
+        from application.poc import local_position
+        local=local_position if self.profile=='vinga-poc' else vinga_local if self.profile in ('vinga','vinga-native','vinga-poc') else to_local
         for p in (self.start,self.target):
             local(p.latitude,p.longitude)
         validate_budget(self.profile,self.candidate_limit,self.departure_offsets_seconds)

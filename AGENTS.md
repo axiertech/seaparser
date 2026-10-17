@@ -84,3 +84,22 @@ Befintligt installations-/databasmandat gäller oförändrat; merge till main,
 force-push och branchradering kräver fortfarande uttryckligt godkännande.
 Bevara orelaterade lokala ändringar och undvik generell staging. Ingen
 fristående bakgrundsaktivitet följer av detta arbetssätt.
+
+
+## Huvudprioritet 2026-10-17: användbart SeaParser-PoC
+
+Ersätter tidigare detaljgranskning som huvudsakligt mål: leverera ett
+sammanhängande grafiskt PoC med verkliga prognosdata, karta/land/rutter,
+start/mål, avgång, befintlig båtmodell, snabbaste/bekvämaste funna alternativ,
+restid/distans/väder, ruttval och GPX. Återanvänd befintlig beräkning och håll
+layout separerad från logik. Prioritera fungerande flöde och tydlig presentation.
+Saknad källmetadata får hanteras med specifika konfigurerade utvecklings-
+antaganden samlade med datadatum i utfällbar förklaring; inga påhittade värden,
+dolda luckor eller borttagna land-/datastöds-/vädergränskontroller.
+Inga nya generella granskningslager eller sidoprojekt. Riktade tester under
+arbetet, samlade kontroller och exakt CI vid leverans. Publicering av PoC
+på befintlig utvecklingswebb är godkänd med befintligt flöde och återställning.
+Detta innebär inte automatiskt tillstånd till tidigare förbjudna root-/
+systemändringar. Förbered konkreta nödvändiga adminsteg innan de eskaleras.
+Första status senast 45 min efter faktisk arbetsstart: vad kan användas,
+aktuella leveranshinder och minsta återstående arbete. Redovisa om 2–4 h inte håller.

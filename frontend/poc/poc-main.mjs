@@ -1,0 +1,13 @@
+import { createMap } from './map-component.mjs';
+import { mount } from './controller.mjs';
+import { createPocTransport } from './poc-transport.mjs';
+const view=await mount(document,(element,scene,pick)=>{
+  const view=createMap(window.L,element,scene,pick);
+  if(window.L.control.scale) window.L.control.scale({imperial:false}).addTo(view.map);
+  for(const p of scene.places||[]){
+    const text=document.createElement('span');text.textContent=p.label;
+    window.L.circleMarker([p.latitude,p.longitude],{radius:10,color:'#075b64',fillColor:'#fffefa',fillOpacity:.9,weight:2}).bindTooltip(text).addTo(view.map);
+  }
+  return view;
+},createPocTransport());
+if(view)document.getElementById('plan-form').dispatchEvent(new Event('submit',{cancelable:true}));

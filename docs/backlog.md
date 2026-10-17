@@ -1,5 +1,15 @@
 # Backlog och nästa sammanhängande leverans
 
+**Aktuell huvudprioritet 2026-10-17: ett användbart, publicerat SeaParser-PoC.**
+Sammanhängande karta → start/mål/avgång/båt → verkliga prognoser → jämför
+snabbaste/bekvämaste funna alternativ → restid/distans/väder → ruttval/GPX.
+Återanvänd befintlig kod; samla antaganden/datadatum i utfällbar förklaring.
+Behåll land-/datastöds-/väderkontroller. God presentation och fungerande
+leverans prioriteras framför fler små granskningar. Inga nya sidoprojekt.
+Publicera på utvecklingswebben genom befintligt flöde med återställning;
+aktivering av äldre publik backend måste lösas, inte döljas av ett frontendbygge.
+
+
 Aktuell gapöversikt 2026-10-16: [forecast-gap-status.md](forecast-gap-status.md).
 Den skiljer kvarvarande källbevis från åtkomst- och leveransproblem.
 

@@ -3055,3 +3055,24 @@ ny adress /vinga-ruttjamforelse-ramar.html; äldre sidor skrivs inte över.
 Leveranskontroller och exakt CI/publiceringskvitto redovisas efter verifiering.
 SSH-konfiguration/DNS blockerade terminalens remoteåtkomst; GitHub-anslutningen
 fungerar och används utan systemändring eller visning av hemligheter.
+
+## 2026-10-17 – sammanhängande PoC vid Vinga
+
+Återhämtningen är redan levererad som 2e0e0f8 (push och exakt grön CI
+39054592940); inga nio kvarvarande filer återstod. Ny huvudprioritet i AGENTS
+/backlog: fungerande PoC framför fler detaljgranskningar. Ny PoC-profil återanvänder
+projekterad fysisk rörelse och verkliga frysta MET/WAV/PHY utan nya datauttag.
+Gemensam karta, val, jämförelse, distans/väder och GPX, med utfällbara antaganden.
+En uttrycklig statisk katalog gör flödet användbart på befintlig webb utan
+root-ändring av äldre API-tjänst. Fria kartpunkter kräver aktiverat nytt API;
+publicerat urval har tre punkter och fyra avgångar. Se docs/poc.md för omfattning,
+publiceringskommandon och återställning. Befintliga offentliga sidor bevaras.
+Samlade lokala låsfilskontroller kördes: 166 domäntester och 328 övriga tester.
+Fyra publiceringsprov träffade en tillfälligt osynkroniserad asset/byggkvittokopia
+under sista metadataredigeringen; kvittot synkroniserades och alla fyra passerade.
+Ett befintligt 16-kombinationsprov slog i tidsgränsen under samtidig körbelastning;
+separat omprov passerade, oförändrad 20-sekundersgräns. Nya riktiga PoC-workerprovet
+passerade också. Fulla frontendkontroller och exakt CI avslutar leveransen.
+Frontendens statiska kontroller och fem av sex testfiler passerade, inklusive det
+nya sammanhängande PoC-provet. Den socketberoende `map.test.mjs` kunde inte
+levereras grönt i den isolerade körmiljön; exakt CI kör samma fulla testsvit.

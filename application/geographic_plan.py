@@ -48,7 +48,7 @@ def obstacle_geometry(shape, convert=to_geo):
 
 
 def scene(profile='vinga'):
-    if profile in ('vinga','vinga-native'):
+    if profile in ('vinga','vinga-native','vinga-poc'):
         return regional_scene(profile)
     if profile != 'synthetic':
         raise ValueError('Okänd region')
@@ -64,16 +64,18 @@ def scene(profile='vinga'):
 
 
 def calculate_geographic(payload, *, audit_candidate_limit=None, weather_config=None, audit_node_limit=None):
-    if payload.get('profile','vinga') not in ('synthetic','vinga','vinga-native'):
+    if payload.get('profile','vinga') not in ('synthetic','vinga','vinga-native','vinga-poc'):
         raise ValueError('Okänd region')
     profile=payload.get('profile','vinga')
+    if profile=='vinga-poc' and payload.get('boat_profile') not in (None,'constant-5kn'):
+        raise ValueError('PoC stöder endast befintlig uppskattad konstantfartsprofil 5 kn')
     regional=profile!='synthetic'
-    native=profile=='vinga-native'
+    native=profile in ('vinga-native','vinga-poc')
     if native:
         if weather_config is not None:
             raise ValueError('Nativeprofilen har fast versionsbunden konfiguration')
         from pathlib import Path
-        weather_config=Path(__file__).resolve().parents[1]/'settings/development-weather-native-assumptions.json'
+        weather_config=Path(__file__).resolve().parents[1]/'settings'/('development-weather-projected-assumptions.json' if profile=='vinga-poc' else 'development-weather-native-assumptions.json')
     offsets=payload.get('departure_offsets_seconds',[0,600])
     candidate_limit=validate_budget('vinga' if regional else 'synthetic',payload.get('candidate_limit'),offsets)
     if audit_candidate_limit is not None:
@@ -81,7 +83,8 @@ def calculate_geographic(payload, *, audit_candidate_limit=None, weather_config=
             raise ValueError('Offlineaudit tillåter endast Vinga och 2/4/8 kandidater')
         candidate_limit=validate_budget('vinga',audit_candidate_limit,offsets,offline=True)
     convert=land.to_geo if regional else to_geo
-    local=land.to_local if regional else to_local
+    from application.poc import local_position
+    local=local_position if profile=='vinga-poc' else land.to_local if regional else to_local
     projection=land.metadata() if regional else metadata()
     start=local(payload['start']['latitude'],payload['start']['longitude'])
     target=local(payload['target']['latitude'],payload['target']['longitude'])
@@ -148,6 +151,9 @@ def calculate_geographic(payload, *, audit_candidate_limit=None, weather_config=
                               'departure_time':departure['departure_time'],
                               'fastest':route['candidate']['name']==report['fastest_candidate'],
                               'comfortable':route['candidate']['name']==report['comfortable_candidate']})
+                if profile=='vinga-poc':
+                    from application.poc import route_metrics
+                    props.update(route_metrics(route))
                 planned=(start,*(position(p) for p in route['candidate']['waypoints']),target)
                 actual=(start,*(position(s['end_position']) for leg in route['legs'] for s in leg['steps']))
                 features.append(feature(line(planned,convert),props|{'kind':'planned'}))
@@ -172,10 +178,10 @@ def calculate_geographic(payload, *, audit_candidate_limit=None, weather_config=
 
 
 def regional_scene(profile='vinga'):
-    native=profile=='vinga-native'
+    native=profile in ('vinga-native','vinga-poc')
     from pathlib import Path
     root=Path(__file__).resolve().parents[1]
-    dataset,config,evidence=load_development_weather(root/'settings/development-weather-native-assumptions.json' if native else None)
+    dataset,config,evidence=load_development_weather(root/'settings'/('development-weather-projected-assumptions.json' if profile=='vinga-poc' else 'development-weather-native-assumptions.json') if native else None)
     snapshot=land.load_land(root/'fixtures/vinga-land-expanded-20261017.geojson',margin_m=10,review_bounds=(11.55,57.60,11.66,57.67)) if native else land.load_land(margin_m=10)
     obstacle_convert=land.review_to_geo if native else land.to_geo
     corners=(Vector(-450,-420),Vector(520,-420),Vector(520,420),Vector(-450,420),Vector(-450,-420))
@@ -183,7 +189,12 @@ def regional_scene(profile='vinga'):
         from math import sin,cos,pi
         corners=tuple(Vector(900*cos(i*pi/36),900*sin(i*pi/36)) for i in range(72))
         corners=(*corners,corners[0])
-    return {'synthetic':False,'profile':profile,'dataset_version':dataset.version,'dataset_id':dataset.dataset_id,
+    extra={}
+    if profile=='vinga-poc':
+        from application.poc import scene_options
+        extra=scene_options()
+        extra['wind_sample_validities']=[t.isoformat() for t in dataset.wind.times]
+    return {**extra,'synthetic':False,'profile':profile,'dataset_version':dataset.version,'dataset_id':dataset.dataset_id,
             'planning_time':config['planning_time'],'departure':config['departure'],
             'weather_provenance':evidence,'weather_limits':{'max_wind_m_s':config['max_wind_m_s'],'max_wave_height_m':config['max_wave_height_m']},
             'start':land.to_geo(Vector(500,0) if native else Vector(300,-400)),'target':land.to_geo(Vector(500,350) if native else Vector(300,400)),'projection':land.metadata(),

@@ -4,7 +4,7 @@ async function json(response) {
   return response.json();
 }
 export async function loadScene(fetcher = fetch, profile = 'vinga') {
-  if (!['synthetic', 'vinga', 'vinga-native'].includes(profile)) throw new Error('Okänd region');
+  if (!['synthetic', 'vinga', 'vinga-native', 'vinga-poc'].includes(profile)) throw new Error('Okänd region');
   return json(await fetcher('/api/scene?profile=' + profile));
 }
 export async function plan(payload, { fetcher = fetch, pause = ms => new Promise(resolve => setTimeout(resolve, ms)), signal } = {}) {
