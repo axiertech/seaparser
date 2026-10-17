@@ -1,6 +1,10 @@
 // Same-origin HTTP transport, bounded polling. No forecast/tile fetch in the engine.
 async function json(response) {
-  if (!response.ok) throw new Error(`API svarade ${response.status}`);
+  if (!response.ok) {
+    const body=await response.json().catch(()=>null);
+    const detail=typeof body?.detail==='string'?body.detail:Array.isArray(body?.detail)?body.detail.map(e=>e.msg?.replace(/^Value error, /,'')).filter(Boolean).join(' '):'';
+    throw new Error(detail || `API svarade ${response.status}`);
+  }
   return response.json();
 }
 export async function loadScene(fetcher = fetch, profile = 'vinga') {

@@ -3076,3 +3076,18 @@ passerade också. Fulla frontendkontroller och exakt CI avslutar leveransen.
 Frontendens statiska kontroller och fem av sex testfiler passerade, inklusive det
 nya sammanhängande PoC-provet. Den socketberoende `map.test.mjs` kunde inte
 levereras grönt i den isolerade körmiljön; exakt CI kör samma fulla testsvit.
+
+## 2026-10-17 – fria kartklick i PoC
+
+Utgår från b2a2d239. Egna start-/målpunkter kopplas till befintlig PoC-profil,
+med tydlig 900m-täckning, korrekt formulärsynkronisering, tids-/täckningsbesked
+utan gamla GPX-länkar och bibehållna land-/vädergränser. Riktig worker med egna
+koordinater passerar. Ny sammanhängande Leaflet/API/jämförelse/GPX-regression
+används både i CI och efter API-aktivering. Befintlig API-tjänst kräver rootbyte
+av release och Pythonmiljö. Avgränsat underlag för separat PoC-tjänst på localhost:8766, två proxyregler
+för /api/poc/, låst miljö, backup och automatisk återställning förbereds.
+Äldre API-process och publika sidor bevaras; inga TLS-/DocumentRoot-/DB-ändringar. Se docs/poc.md.
+Lokala samlade kontroller: 166+330 Python-tester godkända vid körningen;
+därefter de tre uppdaterade aktiveringsproven gröna. Fem frontendtestfiler gröna;
+två riktiga HTTP-serverprov blockeras lokalt av socketförbud och körs i exakt CI.
+API-aktiveringen måste utföras som root i vanlig terminal; förberett är inte startat.

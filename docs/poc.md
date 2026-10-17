@@ -66,3 +66,45 @@ publicerade filer mot exakt commits byggkvitto. Det möjliggör extern kontroll
 när den lokala körmiljön förbjuder socketar. Publicera det granskade statiska
 underlaget före denna push; vid CI-fel finns den avgränsade återställningen ovan.
 Andra commits får inget generellt beroende på den publika servern.
+
+## Fria kartklick och aktivering av befintligt API
+
+Fria WGS84-punkter inom markerad 900 m-täckning använder samma beräkning,
+ruttjämförelse och GPX. Egna punkter visas som sådana i formuläret. Punkter
+utanför stödet eller avgångar utan tillgängliga tidsval ger tydliga besked;
+land, hårda vädergränser och beräkningsbudgetar är oförändrade.
+
+Den installerade systemd-tjänsten kör en äldre release och annan låsfil.
+`deployment.poc_api` förbereder en separat arkiverad commit i `releases/poc-SHA`,
+bevarar den befintliga tjänsten och använder en separat beständig miljö i
+`venvs/poc-f46c6e9056cf` med verifierade låsta versioner. Miljön återanvänds från
+den redan installerade CI-miljön, inte från den äldre API-miljön. Vetenskapliga
+bibliotek begränsas till en intern tråd så tjänstens befintliga processgräns
+behålls. Inga paket installeras globalt. Befintlig API-tjänst, TLS, DocumentRoot, databas och tidigare publika filer
+ändras inte. Två proxyregler för `/api/poc/` läggs före befintliga `/api/`-regler;
+PoC-tjänsten lyssnar separat på localhost:8766.
+
+Efter granskad ren commit, publicering av avsedda PoC-resurser och verifierad CI:
+
+```sh
+.venv/bin/python -B -m deployment.poc_api prepare /home/web/seaparser/backups/poc-live-api-20261017
+```
+
+Exakt CI-kvitto (`ci-success.json`) måste därefter finnas i stage innan aktivering.
+Kör som **root i vanlig SSH-terminal** (inte som seaparser):
+
+```sh
+/bin/bash /home/web/seaparser/backups/poc-live-api-20261017/activate.sh
+```
+
+Kommandot tar gemensamt lås, kontrollerar commit/renhet, release, miljö och
+befintlig tjänst, startar en separat PoC-tjänst med granskad kod-/Python-sökväg och trådgränser,
+laddar om proxyreglerna och kör samma riktiga kartklick/API/jämförelse/GPX-prov som CI,
+nu mot `https://seaparser.com/poc/`. Fel efter aktiveringen stoppar PoC-tjänsten och återställer tidigare
+proxyregler automatiskt; den äldre API-processen startas inte om och inga offentliga filer behöver återställas av API-steget.
+Kvitto `activation-success.json` skapas först när det publika flödet passerat.
+Förberedd release är inte en aktiverad tjänst. Manuell API-återställning:
+
+```sh
+/bin/bash /home/web/seaparser/backups/poc-live-api-20261017/activate.sh --rollback
+```

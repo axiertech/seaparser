@@ -74,6 +74,7 @@ class PocApiTests(unittest.IsolatedAsyncioTestCase):
             try:
                 response=await client.get('/api/scene?profile=vinga-poc');self.assertEqual(response.status_code,200)
                 s=response.json();a,b=s['places'][:2]
+                a=a|{'latitude':a['latitude']+.0001,'longitude':a['longitude']+.0001};b=b|{'latitude':b['latitude']-.0001,'longitude':b['longitude']+.0001}
                 request=dict(profile='vinga-poc',start={k:a[k] for k in ('longitude','latitude')},target={k:b[k] for k in ('longitude','latitude')},candidate_limit=4,departure_offsets_seconds=[0],boat_profile='constant-5kn',margin_m=10)
                 created=await client.post('/api/plans',json=request);self.assertEqual(created.status_code,202,created.text)
                 key=created.json()['id']

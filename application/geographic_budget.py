@@ -11,7 +11,7 @@ def validate_budget(profile, candidate_limit, offsets, *, offline=False):
     if (not isinstance(offsets, (list, tuple)) or not 1 <= len(offsets) <= len(allowed)
             or any(type(o) is not int or o not in allowed for o in offsets)
             or len(set(offsets)) != len(offsets)):
-        raise ValueError('Unika avgångsoffset inom profilens uttryckliga tidsval krävs')
+        raise ValueError('Avgången saknar prognosdata i profilens tillåtna tidsval; välj en av de angivna unika avgångarna')
     if profile not in ('vinga','vinga-native','vinga-poc') and limit != 8:
         raise ValueError('Syntetiskt referensfall behåller åtta kandidater')
     if not offline and limit * len(offsets) > MAX_EVALUATIONS:

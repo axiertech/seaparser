@@ -30,6 +30,10 @@ def native_app():
     return review_app('vinga-native')
 
 
+def poc_app():
+    return review_app('vinga-poc')
+
+
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('--profile',choices=('synthetic','vinga','vinga-native','vinga-poc'),default='vinga')

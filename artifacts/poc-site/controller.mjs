@@ -1,6 +1,17 @@
 // Form/results orchestration. Calculations stay on the application side.
 import { loadScene, plan, gpxUrl } from './client.mjs';
 const labels = { weather_limit: 'Konstaterat överskridande', weather_unverified: 'Otillräckligt bevis', data_unavailable: 'Otillräckliga data', blocked: 'Hinder blockerar', infeasible: 'Ingen tillåten färd i båtmodellen', limit_reached: 'Beräkningsgräns nådd' };
+function withinCoverage(point, coverage) {
+  const ring=coverage?.features?.[0]?.geometry?.coordinates?.[0];
+  if(!ring || !Number.isFinite(point.latitude) || !Number.isFinite(point.longitude))return false;
+  const x=point.longitude,y=point.latitude;let inside=false;
+  for(let i=0,j=ring.length-1;i<ring.length;j=i++){
+    const [a,b]=ring[i],[c,d]=ring[j];
+    if(Math.abs((x-a)*(d-b)-(y-b)*(c-a))<1e-14 && x>=Math.min(a,c)-1e-12 && x<=Math.max(a,c)+1e-12 && y>=Math.min(b,d)-1e-12 && y<=Math.max(b,d)+1e-12)return true;
+    if((b>y)!==(d>y) && x<(c-a)*(y-b)/(d-b)+a)inside=!inside;
+  }
+  return inside;
+}
 export function category(route) {
   if (route.qualification === 'conditional_on_assumptions' && route.status === 'arrived' && route.weather_segment_status === 'verified' && route.arrival_weather_status === 'passed_at_arrival') return 'assumed';
   if (route.status === 'arrived' && route.weather_segment_status === 'verified' && route.arrival_weather_status === 'passed_at_arrival') return 'verified';
@@ -32,6 +43,7 @@ export async function mount(document, mapFactory, transport = { loadScene, plan 
     }
     if (scene.weather_limits) { if (byId('wind-limit')) byId('wind-limit').value = scene.weather_limits.max_wind_m_s; if (byId('wave-limit')) byId('wave-limit').value = scene.weather_limits.max_wave_height_m; }
     if (scene.default_margin_m !== undefined) byId('margin').value = scene.default_margin_m;
+    if(profile==='vinga-poc'&&!scene.static_catalog)byId('calculate').textContent='Beräkna ruttalternativ';
     if (scene.static_catalog) {
       byId('calculate').textContent = 'Visa ruttalternativ';
       for (const name of ['start','target']) for (const axis of ['lat','lon']) byId(`${name}-${axis}`).readOnly = true;
@@ -40,26 +52,38 @@ export async function mount(document, mapFactory, transport = { loadScene, plan 
       const select=byId(`${name}-place`);
       for (const p of scene.places) { const option=document.createElement('option'); option.value=p.id; option.textContent=p.label; select.append(option); }
       select.value=scene.places[name==='start'?0:1].id;
-      select.addEventListener('change',()=>{setPoint(name,scene.places.find(p=>p.id===select.value)); invalidate();});
+      select.addEventListener('change',()=>{const place=scene.places.find(p=>p.id===select.value);if(place){setPoint(name,place); invalidate();}});
     }
     if (byId('boat-profile')) for (const boat of scene.boat_profiles || []) {const o=document.createElement('option');o.value=boat.id;o.textContent=boat.label;byId('boat-profile').append(o);}
     if (byId('departure-choice')) {
       for (const d of scene.departure_options || []) {const o=document.createElement('option');o.value=String(d.offset_seconds);o.textContent=d.time.slice(11,16)+' UTC';byId('departure-choice').append(o);}
+      if(profile==='vinga-poc'&&!scene.static_catalog)byId('departure-choice').value='0';
     }
     if (byId('weather-preset')) {
       for (const p of scene.weather_presets || []) {const o=document.createElement('option');o.value=p.id;o.textContent=p.label;byId('weather-preset').append(o);}
       byId('weather-preset').addEventListener('change',()=>{const p=scene.weather_presets.find(p=>p.id===byId('weather-preset').value);byId('wind-limit').value=p.max_wind_m_s;byId('wave-limit').value=p.max_wave_height_m;invalidate();});
     }
-    if (byId('mode-notice')) byId('mode-notice').textContent=scene.static_catalog ? 'Begränsat PoC: välj tre markerade punkter och fyra avgångar. Rutterna är förberäknade från verkliga frysta data. Fria ruttpunkter ingår ännu inte i det publicerade urvalet.' : 'Beräkna nya alternativ inom det markerade prognosområdet.';
+    if (byId('mode-notice')) byId('mode-notice').textContent=scene.static_catalog ? 'Begränsat PoC: välj tre markerade punkter och fyra avgångar. Rutterna är förberäknade från verkliga frysta data. Fria ruttpunkter ingår ännu inte i det publicerade urvalet.' : 'Liveberäkning: klicka fritt för start och mål inom det markerade prognosområdet (900 m). Historiska frysta prognoser; land och vädergränser kontrolleras.';
     setPoint('start', { longitude: scene.start[0], latitude: scene.start[1] });
     setPoint('target', { longitude: scene.target[0], latitude: scene.target[1] });
+    function syncPlace(name,point) {
+      const select=byId(`${name}-place`);if(!select||!scene.places)return;
+      const place=scene.places.find(p=>Math.abs(p.latitude-point.latitude)<1e-8&&Math.abs(p.longitude-point.longitude)<1e-8);
+      if(place){select.value=place.id;return;}
+      if(![...select.options].some(o=>o.value==='custom')){const option=document.createElement('option');option.value='custom';option.textContent='Egen kartpunkt';option.disabled=true;select.append(option);}
+      select.value='custom';
+    }
     const view = mapFactory(byId('map'), scene, point => {
-      if (scene.static_catalog) {
+      if(profile==='vinga-poc'&&!scene.static_catalog&&!withinCoverage(point,scene.coverage)){
+        invalidate();status.textContent='Punkten ligger utanför det markerade prognosområdet. Välj en punkt innanför täckningsgränsen (900 m).';return;
+      }
+      if(profile==='vinga-poc'&&!scene.static_catalog)byId('calculate').textContent='Beräkna ruttalternativ';
+    if (scene.static_catalog) {
         const place=scene.places.find(p=>Math.hypot((p.latitude-point.latitude)*111000,(p.longitude-point.longitude)*60000)<40);
         if (!place) {status.textContent='Välj en av de markerade punkterna i detta begränsade PoC.';return;}
         point=place;byId(`${selected}-place`).value=place.id;
       }
-      setPoint(selected, point); invalidate();
+      setPoint(selected, point); syncPlace(selected,point); invalidate();
       status.textContent = `${selected === 'start' ? 'Start' : 'Mål'} valt. Beräkna igen för aktuell rutt.`;
       selected = selected === 'start' ? 'target' : 'start';
     });
@@ -84,6 +108,10 @@ export async function mount(document, mapFactory, transport = { loadScene, plan 
       event.preventDefault(); invalidate(); const current = generation; abort = new AbortController();
       byId('calculate').disabled = true; status.textContent = scene.static_catalog ? 'Hämtar undersökta ruttalternativ…' : 'Beräknar rutter…';
       try {
+        if(profile==='vinga-poc'&&!scene.static_catalog){
+          if(!withinCoverage(getPoint('start'),scene.coverage)||!withinCoverage(getPoint('target'),scene.coverage))throw new Error('Start eller mål ligger utanför det markerade prognosområdet.');
+          if(!['all',...scene.departure_options.map(d=>String(d.offset_seconds))].includes(byId('departure-choice').value))throw new Error('Avgången saknar tillgängliga prognosdata. Välj en av de angivna tiderna.');
+        }
         const [candidateChoice, departureChoice] = (byId('search-budget')?.value || '2:0,600').split(':');
         const departureOffsets = byId('departure-choice') ? (byId('departure-choice').value==='all' ? scene.departure_options.map(d=>d.offset_seconds) : [Number(byId('departure-choice').value)]) : regional ? departureChoice.split(',').map(Number) : [0, 600];
         const response = await transport.plan({ profile, start: getPoint('start'), target: getPoint('target'), margin_m: Number(byId('margin').value), scenario: regional ? 'baseline' : byId('scenario').value, ...(regional ? { candidate_limit: profile==='vinga-poc' ? 4 : Number(candidateChoice), ...(profile==='vinga-poc'?{boat_profile:byId('boat-profile').value}:{}), max_wind_m_s: Number(byId('wind-limit').value), max_wave_height_m: Number(byId('wave-limit').value) } : {}), departure_offsets_seconds: departureOffsets }, { signal: abort.signal });

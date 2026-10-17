@@ -2,17 +2,19 @@
 import { loadScene, plan, gpxUrl } from './client.mjs';
 export function createPocTransport(fetcher = fetch) {
   let scene, catalog, mode = 'catalog';
+  const pocPath=path=>path.replace(/^\/api\//,'/api/poc/');
+  const liveFetch=(path,options)=>fetcher(pocPath(path),options);
   const read = async path => {const r=await fetcher(path);if(!r.ok)throw new Error(`Kunde inte läsa PoC-underlaget (${r.status})`);return r.json();};
   return {
     async loadScene() {
       try {
-        const live=await loadScene((path,options)=>fetcher(path,{...options,signal:AbortSignal.timeout(2500)}),'vinga-poc');
+        const live=await loadScene((path,options)=>liveFetch(path,{...options,signal:AbortSignal.timeout(15000)}),'vinga-poc');
         if(live.profile==='vinga-poc' && live.boat_profiles && live.weather_provenance?.motion_frame){scene=live;mode='live';return scene;}
       } catch { /* The static catalog is clearly identified, never a simulated API result. */ }
       scene=await read('scene.json');catalog=await read('catalog.json');return {...scene,static_catalog:true};
     },
     async plan(payload, options) {
-      if(mode==='live')return plan(payload,{...options,fetcher});
+      if(mode==='live')return plan(payload,{...options,fetcher:liveFetch});
       if(payload.profile!=='vinga-poc'||!['baseline',undefined].includes(payload.scenario))throw new Error('Detta PoC använder endast den frysta verkliga dataprofilen.');
       const match=p=>scene.places.find(x=>Math.abs(x.latitude-p.latitude)<1e-8 && Math.abs(x.longitude-p.longitude)<1e-8);
       const a=match(payload.start), b=match(payload.target);
@@ -29,6 +31,6 @@ export function createPocTransport(fetcher = fetch) {
       if(comparisonKey===null)throw new Error('Välj en avgång eller alla fyra.');
       return {id:key,result:{...data,alternatives,routes:{...data.routes,features:data.routes.features.filter(f=>ids.has(f.properties.id))},alternative_comparison:data.comparisons[comparisonKey],search_budget:{...data.search_budget,departure_offsets_seconds:offsets,evaluation_limit:offsets.length*4}}};
     },
-    gpxUrl(job, route) {return mode==='live'?gpxUrl(job,route):`gpx/${encodeURIComponent(job)}-${encodeURIComponent(route)}.gpx`;}
+    gpxUrl(job, route) {return mode==='live'?pocPath(gpxUrl(job,route)):`gpx/${encodeURIComponent(job)}-${encodeURIComponent(route)}.gpx`;}
   };
 }
