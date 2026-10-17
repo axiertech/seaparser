@@ -82,3 +82,11 @@ avgränsad tilläggsväg i befintligt atomiskt Vinga-publiceringsflöde. Endast
 nya /vinga-prognosprov.html tillåts. Förberedelse/verify ändrar inget publikt;
 publish är ett separat uttryckligt steg som seaparser. Använd inte root-
 aktiveringsflödena ovan för denna fristående statiska granskningssida.
+
+
+För den godkända verkliga ruttjämförelsen används samma prepare/verify/publish
+med `--review routes`. Endast `/vinga-ruttjamforelse.html` publiceras från
+`artifacts/real-route-review/index.html`. HTML måste motsvara den granskade
+renderingen av result.json, med historikdatum och samlade åtkomliga antaganden.
+JSON, konfiguration och övriga resurser publiceras inte. Samma skydd för rena
+commits, separat URL, exakt fillista och oförändrade tidigare sidor gäller.

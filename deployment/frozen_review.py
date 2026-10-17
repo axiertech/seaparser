@@ -14,13 +14,41 @@ import subprocess
 from deployment.vinga_upgrade import atomic_public_copy, tree_hashes
 from deployment.prepare_vinga import digest, PUBLIC, ROOT
 from presentation.frozen_forecast_html import render_frozen_forecast
+from presentation.real_route_html import render as render_real_routes
 
 NAME = 'vinga-prognosprov.html'
 URL = 'https://seaparser.com/' + NAME
 ARTIFACT = ROOT / 'artifacts/vinga-frozen-review/index.html'
 
 
+def select_review(kind):
+    """Only two reviewed standalone destinations; never accept arbitrary paths."""
+    global NAME, URL, ARTIFACT, REVIEW_KIND
+    if kind not in ('forecast', 'routes'):
+        raise ValueError('Unknown standalone review')
+    REVIEW_KIND=kind
+    NAME='vinga-ruttjamforelse.html' if kind=='routes' else 'vinga-prognosprov.html'
+    URL='https://seaparser.com/'+NAME
+    ARTIFACT=ROOT/('artifacts/real-route-review/index.html' if kind=='routes'
+                   else 'artifacts/vinga-frozen-review/index.html')
+
+
+REVIEW_KIND='forecast'
+
+
 def validate_page(data):
+    if REVIEW_KIND=='routes':
+        result=json.loads(ARTIFACT.with_name('result.json').read_text())
+        if (result.get('result_qualification')!='conditional_on_assumptions'
+                or result.get('data_quality',{}).get('weather')!='real_frozen_with_assumptions'
+                or not result.get('weather_provenance',{}).get('historical_snapshot')
+                or not result['weather_provenance'].get('assumptions')
+                or not result.get('alternatives')):
+            raise ValueError('Historical real-route assumptions and alternatives required')
+        if render_real_routes(result).encode()!=data:
+            raise ValueError('Unexpected standalone route HTML/assets')
+        return
+
     page = data.decode('utf-8')
     match = re.search(r'<script id="review-data" type="application/json">(.*?)</script>', page, re.S)
     if not match:
@@ -39,9 +67,10 @@ def prepare(stage):
     if subprocess.check_output(['git', '-C', str(ROOT), 'status', '--porcelain'], text=True).strip():
         raise ValueError('Clean reviewed checkout required')
     data = ARTIFACT.read_bytes()
-    receipt = json.loads(ARTIFACT.with_suffix('.receipt.json').read_text())
-    if sha256(data).hexdigest() != receipt['sha256']:
-        raise ValueError('Artifact receipt hash mismatch')
+    if REVIEW_KIND=='forecast':
+        receipt = json.loads(ARTIFACT.with_suffix('.receipt.json').read_text())
+        if sha256(data).hexdigest() != receipt['sha256']:
+            raise ValueError('Artifact receipt hash mismatch')
     validate_page(data)
     if (PUBLIC / NAME).exists() or (PUBLIC / NAME).is_symlink():
         raise ValueError('Separate URL already exists; refuse overwrite')
@@ -54,7 +83,7 @@ def prepare(stage):
         ['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip(),
         'public_root': str(PUBLIC), 'url': URL, 'public_before': before,
         'public_files': {NAME: sha256(data).hexdigest()}, 'published': False,
-        'notice': 'Historical raw forecast samples; routing remains unqualified'}
+        'notice': 'Historical real-source routes with explicit assumptions' if REVIEW_KIND=='routes' else 'Historical raw forecast samples; routing remains unqualified'}
     (stage / 'manifest.json').write_text(json.dumps(manifest, indent=2, sort_keys=True) + '\n')
     return manifest
 
@@ -101,7 +130,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=('prepare', 'verify', 'publish'))
     parser.add_argument('stage', type=Path)
+    parser.add_argument('--review', choices=('forecast','routes'), default='forecast')
     args = parser.parse_args()
+    select_review(args.review)
     try:
         result = {'prepare': prepare, 'verify': verify, 'publish': publish}[args.action](args.stage.absolute())
     except (ValueError, OSError, KeyError, subprocess.CalledProcessError) as error:

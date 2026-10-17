@@ -2821,3 +2821,23 @@ Release step: reviewed commit to development/real-map-data and exact-commit CI.
 Next product work: improve source qualification/temporal semantics and boat
 performance while keeping the usable real-data development comparison visible;
 metadata evidence and assumptions must continue to be distinguished.
+
+
+## 2026-10-17: Approved single-page real-route publication
+
+User explicitly approved publishing artifacts/real-route-review/index.html to
+https://seaparser.com/vinga-ruttjamforelse.html with the existing publication
+flow, preserving older pages and without another approval round. Extended
+its fixed standalone-review allowlist with --review routes, reusing identical
+atomic copy, clean-checkout, source/render validation and before/after public
+hash guards. Only the standalone HTML is allowed; JSON, config and source
+files are excluded. The historical date (13 October 2026), four route selectors,
+reset control and unified open assumptions explanation are already in the
+reviewed HTML; no content/rendering changes were necessary.
+
+Relevant verification before release: 12 route/frozen-review/atomic-publication
+tests passed, including preservation of old pages and rejection of extra files,
+altered date/assumption content and existing target; git diff --check passed.
+Next: exact-commit CI, prepare/verify/publish as seaparser, then verify HTTPS,
+exact returned bytes and interaction controls against the deployed response.
+No service, Apache, database, weather or routing changes are part of this step.
