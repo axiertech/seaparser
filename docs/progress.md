@@ -2554,3 +2554,41 @@ beroenden godkända. Frontendens
 statiska kontroll och samtliga 14 frontendtester passerade; karttesterna kördes
 utanför sandboxen eftersom de startar en lokal API-process. Ingen publik demo
 eller databas ändrad. CI kontrolleras efter push.
+# Native MET and marine Vinga provenance check — 2026-10-17
+
+Started from `development/real-map-data` at `df531d2`; worktree was clean.
+Reviewed the already frozen MET native-wind sample and Copernicus WAV/PHY
+fixtures; no existing data or public demonstration was changed.
+
+Checked current official Copernicus WAV PUM Issue 2.8 and PHY/BGC PUM Issue
+1.3 (both November 2025). They document 00Z/12Z products, publication targets
+10/22 UTC, WAM forcing from MetCoOp-HARMONIE and WAM use of BAL PHY surface
+currents. Those model/product facts do not bind the existing ARCO field values
+to an actual run or published time. The frozen files contain no run/reference
+coordinate, issue time, or revision. WAV metadata `cell_methods="time: mean"`
+conflicts with the manual's hourly-instantaneous description and has no time
+bounds; PHY current support/mask metadata is also incomplete. MET carries a
+model-reference time, not verified issue time; `source=meps` is not proven to
+identify the exact MetCoOp-HARMONIE forcing member.
+
+A new source probe was bounded to the Vinga box, five hours, the two reviewed
+products, 2 MB per file and 5 MB total, using existing Toolbox authentication.
+The catalog returned the existing reviewed versions (WAV 202311, PHY 202411).
+The WAV dry-run returned `ValueError` before any weather bytes were downloaded;
+the client message was intentionally suppressed. No new forecast files were
+created. An ARCO subset alone would not cure run provenance; retrieving the
+WAV original is 110 MB compressed per current official manual and outside this
+small probe.
+
+Result: keep `data_unavailable`; no mixed-source route computation or marine
+planning-gate changes. Exact missing fields and source-backed way forward are
+recorded in `docs/forecast-gap-status.md`. Separate native-wind and marine
+fixtures remain intact. No synthetic waves/current were introduced.
+
+Verification: source manuals read; current catalog query succeeded; bounded
+probe stopped before file retrieval. `scripts.check` passed all 160 domain and
+258 integration tests; `npm --prefix frontend run check` and all 14 frontend
+tests passed. `git diff --check` passed. These checks preserve the existing
+fail-closed input behavior. Next: commit this narrowly scoped blocker/status
+update, push the development branch and verify CI. No DB, deployment or public
+demo changes.

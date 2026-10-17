@@ -1,4 +1,4 @@
-# Regional prognos: aktuell gapöversikt 2026-10-16
+# Regional prognos: aktuell gapöversikt 2026-10-17
 
 Detta är aktuell arbetsordning efter metadata-/transportgranskningen, inte ett
 kvalificeringsbeslut. Äldre försöksresultat i forecast-blockers.md är historik.
@@ -39,6 +39,67 @@ filnamn, katalogversion eller ett payloadflag. Vindens model_reference_time
 är källäst men är inte issued_at. Marin model_reference_time, issued_at och
 run_identity är fortfarande okända i regionalrapporten. Djup är unknown och
 navigationssäkerhet not_assessed även om prognosgapen senare löses.
+
+## Källåtkomst för ett sammanhängande Vinga-fall 2026-10-17
+
+Officiella produktmanualer bekräftar användbara produktfakta men saknar
+bindningen till de frysta ARCO-cellvärdena:
+
+- WAV-manual, Issue 2.8 (2025-11): Baltic WAM 4.7, timvisa momentanvärden,
+  två leveranser per dygn senast 10/22 UTC, nio dygns prognos. Första 66 timmarna
+  drivs av MetCoOp-HARMONIE. WAM använder timström från BAL PHY.
+- PHY-manual, Issue 1.3 (2025-11): två 00Z/12Z-produktionscykler, publicerade
+  senast 10/22 UTC; körningen börjar 12Z föregående dag respektive 00Z samma dag.
+  Första 66 timmarna använder MetCoOp-HARMONIE-kontrollmedlem och senare ECMWF.
+- MET-fixturens faktiska `forecast_reference_time` är 2026-10-13 00Z och
+  `source=meps`; `history=Created 00:26Z` har inte dokumenterad utfärdande-
+  semantik. MET Nordic `meps` kan därför inte identifieras med WAM:s exakta
+  SMHI MetCoOp-HARMONIE-medlem/körning.
+
+Manualernas produktionsschema och modellkoppling är inte run-identitet för en
+ARCO-fråga. I de frysta WAV-/PHY-filerna saknas CF
+`forecast_reference_time`/`forecast_period`, `issued_at`, run-ID och revision.
+Det enda frysta beviset är dataset/version/service, giltighetstider, hämtningstid
+och filhash. WAV-fixturens variabler har dessutom `cell_methods="time: mean"`,
+medan gällande WAV-manual anger timvisa momentanvärden; bounds saknas. Denna
+skillnad mellan ARCO-fil och manual är olöst och hindrar tidsmässig segment-
+interpolation. PHY `uo`/`vo` saknar fortfarande verifierad tidsstödsemantik och
+egen våtmask.
+
+En ny, separat Copernicus-provbegäran avgränsades till Vinga-boxen,
+2026-10-17 00–04Z, två variabelgrupper och högst 2 MB per fil / 5 MB överföring
+med den befintliga Toolbox/autentiseringen. Katalogen svarade med samma WAV
+202311 och PHY 202411-versioner. WAV `dry_run` avslutades med `ValueError`
+innan någon väderfil hämtades; felmeddelandet undertrycktes för att undvika
+eventuella privata URL-/autentiseringsuppgifter. Därför finns inget nytt uttag
+eller nytt vädervärde att redovisa. En begränsad ARCO-subset skulle inte på
+egen hand binda svaret till originalrun; ordinarie `get` hämtar hela WAV-
+originalfilen (110 MB komprimerad enligt WAV-manualen) och överskrider den
+avgränsade uttagsbudgeten. Äldre fixturer återanvänds.
+
+Kvarvarande exakta fält och praktisk väg framåt:
+
+1. WAV och PHY behöver källbunden modellreferens/run-ID, faktisk produktens
+   publicerings-/utfärdandetid samt revision för just de valda variablerna och
+   giltigheterna. Begär en per-run export/metadatafil från Copernicus som binder
+   ARCO-subsethashen eller liten subset till originalkörning, alternativt ett
+   källformat där run-koordinaten följer varje urval.
+2. WAV behöver en källa som förenar faktiskt `cell_methods="time: mean"` med
+   manualens “instantaneous”, inklusive tidsbounds/medelfönster. PHY behöver
+   tidsstöd och wet/validity mask på strömmens eget native grid.
+3. MET-vind behöver dokumenterad issued/published time och en källbunden
+   identifikation av `meps`-körning. Run-tidarnas lika/täta värden räcker inte
+   för att hävda kompatibilitet med WAM/PHY.
+
+Ingen run-, utfärdande-, mask- eller kompatibilitetsspärr har hävts. Det finns
+därför inget kvalificerat sammanhängande verkligt Vinga-fall och ingen
+ruttberäkning med blandade vind-/marinbytes har körts. Befintlig MET-segment-
+diagnostik och marina frysta fält förblir separata diagnostiska fixtures.
+
+Primärkällor: [WAV PUM Issue 2.8 (2025-11)](https://documentation.marine.copernicus.eu/PUM/CMEMS-BAL-PUM-003-010.pdf),
+[PHY/BGC PUM Issue 1.3 (2025-11)](https://documentation.marine.copernicus.eu/PUM/CMEMS-BAL-PUM-003-006-007.pdf),
+[frysta MET-metadatadokument](met-nordic-metadata-review.md) och
+[Copernicus ARCO-proveniensgranskning](arco-provenance-review.md).
 
 ## Åtkomst och leverans är andra slags hinder
 
