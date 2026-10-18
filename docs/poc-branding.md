@@ -46,3 +46,13 @@ publicering så befintlig CI kontrollerar alla aktuella resurser över HTTPS.
 Grafikbranchens egna byggfiler och CI visar att presentationen är förberedd;
 de är inte ett kvitto på ändrad publik webb. Inga tjänster eller API behöver
 aktiveras för logotyp, favicon eller rubrik.
+
+Vid publicering från grafikworktreet måste alla resurser utanför `index.html`,
+`poc.css` och de tre namngivna grafikfilerna först matcha den aktuella publika
+versionens hashvärden. Avbryt vid skillnader och integrera mot den nya versionen.
+Det befintliga publiceringsflödets kontroll av hela publika trädet mellan
+förberedelse och aktivering skyddar också mot en samtidig ny leverans.
+Efteråt måste autonomipassets kommande PoC-byggen ta in källpatchen ovan så att
+nya prognosleveranser behåller sidhuvud och favicon. Faktiskt publiceringskvitto,
+återställning och samordningsstatus finns i `autonomy/poc-branding-handoff.md`
+under `/home/web/seaparser`.
