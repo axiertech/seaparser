@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from infrastructure.coastal_water import CoastalWater
+from infrastructure.coastal_grid import attach_grid
 from infrastructure.coastal_forecast import CoastalForecast,CoastalObstacle
 from infrastructure.copernicus_adapter import CopernicusMarineAdapter
 from infrastructure.marine_reserve import NativeWindWithReserve,configured_reserve_policies
@@ -41,6 +42,10 @@ def load_coastal_weather(directory,*,policy=None,margin_m=10,cache_directory=Non
             or sha256(coast.read_bytes()).hexdigest()!=land['source_sha256'] or source_index['sha256']!=land['source_sha256']):
         raise ValueError('Coastal water/source snapshot changed')
     water=CoastalWater(data,land['source_sha256'])
+    if cache_directory is not None:
+        margins={0,margin_m}
+        for product in policies.values():margins.add(max(p.water_path_margin_m for p in product.values()))
+        for margin in sorted(margins):attach_grid(water,cache_directory,margin_m=margin,diagnostics=diagnostics)
     sample,payload,audit=coastal_inputs(directory,request,cache_directory=cache_directory,diagnostics=diagnostics)
     current,waves=CopernicusMarineAdapter().normalize_coastal(payload,water,policies,bounds=config['source_bounds'])
     wind=NativeWindWithReserve(sample,water,policies['wind'])

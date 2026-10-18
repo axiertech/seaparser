@@ -26,6 +26,7 @@ class WaterConnection:
 
 class CoastalWater:
     def __init__(self,data,source_sha256):
+        self.grids={}
         self.sha256=sha256(data).hexdigest();self.source_sha256=source_sha256
         self.geometry=from_wkb(data)
         if self.geometry.is_empty or not self.geometry.is_valid or self.geometry.geom_type not in ('Polygon','MultiPolygon'):
@@ -51,12 +52,41 @@ class CoastalWater:
     def clear(self,start,end,margin_m=0):
         """Whole affine segment, including endpoints, excludes closed land/margin."""
         if type(margin_m) not in (int,float) or not isfinite(margin_m) or margin_m<0:raise ValueError('Finite nonnegative margin required')
-        a,b=self.coordinates(start),self.coordinates(end);shape=Point(a) if a==b else LineString((a,b))
+        a,b=self.coordinates(start),self.coordinates(end)
+        grid=self.grids.get(margin_m)
+        if grid is not None:
+            answer=grid.lookup(a,b,margin_m)
+            if answer is not None:return answer
+        shape=Point(a) if a==b else LineString((a,b))
         return bool(self.prepared.covers(shape) and not len(self.edge_index.query(shape,predicate='dwithin',distance=margin_m+GUARD_M)))
 
     def candidate_clear(self,start,end,margin_m=0):
         """Use local indexed distance checks, never buffer the entire coastline."""
         return self.clear(start,end,margin_m)
+
+    def clear_shapes(self,shapes,margin_m):
+        """Vector form of the same prepared covers and closed boundary query."""
+        import numpy as np
+        import shapely
+        if type(margin_m) not in (int,float) or not isfinite(margin_m) or margin_m<0:raise ValueError('Finite nonnegative margin required')
+        allowed=shapely.covers(self.geometry,shapes)
+        supported=np.flatnonzero(allowed)
+        if len(supported):
+            hits=self.edge_index.query(shapes[supported],predicate='dwithin',distance=margin_m+GUARD_M)
+            if hits.size:allowed[supported[hits[0]]]=False
+        return allowed
+
+    def clear_many(self,start,ends,margin_m=0):
+        """Batch independent smoothing questions; no approximation or I/O."""
+        import numpy as np
+        import shapely
+        if type(margin_m) not in (int,float) or not isfinite(margin_m) or margin_m<0:raise ValueError('Finite nonnegative margin required')
+        a=self.coordinates(start);b=np.array([self.coordinates(p) for p in ends])
+        if not len(b):return ()
+        shapes=shapely.linestrings(np.stack((np.broadcast_to(a,b.shape),b),axis=1))
+        same=np.all(b==a,axis=1)
+        if np.any(same):shapes[same]=shapely.points(b[same])
+        return tuple(bool(v) for v in self.clear_shapes(shapes,margin_m))
 
     def connection(self,start,end,*,max_distance_m,spacing_m=250,max_cells=30000,max_expansions=10000,margin_m=0):
         """Find a bounded, explicitly checked water path, never a land shortcut.
@@ -79,7 +109,7 @@ class CoastalWater:
         middle=(start+end).scaled(.5);radius=max_distance_m/2
         bounds=(middle.east-radius,middle.north-radius,middle.east+radius,middle.north+radius)
         result=generate_water_routes(start,end,bounds,lambda a,b:self.clear(a,b,margin_m),
-            point_clear=lambda p:self.clear(p,p,margin_m),spacing_m=spacing_m,max_cells=max_cells,
+            point_clear=lambda p:self.clear(p,p,margin_m),clear_many=lambda p,ends:self.clear_many(p,ends,margin_m),spacing_m=spacing_m,max_cells=max_cells,
             max_expansions=max_expansions,max_candidates=1,max_waypoints=128)
         if not result.candidates:return WaterConnection(result.limit_reason or result.status,expansions=result.expansions,spacing_m=spacing_m)
         points=(start,*result.candidates[0].waypoints,end)

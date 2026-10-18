@@ -22,7 +22,7 @@ class WaterRoutes:
     scope: str='Bounded water-grid geometry candidates; actual voyages evaluated separately. No global optimum claim.'
 
 
-def generate_water_routes(start,target,bounds,clear,*,point_clear=None,spacing_m=125,max_cells=1000000,max_expansions=300000,max_candidates=3,max_waypoints=256):
+def generate_water_routes(start,target,bounds,clear,*,point_clear=None,clear_many=None,spacing_m=125,max_cells=1000000,max_expansions=300000,max_candidates=3,max_waypoints=256):
     if len(bounds)!=4 or not all(isfinite(v) for v in (*bounds,start.east,start.north,target.east,target.north,spacing_m)) or spacing_m<=0:
         raise ValueError('Finite regional bounds/spacing required')
     if any(type(v) is not int or v<=0 for v in (max_cells,max_expansions,max_candidates,max_waypoints)):raise ValueError('Positive water-grid budgets required')
@@ -78,8 +78,18 @@ def generate_water_routes(start,target,bounds,clear,*,point_clear=None,spacing_m
         smooth=[start];i=0
         while i<len(path)-1:
             end_index=anchor if anchor is not None and i<anchor else len(path)-1
-            j=end_index
-            while j>i+1 and not clear(path[i],path[j]):j-=1
+            if clear_many is None:
+                j=end_index
+                while j>i+1 and not clear(path[i],path[j]):j-=1
+            else:
+                j=None
+                for high in range(end_index,i,-64):
+                    indices=tuple(range(high,max(i,high-64),-1))
+                    answers=clear_many(path[i],tuple(path[k] for k in indices))
+                    if len(answers)!=len(indices):raise ValueError('One geometry answer per candidate segment required')
+                    j=next((k for k,answer in zip(indices,answers) if answer),None)
+                    if j is not None:break
+                if j is None:raise ValueError('Generated edge lost closed land support')
             if not clear(path[i],path[j]):raise ValueError('Generated edge lost closed land support')
             if path[j]!=smooth[-1]:smooth.append(path[j])
             i=j
