@@ -1,0 +1,88 @@
+{
+  "schema": 1,
+  "products": {
+    "wind": {
+      "wind_east_m_s": {
+        "method": "none",
+        "max_distance_m": 20000,
+        "max_time_offset_seconds": 21600,
+        "time_weight_m_per_second": 1,
+        "water_path_spacing_m": 250,
+        "water_path_max_cells": 30000,
+        "water_path_max_expansions": 10000,
+        "water_path_max_sources": 16,
+        "water_path_margin_m": 0
+      },
+      "wind_north_m_s": {
+        "method": "none",
+        "max_distance_m": 20000,
+        "max_time_offset_seconds": 21600,
+        "time_weight_m_per_second": 1,
+        "water_path_spacing_m": 250,
+        "water_path_max_cells": 30000,
+        "water_path_max_expansions": 10000,
+        "water_path_max_sources": 16,
+        "water_path_margin_m": 0
+      }
+    },
+    "current": {
+      "current_east_m_s": {
+        "method": "nearest_valid_water_path",
+        "max_distance_m": 20000,
+        "max_time_offset_seconds": 21600,
+        "time_weight_m_per_second": 1,
+        "water_path_spacing_m": 250,
+        "water_path_max_cells": 30000,
+        "water_path_max_expansions": 10000,
+        "water_path_max_sources": 16,
+        "water_path_margin_m": 0
+      },
+      "current_north_m_s": {
+        "method": "nearest_valid_water_path",
+        "max_distance_m": 20000,
+        "max_time_offset_seconds": 21600,
+        "time_weight_m_per_second": 1,
+        "water_path_spacing_m": 250,
+        "water_path_max_cells": 30000,
+        "water_path_max_expansions": 10000,
+        "water_path_max_sources": 16,
+        "water_path_margin_m": 0
+      }
+    },
+    "waves": {
+      "wave_height_m": {
+        "method": "nearest_valid_water_path",
+        "max_distance_m": 20000,
+        "max_time_offset_seconds": 21600,
+        "time_weight_m_per_second": 1,
+        "water_path_spacing_m": 250,
+        "water_path_max_cells": 30000,
+        "water_path_max_expansions": 10000,
+        "water_path_max_sources": 16,
+        "water_path_margin_m": 0
+      },
+      "wave_period_seconds": {
+        "method": "nearest_valid_water_path",
+        "max_distance_m": 20000,
+        "max_time_offset_seconds": 21600,
+        "time_weight_m_per_second": 1,
+        "water_path_spacing_m": 250,
+        "water_path_max_cells": 30000,
+        "water_path_max_expansions": 10000,
+        "water_path_max_sources": 16,
+        "water_path_margin_m": 0
+      },
+      "wave_direction_from_degrees": {
+        "method": "nearest_valid_water_path",
+        "max_distance_m": 20000,
+        "max_time_offset_seconds": 21600,
+        "time_weight_m_per_second": 1,
+        "water_path_spacing_m": 250,
+        "water_path_max_cells": 30000,
+        "water_path_max_expansions": 10000,
+        "water_path_max_sources": 16,
+        "water_path_margin_m": 0
+      }
+    }
+  }
+}

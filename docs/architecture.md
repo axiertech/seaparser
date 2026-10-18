@@ -118,7 +118,9 @@ Regionala grundkomponenter separerar materialiserad OSM-vattengeometri i
 `prototype/water_routing.py` och uttryckliga reservuppslag i
 `infrastructure/marine_reserve.py`. Normaliserade marina komponenter och
 MET-native-vind återanvänds. Ingen transport sker under uppslag eller sökning.
-Reservposter ger hög osäkerhet, aldrig vädergränscertifiering. Regional
-färdkomposition och spårbara vattenvägar runt uddar återstår; se coastal-reserve.md.
+Reservposter ger hög osäkerhet, aldrig vädergränscertifiering. Kontrollerade
+reservvägar runt uddar återanvänder samma rena kandidatgenerator med explicita
+budgetar och spårbar förbindelse. Regional färdkomposition återstår;
+se coastal-reserve.md.
 
 Valbar vinga-native-profil komponerar fast17-oktober-väder/24hinder och exakt900m-kandidatdisk i befintlig A*-graf. Alla hinder och integrerade segmentkontroller kvar,21noder inom26gränsen. Befintlig frontend/layout och jobbsystem återanvänds. Se supported-native-routing.md.

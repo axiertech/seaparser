@@ -32,3 +32,20 @@ class CoastalWaterTests(unittest.TestCase):
         self.assertEqual(water.geometry.geom_type,'Polygon')
         self.assertFalse(water.clear(Vector(3,5),Vector(7,5)))
         self.assertTrue(water.clear(Vector(3,9),Vector(7,9)))
+
+    def test_water_path_goes_around_peninsula_with_distance_and_budget_limits(self):
+        from shapely import Polygon
+        geometry=box(0,0,100,100).difference(Polygon([(40,0),(60,0),(60,80),(40,80)]))
+        water=CoastalWater(to_wkb(geometry),'test');a,b=Vector(30,50),Vector(70,50)
+        connection=water.connection(a,b,max_distance_m=120,spacing_m=5,margin_m=1)
+        self.assertEqual(connection.status,'found');self.assertGreater(connection.distance_m,70)
+        self.assertLessEqual(connection.distance_m,120)
+        self.assertTrue(all(water.clear(a,b,1) for a,b in zip(connection.points,connection.points[1:])))
+        self.assertNotEqual(water.connection(a,b,max_distance_m=50,spacing_m=5).status,'found')
+        self.assertEqual(water.connection(a,b,max_distance_m=120,spacing_m=5,max_cells=1).status,'max_cells')
+        self.assertEqual(water.connection(a,b,max_distance_m=120,spacing_m=5,max_expansions=1).status,'max_expansions')
+
+    def test_disconnected_water_never_becomes_a_connection(self):
+        from shapely import unary_union
+        water=CoastalWater(to_wkb(unary_union([box(0,0,40,100),box(60,0,100,100)])),'test')
+        self.assertEqual(water.connection(Vector(30,50),Vector(70,50),max_distance_m=1000).status,'disconnected_water')

@@ -390,3 +390,18 @@ kvarvarande luckor runt uddar, så metoden är ännu inte en regional färdmodel
 Fortsättning kräver uttrycklig kontrollerad vattenväg och befintlig motor,
 regional rörelseram samt synlig osäkerhet i jämförelse/karta/GPX.
 Se coastal-reserve.md för uppmätta resultat och kvarvarande omfattning.
+
+## 2026-10-18: Uttrycklig reservmetod genom sammanhängande vatten
+
+För reservuppslag runt uddar återanvänds den befintliga rena geometrisökningen.
+Samma vattenkomponent är ett nödvändigt villkor, men varje konkret förbindelse
+måste dessutom bestå av kontrollerade hela vattensegment. Reservens maximala
+avstånd gäller den funna vattenvägen. Källförsök, grid, celler och expansioner
+är konfigurerade; resultatet redovisar begränsad sökning och hög osäkerhet.
+Ingen globalt närmaste källa eller kortaste förbindelse påstås.
+
+Versionerad variabelpolicy aktiverar vattenväg för vågor/ström och stänger
+vindreserv. Verkligt regionalt stödprov har inga kvarvarande luckor på den
+geometriska kandidaten, men bevisar inte färden vid dess simulerade tider.
+Nästa steg återanvänder källnormalisering och färdmotor samt inför regional
+rörelse-/segmentkomposition och uppskattningsstatus utan falsk verifiering.

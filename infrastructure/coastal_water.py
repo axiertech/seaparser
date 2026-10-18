@@ -5,11 +5,23 @@ barrier model, not proof of depth, navigability or source completeness.
 """
 from hashlib import sha256
 from math import isfinite
+from dataclasses import dataclass
+from functools import lru_cache
 
 from shapely import from_wkb,LineString,Point,STRtree
 from shapely.prepared import prep
+from prototype.water_routing import generate_water_routes
 
 GUARD_M=1e-6
+
+
+@dataclass(frozen=True)
+class WaterConnection:
+    status: str
+    points: tuple=()
+    distance_m: float | None=None
+    expansions: int=0
+    spacing_m: float | None=None
 
 
 class CoastalWater:
@@ -19,6 +31,7 @@ class CoastalWater:
         if self.geometry.is_empty or not self.geometry.is_valid or self.geometry.geom_type not in ('Polygon','MultiPolygon'):
             raise ValueError('Valid materialized water polygons required')
         self.prepared=prep(self.geometry)
+        self.components=STRtree(list(self.geometry.geoms) if self.geometry.geom_type=='MultiPolygon' else [self.geometry])
         boundary=self.geometry.boundary;parts=list(boundary.geoms) if hasattr(boundary,'geoms') else [boundary]
         # Short indexed pieces make exact closed margin checks local, rather
         # than rescanning every coastline vertex for every integration step.
@@ -34,6 +47,7 @@ class CoastalWater:
         if not all(isfinite(v) for v in values):raise ValueError('Finite coastal coordinates required')
         return values
 
+    @lru_cache(maxsize=65536)
     def clear(self,start,end,margin_m=0):
         """Whole affine segment, including endpoints, excludes closed land/margin."""
         if type(margin_m) not in (int,float) or not isfinite(margin_m) or margin_m<0:raise ValueError('Finite nonnegative margin required')
@@ -43,3 +57,32 @@ class CoastalWater:
     def candidate_clear(self,start,end,margin_m=0):
         """Use local indexed distance checks, never buffer the entire coastline."""
         return self.clear(start,end,margin_m)
+
+    def connection(self,start,end,*,max_distance_m,spacing_m=250,max_cells=30000,max_expansions=10000,margin_m=0):
+        """Find a bounded, explicitly checked water path, never a land shortcut.
+
+        All paths with length <= budget lie inside the midpoint-centred square
+        with side length equal to that budget. Grid search may still be incomplete.
+        """
+        if type(max_distance_m) not in (int,float) or not isfinite(max_distance_m) or max_distance_m<0:
+            raise ValueError('Finite nonnegative water distance budget required')
+        if (type(spacing_m) not in (int,float) or not isfinite(spacing_m) or spacing_m<=0
+                or any(type(v) is not int or v<=0 for v in (max_cells,max_expansions))):
+            raise ValueError('Positive water connection search budgets required')
+        if type(margin_m) not in (int,float) or not isfinite(margin_m) or margin_m<0:raise ValueError('Finite nonnegative water path margin required')
+        if (end-start).speed>max_distance_m:return WaterConnection('distance_limit')
+        if self.clear(start,end,margin_m):return WaterConnection('found',(start,end),(end-start).speed)
+        if not self.clear(start,start,margin_m) or not self.clear(end,end,margin_m):return WaterConnection('endpoint_blocked')
+        a=set(self.components.query(Point(self.coordinates(start)),predicate='within'))
+        b=set(self.components.query(Point(self.coordinates(end)),predicate='within'))
+        if not a.intersection(b):return WaterConnection('disconnected_water')
+        middle=(start+end).scaled(.5);radius=max_distance_m/2
+        bounds=(middle.east-radius,middle.north-radius,middle.east+radius,middle.north+radius)
+        result=generate_water_routes(start,end,bounds,lambda a,b:self.clear(a,b,margin_m),
+            point_clear=lambda p:self.clear(p,p,margin_m),spacing_m=spacing_m,max_cells=max_cells,
+            max_expansions=max_expansions,max_candidates=1,max_waypoints=128)
+        if not result.candidates:return WaterConnection(result.limit_reason or result.status,expansions=result.expansions,spacing_m=spacing_m)
+        points=(start,*result.candidates[0].waypoints,end)
+        distance=sum((b-a).speed for a,b in zip(points,points[1:]))
+        if distance>max_distance_m:return WaterConnection('distance_limit',expansions=result.expansions,spacing_m=spacing_m)
+        return WaterConnection('found',points,distance,result.expansions,spacing_m)

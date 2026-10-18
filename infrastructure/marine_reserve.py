@@ -22,10 +22,18 @@ class ReservePolicy:
     max_distance_m: float=20000
     max_time_offset_seconds: float=21600
     time_weight_m_per_second: float=1
+    water_path_spacing_m: float=250
+    water_path_max_cells: int=30000
+    water_path_max_expansions: int=10000
+    water_path_max_sources: int=16
+    water_path_margin_m: float=0
 
     def __post_init__(self):
-        if self.method not in ('none','nearest_valid_water') or any(type(v) not in (int,float) or not isfinite(v) or v<0 for v in (self.max_distance_m,self.max_time_offset_seconds,self.time_weight_m_per_second)):
+        if self.method not in ('none','nearest_valid_water','nearest_valid_water_path') or any(type(v) not in (int,float) or not isfinite(v) or v<0 for v in (self.max_distance_m,self.max_time_offset_seconds,self.time_weight_m_per_second,self.water_path_margin_m)):
             raise ValueError('Explicit finite reserve policy required')
+        if (type(self.water_path_spacing_m) not in (int,float) or not isfinite(self.water_path_spacing_m) or self.water_path_spacing_m<=0
+                or any(type(v) is not int or v<=0 for v in (self.water_path_max_cells,self.water_path_max_expansions,self.water_path_max_sources))):
+            raise ValueError('Explicit positive water path search budgets required')
 
 
 @dataclass(frozen=True)
@@ -39,6 +47,28 @@ class DataEstimate:
     time_offset_seconds: float
     source_value: float
     uncertainty: str='high'
+    direct_distance_m: float | None=None
+    connection_waypoints: tuple=()
+    connection_expansions: int=0
+    connection_spacing_m: float | None=None
+    source_search_truncated: bool=False
+
+
+def configured_reserve_policies(config):
+    """Validate a detached versioned configuration; no file access in queries."""
+    expected={'wind':{'wind_east_m_s','wind_north_m_s'},
+        'current':{'current_east_m_s','current_north_m_s'},
+        'waves':{'wave_height_m','wave_period_seconds','wave_direction_from_degrees'}}
+    try:
+        if type(config['schema']) is not int or config['schema']!=1 or set(config['products'])!=set(expected):raise ValueError('Known reserve configuration schema/products required')
+        result={}
+        for product,variables in expected.items():
+            supplied=config['products'][product]
+            if set(supplied)!=variables or any('method' not in v for v in supplied.values()):raise ValueError('Explicit method for every source variable required')
+            result[product]=MappingProxyType({name:ReservePolicy(**value) for name,value in supplied.items()})
+        return MappingProxyType(result)
+    except (KeyError,TypeError) as error:
+        raise ValueError('Incomplete or malformed reserve policy configuration') from error
 
 
 class MarineReserve:
@@ -86,6 +116,12 @@ class MarineReserve:
         if any(policy.method=='none' for policy in self.policies.values()):raise DataUnavailable(f'{self.product}: source gap; configured reserve disabled')
         max_distance=min(p.max_distance_m for p in self.policies.values());max_time=min(p.max_time_offset_seconds for p in self.policies.values())
         weight=max(p.time_weight_m_per_second for p in self.policies.values())
+        path_enabled=all(p.method=='nearest_valid_water_path' for p in self.policies.values())
+        path_budget=dict(spacing_m=min(p.water_path_spacing_m for p in self.policies.values()),
+            max_cells=min(p.water_path_max_cells for p in self.policies.values()),
+            max_expansions=min(p.water_path_max_expansions for p in self.policies.values()),
+            margin_m=max(p.water_path_margin_m for p in self.policies.values()))
+        max_sources=min(p.water_path_max_sources for p in self.policies.values());attempts=0;truncated=False
         offsets=self.epochs-when.timestamp();eligible=np.flatnonzero(np.abs(offsets)<=max_time)
         if not len(eligible):raise DataUnavailable(f'{self.product}: no valid source time within configured reserve')
         order=eligible[np.argsort(np.abs(offsets[eligible]),kind='stable')]
@@ -94,14 +130,28 @@ class MarineReserve:
         for index in indices:
             j,i=np.unravel_index(index,distance.shape);d=float(distance[j,i])
             if not possible[j,i] or d>best_score:break
-            if not self.water.clear(position,Vector(float(self.x[j,i]),float(self.y[j,i]))):continue
             k=next((int(k) for k in order if self.valid[k,j,i]),None)
             if k is None:continue
-            score=d+abs(float(offsets[k]))*weight
-            if score<best_score:best_score=score;best=(k,j,i,d)
-        if best is None:raise DataUnavailable(f'{self.product}: no valid reserve source reachable over water within {max_distance:g} m / {max_time:g} s')
-        k,j,i,d=best;value=tuple(float(v) for v in self.values[k,j,i]);raw=(value[0],value[1],degrees(atan2(value[2],value[3]))%360) if self.product=='waves' else value
-        records=tuple(DataEstimate(variable,'nearest_valid_visible_water',float(self.grid_longitude[j,i]),float(self.grid_latitude[j,i]),self.times[k],d,float(offsets[k]),raw[n]) for n,variable in enumerate(self.variables))
+            source=Vector(float(self.x[j,i]),float(self.y[j,i]));connection=None;length=d
+            if not self.water.clear(position,source,path_budget['margin_m'] if path_enabled else 0):
+                if not path_enabled:continue
+                if attempts>=max_sources:truncated=True;break
+                attempts+=1
+                connection=self.water.connection(position,source,max_distance_m=max_distance,**path_budget)
+                if connection.status!='found':
+                    if connection.status not in ('disconnected_water','endpoint_blocked'):truncated=True
+                    continue
+                length=connection.distance_m
+            score=length+abs(float(offsets[k]))*weight
+            if score<best_score:best_score=score;best=(k,j,i,length,d,connection)
+        if best is None:raise DataUnavailable(f'{self.product}: no valid reserve source found over water within {max_distance:g} m / {max_time:g} s; path_sources={attempts}/{max_sources}')
+        k,j,i,d,direct,connection=best;value=tuple(float(v) for v in self.values[k,j,i]);raw=(value[0],value[1],degrees(atan2(value[2],value[3]))%360) if self.product=='waves' else value
+        path=tuple(tuple(float(v) for v in INVERSE.transform(p.east,p.north,errcheck=True)) for p in connection.points) if connection else ()
+        method='nearest_valid_water_path' if connection else 'nearest_valid_visible_water'
+        records=tuple(DataEstimate(variable,method,float(self.grid_longitude[j,i]),float(self.grid_latitude[j,i]),self.times[k],d,float(offsets[k]),raw[n],
+            direct_distance_m=direct,connection_waypoints=path,connection_expansions=connection.expansions if connection else 0,
+            connection_spacing_m=connection.spacing_m if connection else None,
+            source_search_truncated=truncated) for n,variable in enumerate(self.variables))
         return value,records
 
 

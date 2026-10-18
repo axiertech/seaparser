@@ -74,9 +74,8 @@ ström och vågor saknar 25 provpunkter en tillåten rak vattenförbindelse, bla
 annat på kandidatens elfte segment. Större radie eller samma vattenkomponent
 är inte tillräckligt när förbindelsen korsar en udde.
 
-Nästa funktionssteg är uttryckligt konfigurerad reservförbindelse som följer
-kontrollerat sammanhängande vatten, med spårbar väg och vattenavstånd. Därefter
-kopplas samma normalisering och befintliga färdmotor samman, med regional
+Den första begränsade metoden ovan har nu kompletterats med vattenvägar enligt
+följande avsnitt. Nästa funktionssteg kopplar samma normalisering och befintliga färdmotor samman, med regional
 rörelseram, hela-segment-kontroller, per-segment-proveniens och särskild
 uppskattningsstatus i karta, jämförelse och GPX. Källmetadata och antagna
 modelluppgifter får inte slås samman. Fram till dess förblir den publicerade
@@ -88,3 +87,57 @@ regressioner prövar kända landbarriärer, marginalkontakt, verkliga nollor,
 tidsavvikelser, cirkulär vågriktning, ogiltiga källvärden och deterministiska
 sökgränser. Första passets lås-/syntax-/fulltest- och exakta CI-resultat förs i
 arbetsloggen och överlämningen efter körning.
+
+## Kontrollerade reservvägar runt uddar
+
+`nearest_valid_water_path` är ett uttryckligt val per variabel, med versionerad
+konfiguration i `settings/vinga-uddevalla-reserve.json`. Där tillåts metoden för
+ström och vågor; vindreserv är uttryckligen avstängd. Native-vindinterpolation
+ändras inte. `configured_reserve_policies` validerar samtliga variabelval innan
+uppslag och ger oföränderliga policykartor, utan filåtkomst under beräkning.
+
+En rak kontrollerad vattenförbindelse används när den finns. Annars krävs samma
+vattenkomponent och en konkret väg från den befintliga rena kandidatgeneratorn.
+Varje delsegment kontrolleras mot hela landmodellen och vald reservmarginal.
+Att punkterna tillhör samma vattenkomponent tillåter aldrig en genväg över land.
+Den nya metoden tillför inga noder eller värden i prognosfältet.
+
+Vattenvägens längd måste rymmas inom `max_distance_m`, utöver källtidsgränsen.
+Alla möjliga förbindelser inom denna längd ryms i sökfyrkanten kring ändpunkternas
+mittpunkt med samma sidlängd som avståndsbudgeten. För själva sökningen finns
+explicit gridsteg, celltak, expansionstak, källförsökstak och marginal. Första
+regionala inställningen är 250 m, 30 000 celler, 10 000 expansioner, högst 16
+källförsök som behöver en omväg och 0 m särskild reservmarginal. Kustmodellens
+konservativa grundskydd finns kvar. Båtens landmarginal är separat och är ännu
+inte kopplad till en regional färdsimulering.
+
+Produktens gemensamma policy använder minsta avstånds-/tids-/sökbudget, finaste
+begärda gridsteg, största tidsvikt och största marginal. En variabel som kräver
+rak synlighet kan inte få omväg genom en annan variabels inställning. Avstängd
+reserv blockerar hela produktens reservuppslag. En begränsad geometri-LRU delar
+exakta redan kontrollerade segment mellan uppslag; den är ingen beständig cache.
+
+Proveniensen anger `distance_m` längs den funna vattenvägen och dessutom
+`direct_distance_m`, förbindelsens WGS84-vägpunkter, expansioner, gridsteg och
+`source_search_truncated` när budget eller ofullständig anslutningssökning berör
+källvalet. Källposition, källtid, källvärde, signerad tidsavvikelse och hög
+osäkerhet finns kvar för varje variabel. Rangordningen jämför funna förbindelser;
+den bevisar varken kortast vattenavstånd eller globalt närmaste användbara källa.
+Tömda budgetar ger aldrig påhittade värden eller bevis om omöjlig färd.
+
+Det återupprepade verkliga stödprovet med denna konfiguration har 410
+geometriska provpunkter och båda marina produkter, totalt 820 uppslag. Samtliga
+har stöd; de tidigare 25 luckorna per produkt är borta i detta prov. Det ger
+1 913 reservposter, varav 517 med kontrollerade vattenvägar, fördelade på 206
+produktuppslag. Alla återtransformerade förbindelsesegment kontrollerades
+separat mot vattengeometrin och deras summerade längd mot rapporterat avstånd
+(0,1 mm numerisk tolerans). Största använda vattenavstånd var 4 273,42 m,
+största raka avstånd 4 060,54 m och största absoluta tidsavvikelse 1 798,88 s.
+78 variabelposter anger begränsad källsökning; osäkerheten döljs inte.
+
+Första kalla stödprovet tog 22,49 s inklusive normalisering/inläsning.
+Omprovet med extra förbindelsekontroll tog 14,77 s på samma maskin; detta är
+ingen generell latensgaranti. Källor och data återanvändes helt. Underlaget
+fortsätter att vara ett stödprov vid idealiserad tid, utan färd-, ankomst-,
+vädergräns- eller GPX-kvalificering. Den integrerade färdens faktiskt uppslagna
+tider, landmarginaler och segment måste kontrolleras i nästa komposition.

@@ -3134,3 +3134,29 @@ Frontend och exakt leverans-CI redovisas i överlämningen efter körning.
 Ingen ny publik aktivering i denna grundleverans. Nästa del: kontrollerad
 vattenförbindelse, därefter befintlig färdmotor, regional rörelseram och
 synliga uppskattade segment/jämförelse/GPX i samma PoC. Se coastal-reserve.md.
+
+## 2026-10-18 – reservförbindelser genom sammanhängande vatten
+
+Andra begränsade delen i samma aktiva pass, från 12:53:40 UTC. Den tidigare
+grundleveransen 65c5f009d92cd0297b2a135f6c176bbe2f18a284 har exakt grön CI.
+Ny explicit variabelpolicy aktiverar kontrollerade vattenvägar för vågor/ström
+och stänger vindreserv. Samma rena geometrisökning och hela landsegment används;
+avståndstaket gäller funnen vattenväg. Källförsök, celler, expansioner, grid och
+marginal är konfigurerade. Källa/tid/värde, vatten-/direktavstånd, förbindelsens
+WGS84-punkter och begränsad sökning följer varje reservpost, med hög osäkerhet.
+
+Verkligt stödprov med bevarade data och kandidat ger 820 produktuppslag vid
+410 geometriska provpunkter, utan kvarvarande luckor. De tidigare 25 luckorna
+per marin produkt är lösta i detta stödprov. 517 variabelposter har konkreta
+vattenförbindelser som separat återkontrollerats mot land och rapporterad längd.
+Största vattenavstånd 4 273,42 m, största absoluta tidsavvikelse 1 798,88 s;
+78 poster redovisar begränsad källsökning. Kallt prov 22,49 s, omprov med extra
+förbindelsekontroll 14,77 s. Detta bevisar inte regional färdtid eller allmänt
+datastöd: provtiderna är fortfarande idealiserade utan strömpåverkan.
+
+24 riktade prov och samlade 534 Pythonprov godkända med låsta beroenden,
+syntax-/arkitekturkontroller. Ingen ny installation, källa, datahämtning,
+publicering eller ändring av aktiv startare/lås. Befintlig PoC är oförändrad.
+Exakt CI redovisas i överlämningen efter push. Nästa funktionsdel: komposition
+av befintlig normalisering och färdmotor, regional rörelseram/segmentkontroll
+samt per-segment-osäkerhet och uppskattningsstatus i karta/jämförelse/GPX.

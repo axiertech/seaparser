@@ -78,3 +78,31 @@ class MarineReserveTests(unittest.TestCase):
         self.assertLess(min(abs(float(v)-y) for v in sample.y_m),1e-6)
         self.assertEqual(records[0].source_time,sample.times[-1])
         self.assertEqual(records[0].time_offset_seconds,-3600)
+
+    def test_explicit_water_path_reserve_records_a_checked_connection_around_land(self):
+        water=CoastalWater(to_wkb(box(-10000,-10000,10000,10000).difference(box(500,-10000,800,1200))),'test')
+        base=self.make(water);values=base.values.copy();values[:,:,0,:]=np.nan
+        policies={v:ReservePolicy(method='nearest_valid_water_path') for v in base.variables}
+        field=MarineReserve('current',base.longitude,base.latitude,base.times,values,water,policies)
+        point=Vector(*FORWARD.transform(11.61,57.6334));value,records=field.sample(point,START)
+        self.assertEqual(value,(9.,0.))
+        for r in records:
+            self.assertEqual(r.method,'nearest_valid_water_path');self.assertEqual(r.uncertainty,'high')
+            self.assertGreater(r.distance_m,r.direct_distance_m);self.assertGreater(len(r.connection_waypoints),2)
+            points=[Vector(*FORWARD.transform(*p)) for p in r.connection_waypoints]
+            self.assertTrue(all(water.clear(a,b) for a,b in zip(points,points[1:])))
+        tight={v:ReservePolicy(method='nearest_valid_water_path',max_distance_m=1000) for v in base.variables}
+        field=MarineReserve('current',base.longitude,base.latitude,base.times,values,water,tight)
+        with self.assertRaises(DataUnavailable):field.sample(point,START)
+
+    def test_versioned_variable_policies_are_explicit_and_cannot_silently_gain_a_method(self):
+        import json
+        from pathlib import Path
+        from infrastructure.marine_reserve import configured_reserve_policies
+        config=json.loads((Path(__file__).resolve().parents[1]/'settings/vinga-uddevalla-reserve.json').read_text())
+        policies=configured_reserve_policies(config)
+        self.assertTrue(all(p.method=='nearest_valid_water_path' for p in policies['waves'].values()))
+        self.assertTrue(all(p.method=='none' for p in policies['wind'].values()))
+        with self.assertRaises(TypeError):policies['waves']['wave_height_m']=ReservePolicy()
+        del config['products']['waves']['wave_height_m']['method']
+        with self.assertRaisesRegex(ValueError,'Explicit method'):configured_reserve_policies(config)
