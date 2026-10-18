@@ -9,8 +9,10 @@ from .models import PlanInput
 from .limits import BodyLimit
 
 
-def create_app(store=None):
-    jobs=store or JobStore()
+def create_app(store=None,*,resource_profile='local'):
+    from application.geographic_budget import resource_budget
+    resources=resource_budget(resource_profile)
+    jobs=store or JobStore(timeout=resources['job_seconds'],max_result_bytes=resources['result_bytes'])
     @asynccontextmanager
     async def lifespan(app):
         yield
@@ -32,7 +34,7 @@ def create_app(store=None):
             key=jobs.submit(request.model_dump())
         except BusyError as error:
             raise HTTPException(429,str(error),headers={'Retry-After':'2'}) from error
-        return {'id':key,'status':'queued','status_url':'/api/plans/'+key}
+        return {'id':key,'status':'queued','status_url':'/api/plans/'+key,'server_timeout_seconds':jobs.timeout,'poll_timeout_seconds':jobs.timeout+10}
 
     def job(key):
         found=jobs.get(key)

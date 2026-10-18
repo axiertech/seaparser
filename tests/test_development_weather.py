@@ -79,7 +79,7 @@ class DevelopmentWeatherTests(unittest.TestCase):
         s=scene();a,b=s['start'],s['target']
         payload=dict(start={'longitude':a[0],'latitude':a[1]},target={'longitude':b[0],'latitude':b[1]},
                      margin_m=10,departure_offsets_seconds=[0,600])
-        first=calculate_geographic(payload);second=calculate_geographic(payload)
+        first=calculate_geographic(payload,frozen_reference=True);second=calculate_geographic(payload,frozen_reference=True)
         self.assertEqual(canonical(first),canonical(second))
         self.assertFalse(first['synthetic'])
         self.assertEqual(len(first['alternatives']),4)

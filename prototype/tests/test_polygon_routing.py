@@ -89,7 +89,7 @@ class AutomaticRoutingTests(unittest.TestCase):
         result=generate_routes(Vector(0,0),Vector(90,0),(wall,),policy,node_radius_m=100)
         self.assertEqual(result.node_count,2);self.assertEqual(result.candidates,())
         self.assertEqual(result.status,'no_graph_path')
-        for radius in (True,0,-1,float('nan'),float('inf'),10001):
+        for radius in (True,0,-1,float('nan'),float('inf')):
             with self.assertRaises(ValueError):generate_routes(A,B,(),policy,node_radius_m=radius)
 
     def test_free_direct_path(self):
@@ -125,7 +125,16 @@ class AutomaticRoutingTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             SearchPolicy(clearance_m=0)
         with self.assertRaises(ValueError):
-            SearchPolicy(max_expansions=100001)
+            SearchPolicy(max_expansions=0)
+
+    def test_explicit_regional_budgets_keep_hard_obstacles_and_truncation(self):
+        # More than the legacy 64 polygons is an explicit server-side budget.
+        obstacles=tuple(box(restriction='information') for _ in range(69))+(box(),)
+        with self.assertRaises(ValueError):generate_routes(A,B,obstacles)
+        policy=SearchPolicy(max_nodes=2,max_obstacles=100,max_expansions=100001,max_waypoints=128)
+        result=generate_routes(A,B,obstacles,policy,node_radius_m=100000)
+        self.assertTrue(result.truncated);self.assertEqual(result.status,'node_limit');self.assertEqual(result.candidates,())
+        self.assertEqual(SearchPolicy(max_nodes=1024).max_nodes,1024)
 
     def test_obstacle_generator_consumption_is_bounded(self):
         count = 0

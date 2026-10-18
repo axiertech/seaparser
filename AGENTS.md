@@ -103,3 +103,15 @@ Detta innebär inte automatiskt tillstånd till tidigare förbjudna root-/
 systemändringar. Förbered konkreta nödvändiga adminsteg innan de eskaleras.
 Första status senast 45 min efter faktisk arbetsstart: vad kan användas,
 aktuella leveranshinder och minsta återstående arbete. Redovisa om 2–4 h inte håller.
+
+## PoC-mandat 2026-10-18
+
+Leverera i ordning: kartpresentation, regionala resursbudgetar, Vinga–Uddevalla
+med uttryckliga landmedvetna reservdata, gemensam beständig cache, kust/offshore.
+Uppskattningar är tillåtna när metod, källposition/tid, avstånd och berörda
+segment redovisas; de får inte märkas som verifierat klarade vädergränser.
+Ingen dold nollutfyllnad eller val av reservpunkt över land. Behåll determinism,
+landkontroller och synlig osäkerhet i jämförelse och GPX. Publicera färdiga
+förbättringar i samma PoC med återställning. Se `docs/resource-budgets.md`.
+Flytta worktreet med Git-hantering först i dagens avslutande arbetspass,
+till `/home/web/seaparser/worktrees/development`; invänta inte alla profiler.

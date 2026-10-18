@@ -10,7 +10,7 @@ def build(output, *, candidates=2, departures=(0,600), motion_frame=False):
     model=scene('vinga-native' if motion_frame else 'vinga');a,b=model['start'],model['target']
     config=Path(__file__).resolve().parents[1]/'settings/development-weather-projected-assumptions.json' if motion_frame else None
     result=calculate_geographic({'profile':'vinga','start':dict(longitude=a[0],latitude=a[1]),
-        'target':dict(longitude=b[0],latitude=b[1]),'margin_m':10,'departure_offsets_seconds':list(departures),'candidate_limit':candidates},weather_config=config)
+        'target':dict(longitude=b[0],latitude=b[1]),'margin_m':10,'departure_offsets_seconds':list(departures),'candidate_limit':candidates},weather_config=config,frozen_reference=True)
     output.mkdir(parents=True,exist_ok=True)
     (output/'result.json').write_text(canonical(result)+'\n')
     (output/'index.html').write_text(render(result))

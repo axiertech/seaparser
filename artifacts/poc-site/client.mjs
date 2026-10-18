@@ -14,7 +14,9 @@ export async function loadScene(fetcher = fetch, profile = 'vinga') {
 export async function plan(payload, { fetcher = fetch, pause = ms => new Promise(resolve => setTimeout(resolve, ms)), signal } = {}) {
   const created = await json(await fetcher('/api/plans', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal }));
   if (!/^[a-f0-9]{32}$/.test(created.id)) throw new Error('Ogiltigt jobb-id');
-  for (let index = 0; index < 120; index++) {
+  const seconds=created.poll_timeout_seconds??30;
+  if(typeof seconds!=='number'||!Number.isFinite(seconds)||seconds<=0||seconds>3600)throw new Error('Ogiltig beräkningstidsbudget');
+  for (let index = 0; index < Math.ceil(seconds*4); index++) {
     if (signal?.aborted) throw new Error('Avbrutet');
     const state = await json(await fetcher(`/api/plans/${created.id}`, { signal }));
     if (state.status === 'completed') return { id: created.id, result: state.result };

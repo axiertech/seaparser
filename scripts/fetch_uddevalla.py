@@ -150,13 +150,13 @@ def capture_marine(output,request,args):
         environment=os.environ.copy()
         for key in ('COPERNICUSMARINE_SERVICE_USERNAME','COPERNICUSMARINE_SERVICE_PASSWORD'):environment.pop(key,None)
         subprocess.run(command,cwd=ROOT,env=environment,check=True,stdin=subprocess.DEVNULL)
-    return inspect_marine(directory,request)
+    return inspect_marine(directory,request,max_decoded_chunk_bytes=args.decode_chunk_mb*1024*1024)
 
 
-def inspect_marine(directory,request):
+def inspect_marine(directory,request,*,max_decoded_chunk_bytes=64*1024*1024):
     import numpy as np
     import xarray as xr
-    from scripts.audit_copernicus import coordinate
+    from scripts.audit_copernicus import coordinate,finite_statistics
     manifest=json.loads((directory/'manifest.json').read_text());products={};common=None
     expected={'waves':WAVE_FIELDS,'current':CURRENT_FIELDS,'wave-mask':BATHY_FIELDS}
     if {f['product'] for f in manifest['files']}!=set(expected):raise ValueError('Incomplete marine capture; preserve it and resume through the existing cache')
@@ -170,7 +170,7 @@ def inspect_marine(directory,request):
                 if axis_value.attrs.get('units')!=units or len(axis_value)<2 or not np.isfinite(axis_value.values).all() or not (np.diff(axis_value.values)>0).all():raise ValueError('Unsupported native geographic axis')
             w,s,e,n=request['planning_area']
             if not (float(lon.min())<=w<e<=float(lon.max()) and float(lat.min())<=s<n<=float(lat.max())):raise ValueError('Marine source does not enclose the planning area')
-            report={'coverage':dict(west=float(lon.min()),east=float(lon.max()),south=float(lat.min()),north=float(lat.max())),'variables':{name:dict(dimensions=list(ds[name].dims),shape=list(ds[name].shape),missing=int((~np.isfinite(ds[name].values)).sum()),count=int(ds[name].size),units=ds[name].attrs.get('units'),cell_methods=ds[name].attrs.get('cell_methods')) for name in expected[entry['product']]},'issued_at':None}
+            report={'coverage':dict(west=float(lon.min()),east=float(lon.max()),south=float(lat.min()),north=float(lat.max())),'variables':{name:dict(dimensions=list(ds[name].dims),shape=list(ds[name].shape),**finite_statistics(ds[name],max_decoded_chunk_bytes),units=ds[name].attrs.get('units'),cell_methods=ds[name].attrs.get('cell_methods')) for name in expected[entry['product']]},'issued_at':None}
             if entry['product']!='wave-mask':
                 names=[k for k,v in ds.coords.items() if v.attrs.get('standard_name')=='time']
                 if len(names)!=1:raise ValueError('Unambiguous native time coordinate required')
@@ -187,8 +187,8 @@ def inspect_marine(directory,request):
 def main(argv=None):
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--output',type=Path,required=True);p.add_argument('--departure');p.add_argument('--public-only',action='store_true');p.add_argument('--request-file',type=Path)
     p.add_argument('--cache',type=Path,default=Path('/tmp/seaparser-copernicus-cache'));p.add_argument('--file-budget-gb',type=float,default=2);p.add_argument('--transfer-budget-gb',type=float,default=10);p.add_argument('--total-transfer-budget-gb',type=float,default=20)
-    p.add_argument('--met-response-mb',type=int,default=32);p.add_argument('--land-response-mb',type=int,default=512);p.add_argument('--land-only',action='store_true',help='Retry land without repeating wind or marine downloads');a=p.parse_args(argv)
-    if a.met_response_mb<=0 or a.land_response_mb<=0:raise ValueError('Positive configurable response budgets required')
+    p.add_argument('--met-response-mb',type=int,default=32);p.add_argument('--land-response-mb',type=int,default=512);p.add_argument('--decode-chunk-mb',type=int,default=64);p.add_argument('--land-only',action='store_true',help='Retry land without repeating wind or marine downloads');a=p.parse_args(argv)
+    if a.met_response_mb<=0 or a.land_response_mb<=0 or a.decode_chunk_mb<=0:raise ValueError('Positive configurable response budgets required')
     os.umask(0o077);a.output.mkdir(parents=True,exist_ok=True)
     filename=a.output/'request.json'
     request=json.loads(filename.read_text()) if filename.exists() else json.loads(a.request_file.read_text()) if a.request_file else plan(a.departure)

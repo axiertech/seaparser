@@ -29,7 +29,7 @@ def build(output):
     s=scene();a,b=s['start'],s['target']
     payload=dict(profile='vinga',start=dict(longitude=a[0],latitude=a[1]),target=dict(longitude=b[0],latitude=b[1]),
                  margin_m=10,departure_offsets_seconds=[0,600])
-    result=calculate_geographic(payload,weather_config=ROOT/'settings/development-weather-native-assumptions.json')
+    result=calculate_geographic(payload,weather_config=ROOT/'settings/development-weather-native-assumptions.json',frozen_reference=True)
     (output/'result.json').write_text(canonical(result)+'\n');(output/'index.html').write_text(render(result))
     raw,_=freeze_native_with_audit(ROOT/'fixtures/vinga-expanded-20261017',radius_m=2000)
     dataset=CopernicusMarineAdapter().normalize(raw,native_radius_m=2000);time=dataset.products[0].times[0]
@@ -47,6 +47,8 @@ def build(output):
         step_seconds=30,max_seconds=1800,max_steps=2000)
     specified_result=json.loads(run_plan(specified))
     (output/'specified-route.json').write_text(canonical(specified_result)+'\n')
+    legacy_searches=[asdict(search),asdict(feasible_search)]
+    for entry in legacy_searches:entry['policy'].pop('max_obstacles')
     report=dict(scope='native_marine_geometry_and_expanded_land_component_review',source_qualification='unverified',
         result_qualification='diagnostic_only',routing_area_expanded=False,unchanged_development_radius_m=900,
         native_marine_radius_m=2000,guard_m=1,geographic_disk_bounds=dataset.products[0].geographic_bounds,
@@ -56,7 +58,7 @@ def build(output):
         segment_check=dict(start_m=[-1500,0],end_m=[1500,0],seconds=1200,
             whole_envelope_data_support='passed_within_coordinate_interpolation_model'),
         land=dict(snapshot_sha256=land.sha256,closed_hulls=len(land.obstacles),review_disk_radius_m=1500,
-            completeness='unknown',depth='unknown',geometry_search=asdict(search),feasible_endpoint_search=asdict(feasible_search)),
+            completeness='unknown',depth='unknown',geometry_search=legacy_searches[0],feasible_endpoint_search=legacy_searches[1]),
         conditional_demo=dict(input_sha256=result['input_sha256'],result_qualification=result['result_qualification'],
             algorithm_version=result['planning']['manifest']['algorithm_version'] if result['planning'] else None,snapshot_date='2026-10-17',
             configured_radius_m=900,geometry_search_status=result['geometry_search']['status'],alternative_comparison=result['alternative_comparison'],alternatives=result['alternatives']),specified_route=dict(scope='Single explicitly supplied segment; not automatic candidate search',

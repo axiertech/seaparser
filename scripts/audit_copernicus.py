@@ -26,6 +26,22 @@ def coordinate(dataset, standard):
     return result
 
 
+def finite_statistics(array,chunk_bytes=64*1024*1024):
+    """Scan decoded NetCDF hyperslabs without materializing a GB-sized field."""
+    from itertools import product
+    import numpy as np
+    if type(chunk_bytes) is not int or chunk_bytes<array.dtype.itemsize:raise ValueError('Positive decoded chunk budget required')
+    remaining=chunk_bytes//array.dtype.itemsize;chunks={}
+    for dim in reversed(array.dims):
+        chunks[dim]=min(array.sizes[dim],remaining);remaining=max(1,remaining//max(1,chunks[dim]))
+    missing=0;largest=0
+    for starts in product(*(range(0,array.sizes[dim],chunks[dim]) for dim in array.dims)):
+        part=array.isel({dim:slice(start,start+chunks[dim]) for dim,start in zip(array.dims,starts)}).values
+        if part.nbytes>chunk_bytes:raise ValueError('Decoded slab exceeded its byte budget')
+        largest=max(largest,part.nbytes);missing+=int((~np.isfinite(part)).sum())
+    return {'missing':missing,'count':int(array.size),'largest_decoded_chunk_bytes':largest}
+
+
 def inspect_file(data, fields, np, xr):
     if len(data) > 10_000_000:
         raise ValueError('NetCDF size budget exceeded')

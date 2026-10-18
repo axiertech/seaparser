@@ -3,7 +3,7 @@ from dataclasses import replace, asdict
 from datetime import datetime, timedelta
 from .development_weather import load_development_weather
 from infrastructure.development_forecast import ProjectedDevelopmentForecast
-from .geographic_budget import validate_budget, VINGA_OFFSETS, MAX_EVALUATIONS
+from .geographic_budget import validate_budget, VINGA_OFFSETS, MAX_EVALUATIONS,resource_budget,available_voyage_seconds
 from .planning import PlanRequest
 from prototype.model import ConstantBoat
 from prototype.forecast import ForecastPolicy
@@ -63,13 +63,14 @@ def scene(profile='vinga'):
             'notice':'Uppskattade syntetiska testdata. Ingen GPS/AIS. Kartbakgrund är inte routingsunderlag.'}
 
 
-def calculate_geographic(payload, *, audit_candidate_limit=None, weather_config=None, audit_node_limit=None):
+def calculate_geographic(payload, *, audit_candidate_limit=None, weather_config=None, audit_node_limit=None,frozen_reference=False):
     if payload.get('profile','vinga') not in ('synthetic','vinga','vinga-native','vinga-poc'):
         raise ValueError('Okänd region')
     profile=payload.get('profile','vinga')
     if profile=='vinga-poc' and payload.get('boat_profile') not in (None,'constant-5kn'):
         raise ValueError('PoC stöder endast befintlig uppskattad konstantfartsprofil 5 kn')
     regional=profile!='synthetic'
+    resources=resource_budget('local')
     native=profile in ('vinga-native','vinga-poc')
     if native:
         if weather_config is not None:
@@ -111,18 +112,22 @@ def calculate_geographic(payload, *, audit_candidate_limit=None, weather_config=
         snapshot=land.load_land(margin_m=payload.get('margin_m',2)) if regional else None
     shapes=snapshot.obstacles if regional else (shape,)
     obstacle_convert=land.review_to_geo if regional and config.get('source_bundle')=='vinga-expanded-20261017' else convert
-    waypoints=8 if regional else 4
+    waypoints=resources['max_waypoints'] if regional else 4
     if regional:
         valid_from=max(p.valid_from for p in dataset.product_metadata)
         valid_until=min(p.valid_until for p in dataset.product_metadata)
-        if any(not (valid_from <= request.departures[0]+timedelta(seconds=o) and
-                       request.departures[0]+timedelta(seconds=o+1800) < valid_until) for o in offsets):
-            raise ValueError('Avgång och hela ruttbudgeten måste rymmas i faktiskt gemensamt tidsstöd')
+        if any(not valid_from<=request.departures[0]+timedelta(seconds=o)<valid_until for o in offsets):
+            raise ValueError('Avgången saknar faktiskt gemensamt tidsstöd')
+        duration=available_voyage_seconds(resources,request.departures[0],offsets,valid_until)
+        if audit_candidate_limit is not None or frozen_reference:
+            # Frozen reference audits retain their simulated time/step budgets.
+            if duration<1800:raise ValueError('Avgång och hela ruttbudgeten måste rymmas i faktiskt gemensamt tidsstöd')
+            duration=1800
     request=replace(request,position=start,target=target,obstacles=shapes,
                     candidates=request.candidates[:2] if regional else request.candidates,
                     departures=tuple(request.departures[0]+timedelta(seconds=o) for o in offsets),
-                    max_departures=4 if regional else 2,max_candidates=candidate_limit,max_waypoints=waypoints,max_steps=2000,max_seconds=1800,
-                    step_seconds=30 if regional else 10,tolerance_m=.01)
+                    max_departures=4 if regional else 2,max_candidates=candidate_limit,max_waypoints=waypoints,max_obstacles=100 if frozen_reference else resources['max_obstacles'],max_steps=resources['max_steps'] if regional and audit_candidate_limit is None and not frozen_reference else 2000,max_seconds=duration if regional else 1800,
+                    step_seconds=resources['step_seconds'] if regional else 10,tolerance_m=.01)
     if regional:
         sampled=request.dataset.evaluate(start,request.departures[0])
         start_weather={'time':request.departures[0].isoformat(),
@@ -130,7 +135,7 @@ def calculate_geographic(payload, *, audit_candidate_limit=None, weather_config=
                        'current_m_s':sampled.current.speed if sampled.current is not None else None,
                        'wave_height_m':sampled.waves.height_m if sampled.waves is not None else None,
                        'wave_period_seconds':sampled.waves.period_seconds if sampled.waves is not None else None}
-    nodes=26 if regional else 10
+    nodes=resources['max_nodes'] if regional else 10
     if audit_node_limit is not None:
         if (audit_candidate_limit is None or not regional or
                 config.get('source_bundle')!='vinga-expanded-20261017' or
@@ -138,7 +143,7 @@ def calculate_geographic(payload, *, audit_candidate_limit=None, weather_config=
             raise ValueError('Offline native-audit kräver uttrycklig nodbudget 26 eller 66')
         nodes=audit_node_limit
     raw=json.loads(run_obstacle_plan(request,SearchPolicy(clearance_m=5,max_candidates=candidate_limit,
-                                                        max_waypoints=waypoints,max_expansions=1000,max_nodes=nodes),
+                                                        max_waypoints=waypoints,max_expansions=resources['max_expansions'],max_nodes=nodes,max_obstacles=resources['max_obstacles']),
                     node_radius_m=dataset.support_radius_m if native or (regional and isinstance(dataset,ProjectedDevelopmentForecast)) else None))
     features=[]; alternatives=[]
     if raw['planning']:
@@ -172,6 +177,8 @@ def calculate_geographic(payload, *, audit_candidate_limit=None, weather_config=
             'input_sha256':identity,'planning':raw['planning'],'routes':collection(features),
             'alternatives':alternatives,'alternative_comparison':compare_alternatives(alternatives,request.max_comfort_extra_seconds),
             'search_budget':{'candidate_limit':candidate_limit,'departure_offsets_seconds':offsets,
+                             **({} if frozen_reference else {'max_simulated_seconds':request.max_seconds,'step_seconds':request.step_seconds,
+                             'configured_server_seconds':resources['job_seconds']}),
                              'evaluation_limit':candidate_limit*len(offsets),'max_interactive_evaluations':MAX_EVALUATIONS,
                              'offline_audit':audit_candidate_limit is not None},'obstacles':collection([f for p in shapes for f in obstacle_geometry(p,obstacle_convert)['features']]),
             'notice':raw['limitations']+(f' Verkliga historiska MET/WAV/PHY-data {request.departures[0].date().isoformat()}; beräknad med uttryckliga utvecklingsantaganden, uppskattad konstantfartsbåt och ej validerat komfortmått.' if regional else ' Syntetiska referensdata.')+' Djup och landfullständighet är okända. Ej navigationssäkert.'}

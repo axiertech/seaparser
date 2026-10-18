@@ -65,12 +65,23 @@ class GeographicBudgetTests(unittest.TestCase):
             self.assertIn('issued_at',p['assumed_fields'])
 
 
-    def test_entire_duration_budget_must_fit_before_exclusive_end(self):
+    def test_duration_adapts_to_actual_exclusive_source_end_without_old_30_minute_gate(self):
         from unittest.mock import patch
         from application.development_weather import load_development_weather
         from application.geographic_plan import calculate_geographic
         dataset,config,evidence=load_development_weather()
         config=config | {'departure':'2026-10-13T15:30:00Z'}
         with patch('application.geographic_plan.load_development_weather',return_value=(dataset,config,evidence)):
-            with self.assertRaisesRegex(ValueError,'hela ruttbudgeten'):
-                calculate_geographic(self.payload | {'departure_offsets_seconds':[0]})
+            result=calculate_geographic(self.payload | {'departure_offsets_seconds':[0]})
+            self.assertEqual(result['search_budget']['max_simulated_seconds'],1799)
+            self.assertEqual(result['search_budget']['configured_server_seconds'],20)
+
+    def test_multiday_duration_and_server_wall_time_are_independent(self):
+        from application.geographic_budget import resource_budget,available_voyage_seconds
+        from datetime import datetime,timedelta,timezone
+        start=datetime(2026,10,18,tzinfo=timezone.utc);budget=resource_budget('offshore')
+        duration=available_voyage_seconds(budget,start,[0,3600],start+timedelta(days=10))
+        self.assertEqual(duration,10*86400-3601)
+        self.assertEqual(budget['job_seconds'],90);self.assertGreater(duration,1800)
+        self.assertGreaterEqual(budget['max_steps']*budget['step_seconds'],duration)
+        with self.assertRaises(ValueError):available_voyage_seconds(budget,start,[0],start)

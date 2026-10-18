@@ -3,6 +3,7 @@ import asyncio
 from dataclasses import dataclass,field
 import json
 from pathlib import Path
+from math import isfinite
 import sys
 from time import monotonic
 from uuid import uuid4
@@ -23,9 +24,13 @@ class Job:
 
 
 class JobStore:
-    def __init__(self,runner=None,timeout=20,max_active=2,max_jobs=8,ttl=300):
+    def __init__(self,runner=None,timeout=20,max_active=2,max_jobs=8,ttl=300,max_result_bytes=8_000_000):
+        if (any(type(v) not in (int,float) or not isfinite(v) or v<=0 for v in (timeout,ttl))
+                or any(type(v) is not int or v<=0 for v in (max_active,max_jobs,max_result_bytes))):
+            raise ValueError('Positive finite job/resource budgets required')
         self.runner=runner or self.compute
         self.timeout=timeout;self.max_active=max_active;self.max_jobs=max_jobs;self.ttl=ttl
+        self.max_result_bytes=max_result_bytes
         self.jobs={};self.tasks=set()
 
     def prune(self):
@@ -66,8 +71,14 @@ class JobStore:
         try:
             # Cancellation during spawn must still obtain and reap the child.
             process=await asyncio.shield(startup)
-            output,_=await process.communicate(json.dumps(payload,allow_nan=False).encode())
-            if process.returncode or len(output)>8_000_000:
+            process.stdin.write(json.dumps(payload,allow_nan=False).encode());await process.stdin.drain();process.stdin.close()
+            chunks=[];size=0
+            while chunk:=await process.stdout.read(min(65536,self.max_result_bytes+1-size)):
+                size+=len(chunk)
+                if size>self.max_result_bytes:raise ValueError('Beräkningsresultatet överskrider bytebudgeten')
+                chunks.append(chunk)
+            await process.wait();output=b''.join(chunks)
+            if process.returncode:
                 raise ValueError('Beräkningsprocessen misslyckades')
             return json.loads(output)
         finally:

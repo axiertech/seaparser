@@ -19,15 +19,14 @@ class SearchPolicy:
     max_waypoints: int = 8
     max_expansions: int = 10000
     max_nodes: int = 66
+    max_obstacles: int = 64
 
     def __post_init__(self):
         if not isfinite(self.clearance_m) or self.clearance_m <= 0:
             raise ValueError('Positiv finit hörnklarering krävs utöver hindermarginal')
         if any(type(v) is not int or v <= 0 for v in
-               (self.max_candidates,self.max_waypoints,self.max_expansions,self.max_nodes)):
+               (self.max_candidates,self.max_waypoints,self.max_expansions,self.max_nodes,self.max_obstacles)):
             raise ValueError('Positiva heltal krävs för sökgränser')
-        if self.max_nodes > 258 or self.max_candidates > 100 or self.max_waypoints > 32 or self.max_expansions > 100000:
-            raise ValueError('Sökgränser över prototypens hårda budget')
 
 
 @dataclass(frozen=True)
@@ -46,8 +45,8 @@ class GeneratedRoutes:
 def generate_routes(position, target, obstacles, policy=SearchPolicy(), *, node_radius_m=None):
     xy(position); xy(target)
     if node_radius_m is not None and (type(node_radius_m) not in (int,float) or
-            not isfinite(node_radius_m) or not 0 < node_radius_m <= 10000):
-        raise ValueError('Finit sökdiskradie 0–10000 m krävs')
+            not isfinite(node_radius_m) or not 0 < node_radius_m):
+        raise ValueError('Finit positiv sökdiskradie krävs')
     radius2=None if node_radius_m is None else Fraction(node_radius_m)**2
     def supported(point):
         return radius2 is None or sum(v*v for v in xy(point)) <= radius2
@@ -58,8 +57,8 @@ def generate_routes(position, target, obstacles, policy=SearchPolicy(), *, node_
         raise ValueError('Fryst sökpolicy med minst två noder krävs')
     items = []
     for obstacle in obstacles:
-        if len(items) >= 64 or type(obstacle) is not Polygon:
-            raise ValueError('Högst 64 syntetiska polygoner stöds')
+        if len(items) >= policy.max_obstacles or type(obstacle) is not Polygon:
+            raise ValueError('Polygonantalet överskrider sökpolicyns hinderbudget')
         items.append(obstacle)
     obstacles = tuple(items)
     hard = tuple(o for o in obstacles if o.restriction == 'hard')

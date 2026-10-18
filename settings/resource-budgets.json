@@ -1,0 +1,5 @@
+{
+  "local": {"voyage_seconds":604800,"step_seconds":30,"max_steps":100000,"max_waypoints":8,"max_nodes":26,"max_expansions":1000,"max_obstacles":64,"job_seconds":20,"result_bytes":8000000},
+  "regional": {"voyage_seconds":604800,"step_seconds":60,"max_steps":200000,"max_waypoints":128,"max_nodes":1024,"max_expansions":1000000,"max_obstacles":20000,"job_seconds":60,"result_bytes":67108864},
+  "offshore": {"voyage_seconds":2592000,"step_seconds":300,"max_steps":200000,"max_waypoints":256,"max_nodes":2048,"max_expansions":2000000,"max_obstacles":50000,"job_seconds":90,"result_bytes":67108864}
+}

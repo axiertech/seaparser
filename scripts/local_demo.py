@@ -10,7 +10,7 @@ def review_app(profile='vinga'):
     if profile not in ('synthetic','vinga','vinga-native','vinga-poc'):
         raise ValueError('Okänd granskningsprofil')
     directory=Path(__file__).resolve().parents[1]/'frontend'/('land-dist' if profile=='vinga' else 'dist')
-    app=create_app()
+    app=create_app(resource_profile='regional' if profile=='vinga-poc' else 'local')
     if profile=='vinga-poc':
         directory=Path(__file__).resolve().parents[1]/'artifacts/poc-site'
     if profile=='vinga-native':
