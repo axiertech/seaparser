@@ -15,6 +15,7 @@ from deployment.vinga_upgrade import atomic_public_copy,tree_hashes
 BUILD=ROOT/'artifacts/poc-site'
 URL='https://seaparser.com/poc/'
 ROOT_FILES=set(PUBLIC_ASSETS)-{'main.mjs'}|{'poc-main.mjs','poc-transport.mjs','poc.css','scene.json','catalog.json','uddevalla-main.mjs','vinga-uddevalla.json','coastal-view.mjs','coastal-voyage.json'}
+ROOT_FILES|={'assets/logos/seaparser-logo.svg','assets/logos/favicon.ico','assets/logos/favicon-256.png'}
 
 
 def allowed(name):
