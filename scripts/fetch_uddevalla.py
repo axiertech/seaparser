@@ -121,7 +121,7 @@ def capture_met(output,request,limit):
 def capture_land(output,request,limit):
     # Overpass maxsize limits SERVER working memory, not downloaded bytes.
     # Keep the response budget separate from the normal 512 MiB query memory.
-    w,s,e,n=request['bbox'];query=f'[out:xml][timeout:180][maxsize:536870912];way["natural"="coastline"]({s},{w},{n},{e});(._;>;);out meta;'
+    w,s,e,n=request['bbox'];query=f'[out:xml][timeout:180][maxsize:536870912];way["natural"="coastline"]({s},{w},{n},{e});(._;>;);out body;'
     def envelope(body):
         root=ET.fromstring(body)
         if root.tag!='osm':raise ValueError('Unexpected Overpass XML root')
@@ -187,7 +187,7 @@ def inspect_marine(directory,request):
 def main(argv=None):
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--output',type=Path,required=True);p.add_argument('--departure');p.add_argument('--public-only',action='store_true');p.add_argument('--request-file',type=Path)
     p.add_argument('--cache',type=Path,default=Path('/tmp/seaparser-copernicus-cache'));p.add_argument('--file-budget-gb',type=float,default=2);p.add_argument('--transfer-budget-gb',type=float,default=10);p.add_argument('--total-transfer-budget-gb',type=float,default=20)
-    p.add_argument('--met-response-mb',type=int,default=32);p.add_argument('--land-response-mb',type=int,default=64);p.add_argument('--land-only',action='store_true',help='Retry land without repeating wind or marine downloads');a=p.parse_args(argv)
+    p.add_argument('--met-response-mb',type=int,default=32);p.add_argument('--land-response-mb',type=int,default=512);p.add_argument('--land-only',action='store_true',help='Retry land without repeating wind or marine downloads');a=p.parse_args(argv)
     if a.met_response_mb<=0 or a.land_response_mb<=0:raise ValueError('Positive configurable response budgets required')
     os.umask(0o077);a.output.mkdir(parents=True,exist_ok=True)
     filename=a.output/'request.json'
