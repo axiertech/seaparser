@@ -2,9 +2,12 @@
 import json
 from pathlib import Path
 import unittest
+from hashlib import sha256
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 import numpy as np
 import xarray as xr
-from scripts.build_uddevalla import marine_probe
+from scripts.build_uddevalla import marine_probe,wind_sample
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -33,5 +36,17 @@ class UddevallaPreflightTests(unittest.TestCase):
         ds['uo'][0,0,1]=np.nan
         result=marine_probe(ds,None,'current',point)['samples'][0]
         self.assertIsNone(result['value']);self.assertEqual(result['missing_corners'],1)
+
+    def test_changed_frozen_wind_bytes_fail_without_repeating_source_capture(self):
+        with TemporaryDirectory() as name:
+            directory=Path(name);index={}
+            for filename in ('forecast.dds','forecast.das','times.txt','axes.txt','coordinates.txt','wind.txt'):
+                content=b'frozen test bytes';(directory/filename).write_bytes(content)
+                index[filename]={'bytes':len(content),'sha256':sha256(content).hexdigest()}
+            (directory/'sources.json').write_text(json.dumps(index));(directory/'inventory.json').write_text('{}')
+            (directory/'wind.txt').write_bytes(b'changed test bytes')
+            with patch('scripts.fetch_uddevalla.capture_met',side_effect=AssertionError('No repeated capture')):
+                with self.assertRaisesRegex(ValueError,'Frozen MET source bytes changed'):
+                    wind_sample(directory,{})
 
 if __name__=='__main__':unittest.main()

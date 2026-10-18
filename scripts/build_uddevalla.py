@@ -16,8 +16,8 @@ import numpy as np
 import xarray as xr
 from pyproj import Geod
 
-from scripts.audit_met_metadata import axis,matrix,numbers,PROJ4
-from scripts.fetch_uddevalla import inspect_marine,capture_met,utc
+from scripts.audit_met_metadata import axis,matrix,numbers,PROJ4,field_metadata,geometry_metadata,time_metadata
+from scripts.fetch_uddevalla import inspect_marine,utc
 from infrastructure.native_wind import NativeWindSample
 from infrastructure.met_wind_segments import NativeMetWind
 from infrastructure.copernicus_fields import wave_node,current_node
@@ -27,7 +27,14 @@ ROOT=Path(__file__).resolve().parents[1]
 
 
 def wind_sample(directory,request):
-    inventory=capture_met(directory.parent,request,32_000_000)
+    # Runtime callers must only read frozen local data, never initiate transport.
+    inventory=json.loads((directory/'inventory.json').read_text());index=json.loads((directory/'sources.json').read_text())
+    if set(index)!={'forecast.dds','forecast.das','times.txt','axes.txt','coordinates.txt','wind.txt'}:raise ValueError('Complete frozen MET source index required')
+    for name,entry in index.items():
+        path=directory/name
+        if path.is_symlink() or path.stat().st_size!=entry['bytes'] or sha256(path.read_bytes()).hexdigest()!=entry['sha256']:raise ValueError('Frozen MET source bytes changed')
+    dds=(directory/'forecast.dds').read_text();das=(directory/'forecast.das').read_text();times_text=(directory/'times.txt').read_text()
+    field_metadata(das);geometry_metadata(das);time_metadata(dds,das,times_text,expected_reference=Decimal(int(utc(request['reference_time']).timestamp())))
     bounds=inventory['native_subset'];nx=bounds['x_last']-bounds['x_first']+1;ny=bounds['y_last']-bounds['y_first']+1
     text=(directory/'wind.txt').read_text();coords=(directory/'coordinates.txt').read_text();axes=(directory/'axes.txt').read_text();planes={}
     times=tuple(utc(t) for t in inventory['times'])

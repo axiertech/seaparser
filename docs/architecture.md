@@ -113,4 +113,12 @@ Se native-marine-geometry.md; större landgranskning är separat från kartbakgr
 
 Exakt polygonbox-avvisning och en begränsad geometri-LRU minskar kostnaden utan att ändra hinderpredikat. Native-kandidataudit använder explicit offlinebudget66, alla24hinder och befintlig planering. API-budgeten är oförändrad. Se native-candidate-budget.md.
 
+Regionala grundkomponenter separerar materialiserad OSM-vattengeometri i
+`infrastructure/coastal_water.py`, ren budgetbegränsad kandidatgenerering i
+`prototype/water_routing.py` och uttryckliga reservuppslag i
+`infrastructure/marine_reserve.py`. Normaliserade marina komponenter och
+MET-native-vind återanvänds. Ingen transport sker under uppslag eller sökning.
+Reservposter ger hög osäkerhet, aldrig vädergränscertifiering. Regional
+färdkomposition och spårbara vattenvägar runt uddar återstår; se coastal-reserve.md.
+
 Valbar vinga-native-profil komponerar fast17-oktober-väder/24hinder och exakt900m-kandidatdisk i befintlig A*-graf. Alla hinder och integrerade segmentkontroller kvar,21noder inom26gränsen. Befintlig frontend/layout och jobbsystem återanvänds. Se supported-native-routing.md.

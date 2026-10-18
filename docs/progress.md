@@ -3106,3 +3106,31 @@ Vinga-beräkning, export och tidigare sidor behålls. Kusturvalet är enbart
 visning; öppna kustkedjor görs inte till falska routingpolygoner.
 Full regional routing kräver källdata med stöd i fjordarna samt regional
 landtopologi och segmentkontroll; högre sökbudget ensam löser inte dataluckan.
+
+## 2026-10-18 – granskade regionala grundkomponenter
+
+Femtimmarspassets första begränsade leverans startade 12:35:09 UTC.
+Exakt e1c0bd4914aeffb623c0c65ecc2695e3136e4aaf verifierad COMPLETED/SUCCESS
+i GitHub-run 39127363912, inklusive frontend och publicerade HTTPS-resurser.
+De tio överlämnade filerna har bevarats och granskats. Shapely 2.2.0 med
+Linux CPython 3.14-hjulhash verifierad mot officiella PyPI och låst.
+Riktad OSM-vattenmaterialisering, hela-segment-/marginalkontroller,
+uttryckliga reservpolicyer/proveniens samt deterministisk geometrisk
+kandidatsökning är färdigställda som komponenter. Reservvindens källpositioner
+binds till dess faktiska native-axlar; ogiltiga värden kan inte döljas som luckor.
+Sökgränser rapporteras även när flera försök ger samma kandidat.
+
+Återanvänd regional bunt, 67 MiB, utan nya uttag eller dataöverskrivning.
+Faktiska ändpunktsprov hittar vattenförbundna marina källor på 0,5–1,2 km.
+Ett högst 250 m-stödprov längs den sparade cirka 88,96 km-kandidaten hittar
+25 provpunkter per marin produkt utan rak landfri reservförbindelse.
+PROJECT_BLOCKER: reservmetoden behöver uttryckliga kontrollerade vattenvägar
+runt uddar innan hela regionala färden kan simuleras. Det är ett datastödsprov
+med idealiserad 5 kn-tid, ingen verklig restid eller vädergränsverifiering.
+
+Lokalt passerade 528 Python-prov i samlad lås-/syntax-/arkitekturkontroll,
+följt av 20 riktade prov mot slutlig kod inklusive två tillagda regressioner.
+Frontend och exakt leverans-CI redovisas i överlämningen efter körning.
+Ingen ny publik aktivering i denna grundleverans. Nästa del: kontrollerad
+vattenförbindelse, därefter befintlig färdmotor, regional rörelseram och
+synliga uppskattade segment/jämförelse/GPX i samma PoC. Se coastal-reserve.md.

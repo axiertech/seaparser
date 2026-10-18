@@ -374,3 +374,19 @@ Behåll API:s nod-/processgränser. Tillåt endast explicit offlineaudit26/66nod
 ## 2026-10-17: Begränsa kandidatnoder till verkligt utvecklingsstöd
 
 Filtrera enbart kandidathörn med exakt sluten900m-disk, aldrig hinder. All kant-/färdkontroll behåller24hinder; externa hinderhörn kan ändå blockera. 21noder ryms inom26 och samma första8vägar behålls. Kalla standardprocessprov under20s/8MB möjliggör explicit vinga-native-profil med högst16kombinationer. Standard/publik tjänst och900m-tak oförändrade. Se supported-native-routing.md.
+
+## 2026-10-18: Regionala grundkomponenter med explicita reservuppslag
+
+Användarens PoC-mandat tillåter uppskattningar med metod, källposition/tid,
+avstånd och berörda segment. De får aldrig betecknas som verifierat klarade
+vädergränser. Regionalt grundarbete återanvänder befintliga källnormaliseringar,
+native-vind och frysta uttag. Riktad OSM-topologi ger materialiserat vatten;
+en ren begränsad kandidatgenerator tar geometri som funktionsargument.
+
+Första reservmetoden kräver rak landfri vattenförbindelse till källan och
+konfigurerad policy för varje variabel. Hela produktvärdet kommer från samma
+nod/tid och måste följa samtliga policyer. Faktiskt regionalt stödprov visar
+kvarvarande luckor runt uddar, så metoden är ännu inte en regional färdmodell.
+Fortsättning kräver uttrycklig kontrollerad vattenväg och befintlig motor,
+regional rörelseram samt synlig osäkerhet i jämförelse/karta/GPX.
+Se coastal-reserve.md för uppmätta resultat och kvarvarande omfattning.
