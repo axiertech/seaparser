@@ -16,6 +16,8 @@ from infrastructure.materialized_cache import MaterializedCache,fingerprint
 
 ROOT=Path(__file__).resolve().parents[1]
 DIRECTIONS=((1,0,2),(0,1,4),(1,1,8),(-1,1,16))
+EDGE_MASKS={direction:(mask,reverse) for dx,dy,mask in DIRECTIONS
+            for direction,reverse in (((dx,dy),False),((-dx,-dy),True))}
 
 
 class CoastalGrid:
@@ -38,15 +40,24 @@ class CoastalGrid:
         for x,y in (a,b):
             i,j=round(x/self.spacing),round(y/self.spacing)
             if i*self.spacing!=x or j*self.spacing!=y:return None
-            i-=self.imin;j-=self.jmin
-            if not 0<=i<self.nx or not 0<=j<self.ny:return None
             cells.append((i,j))
-        (i,j),(u,v)=cells
-        if (i,j)==(u,v):return bool(self.flags[j*self.nx+i]&1)
-        for dx,dy,mask in DIRECTIONS:
-            if (u-i,v-j)==(dx,dy):return bool(self.flags[j*self.nx+i]&mask)
-            if (i-u,j-v)==(dx,dy):return bool(self.flags[v*self.nx+u]&mask)
-        return None
+        a,b=cells
+        return self.point_key_clear(a) if a==b else self.edge_key_clear(a,b)
+
+    def _index(self,key):
+        i,j=key[0]-self.imin,key[1]-self.jmin
+        return j*self.nx+i if 0<=i<self.nx and 0<=j<self.ny else None
+
+    def point_key_clear(self,key):
+        index=self._index(key)
+        return None if index is None else bool(self.flags[index]&1)
+
+    def edge_key_clear(self,a,b):
+        first,last=self._index(a),self._index(b)
+        entry=EDGE_MASKS.get((b[0]-a[0],b[1]-a[1]))
+        if first is None or last is None or entry is None:return None
+        mask,reverse=entry
+        return bool(self.flags[last if reverse else first]&mask)
 
 
 def build_grid(water,*,spacing_m=250,margin_m=10,max_cells=1000000,chunk_cells=8192):

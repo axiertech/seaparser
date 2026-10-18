@@ -454,3 +454,23 @@ rena sökningen. Inga frågepositioner avrundas, inga förbindelser över land
 tillkommer och inga sök-/väderbudgetar höjs. Hela verkliga färdresultatet ska
 förbli byteidentiskt. Fria punkters nya sökning och flera simulerade alternativ
 måste fortfarande mätas samlat före interaktiv aktivering.
+
+## 2026-10-18: Fria regionala punkter med två kompletta modellfärder
+
+Återanvänd samma kustnormalisering och `_simulate` för bevarade och nysökta
+kandidater. Sökbudget och 10 m marginal styrs på serversidan; klienten får
+ange ändpunkter, tidszonsangiven avgång, befintlig båt och valda vädergränser.
+Sökfel ger uttryckligen ingen simulering. Alla kandidaters ankomst, datastöd
+och hårda gränser kontrolleras av den befintliga motorn före jämförelse.
+
+Batcha exakta ändpunkts-/förenklingsfrågor och läs de befintliga exakta
+gridpredikaten direkt med heltalsnycklar. Geometriresultat, ordning och
+trunkering ska förbli identiska. Begränsad återanvändning är bunden till
+vatteninstans, exakta punkter och marginal. Resultatträdet byggs JSON-nativt
+för att undvika en fullständig extra serialisering och kopia i minnet;
+alla reservposter och käll-/modellantaganden bevaras byteidentiskt.
+
+Två verkliga Vinga–Uddevalla-färder når mål, men detta kvalificerar inte
+regional interaktiv drift. Behåll 60 s/64 MiB och befintlig tjänsts 512 MiB;
+redovisa faktisk processuppstart och toppminne separat. Ingen API-aktivering
+eller publik ändring ingår innan dessa leveranshinder är lösta.

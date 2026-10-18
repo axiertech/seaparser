@@ -1,0 +1,8 @@
+{
+  "spacing_m": 250,
+  "max_cells": 1000000,
+  "max_expansions": 300000,
+  "max_candidates": 2,
+  "max_waypoints": 128,
+  "margin_m": 10
+}

@@ -1,0 +1,7 @@
+{
+  "start": {"longitude": 11.613, "latitude": 57.633},
+  "target": {"longitude": 11.9, "latitude": 58.337},
+  "departure": "2026-10-18T09:00:00+00:00",
+  "candidate_limit": 2,
+  "boat_profile": "constant-5kn"
+}

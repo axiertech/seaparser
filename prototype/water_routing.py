@@ -22,7 +22,7 @@ class WaterRoutes:
     scope: str='Bounded water-grid geometry candidates; actual voyages evaluated separately. No global optimum claim.'
 
 
-def generate_water_routes(start,target,bounds,clear,*,point_clear=None,clear_many=None,spacing_m=125,max_cells=1000000,max_expansions=300000,max_candidates=3,max_waypoints=256):
+def generate_water_routes(start,target,bounds,clear,*,point_clear=None,clear_many=None,grid_point_clear=None,grid_edge_clear=None,spacing_m=125,max_cells=1000000,max_expansions=300000,max_candidates=3,max_waypoints=256):
     if len(bounds)!=4 or not all(isfinite(v) for v in (*bounds,start.east,start.north,target.east,target.north,spacing_m)) or spacing_m<=0:
         raise ValueError('Finite regional bounds/spacing required')
     if any(type(v) is not int or v<=0 for v in (max_cells,max_expansions,max_candidates,max_waypoints)):raise ValueError('Positive water-grid budgets required')
@@ -39,15 +39,23 @@ def generate_water_routes(start,target,bounds,clear,*,point_clear=None,clear_man
         return coordinates[key]
     def supported(key):
         if not imin<=key[0]<=imax or not jmin<=key[1]<=jmax:return False
-        if key not in points:points[key]=bool(allowed(point(key)))
+        if key not in points:
+            answer=grid_point_clear(key) if grid_point_clear is not None else None
+            points[key]=bool(allowed(point(key)) if answer is None else answer)
         return points[key]
     def edge(a,b):
         key=tuple(sorted((a,b)))
-        if key not in edges:edges[key]=bool(clear(point(a),point(b)))
+        if key not in edges:
+            answer=grid_edge_clear(a,b) if grid_edge_clear is not None else None
+            edges[key]=bool(clear(point(a),point(b)) if answer is None else answer)
         return edges[key]
     def anchors(p):
         i,j=round(p.east/spacing_m),round(p.north/spacing_m)
-        return tuple((x,y) for x in range(i-3,i+4) for y in range(j-3,j+4) if supported((x,y)) and clear(p,point((x,y))))
+        keys=tuple((x,y) for x in range(i-3,i+4) for y in range(j-3,j+4) if supported((x,y)))
+        if clear_many is None:return tuple(key for key in keys if clear(p,point(key)))
+        answers=clear_many(p,tuple(point(key) for key in keys))
+        if len(answers)!=len(keys):raise ValueError('One geometry answer per endpoint anchor required')
+        return tuple(key for key,answer in zip(keys,answers) if answer)
     first,last=anchors(start),set(anchors(target))
     if not first or not last:return WaterRoutes('no_endpoint_connection',(),0,len(points),False,'grid_resolution_or_margin',spacing_m)
     penalties=set();routes=[];expansions=0;reason='';seen=set()
@@ -83,10 +91,12 @@ def generate_water_routes(start,target,bounds,clear,*,point_clear=None,clear_man
             if clear_many is None:
                 j=end_index
                 while j>i+1 and not clear(path[i],path[j]):j-=1
+            elif clear(path[i],path[end_index]):
+                j=end_index
             else:
                 j=None
-                for high in range(end_index,i,-64):
-                    indices=tuple(range(high,max(i,high-64),-1))
+                for high in range(end_index-1,i,-16):
+                    indices=tuple(range(high,max(i,high-16),-1))
                     answers=clear_many(path[i],tuple(path[k] for k in indices))
                     if len(answers)!=len(indices):raise ValueError('One geometry answer per candidate segment required')
                     j=next((k for k,answer in zip(indices,answers) if answer),None)

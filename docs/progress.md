@@ -3259,3 +3259,31 @@ ingen API-aktivering eller ändring av den publicerade sparade färden ingår h�
 Samlade lokala kontroller passerar: 556 Python-tester, frontendstruktur och
 30 frontendtester, med låsta beroenden och oförändrade tidsgränser.
 Exakt leverans-CI redovisas i sessionens överlämning.
+
+## 2026-10-18: Fria regionala punkter och två kompletta offlinefärder
+
+De åtta bevarade arbetsfilerna är färdigställda som en sammanhängande
+offlinekomposition. Fria WGS84-ändpunkter, uttrycklig avgång och valda gränser
+går genom samma frysta normalisering och färdmotor. Versionerad sökbudget
+begränsar grid, expansioner, kandidater, vägpunkter och marginal. Två faktiska
+Vinga–Uddevalla-alternativ når mål: 88,09/89,69 km, 34 106,63/34 997,47 s och
+syntetisk komfortexponering 3 254,71/3 013,72. Ingen global optimalitet påstås.
+
+Exakta batchade gränskontroller, direkta gridnycklar, batchade ändpunkter,
+begränsad identisk frågeåteranvändning och JSON-nativt resultatträd bevarar
+hela resultatfilen byteidentiskt: 25 125 746 byte, SHA-256
+285318e3e0895bec2d55db6e7ce693c41df8b2128d8ee5946a5d7e953377f9a4.
+Samtliga käll-/reservposter och osäkerhetssegment kvar; inga nya uttag.
+
+Slutligt prov med delad cacheträff och tjänstens en-trådsinställning:
+80,01 s internt / 89,40 s inklusive uppstart, motor 37,81 s och topp-RSS
+550 334 464 byte. Resultatstorleken klarar 64 MiB. PROJECT_BLOCKER:
+hela 60 s och 512 MiB är fortfarande inte kvalificerade; ingen ny API-/UI-
+aktivering eller publicering i denna del. Nästa: minska kvarvarande fulla
+presentationskopior och geometritid, sedan verifiera hela API-processen.
+
+Se coastal-free-planning.md för återkörning, bevisstatus och begränsningar.
+Riktade krav-/referensprov passerar. Samlade lokala kontroller passerar:
+562 Python-tester, frontendkontroll och 30 frontendtester med låsta beroenden.
+Exakt CI redovisas i sessionens överlämning. Den separat publicerade grafiken bevaras och dess
+källpatch ska integreras före nästa publika presentationsbygge.

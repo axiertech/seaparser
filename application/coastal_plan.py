@@ -13,7 +13,7 @@ from infrastructure.marine_reserve import NativeWindWithReserve,configured_reser
 from infrastructure.land import FORWARD
 from infrastructure.land import FRAME
 from prototype.forecast_metadata import ProductMetadata
-from prototype.forecast import ForecastPolicy,FixedClock
+from prototype.forecast import ForecastPolicy,FixedClock,utc_time
 from prototype.model import Vector,ConstantBoat
 from prototype.routes import RouteCandidate,compare_routes
 from prototype.weather import WeatherPolicy
@@ -77,28 +77,105 @@ def simulate_coastal_candidate(directory,candidate_file,*,departure=None,policy=
     target=Vector(*FORWARD.transform(request['target']['longitude'],request['target']['latitude']))
     candidates=tuple(RouteCandidate(c['name'],tuple(Vector(*p) for p in c['waypoints'])) for c in saved['candidates'])
     when=datetime.fromisoformat((departure or request['departure']).replace('Z','+00:00'))
+    return _simulate(environment,config,evidence,request,start,target,candidates,when,saved,timings)
+
+
+def _simulate(environment,config,evidence,request,start,target,candidates,when,saved,timings):
+    from time import monotonic
     resources=resource_budget('regional')
     mark=monotonic()
     result=compare_routes(environment,when,target,candidates,position=start,boat=ConstantBoat(5),
-        obstacles=(CoastalObstacle(environment.water,10),),weather_policy=environment.policy,
+        obstacles=(CoastalObstacle(environment.water,environment.margin_m),),weather_policy=environment.policy,
         forecast_policy=ForecastPolicy(config['max_age_seconds']),clock=FixedClock(datetime.fromisoformat(config['planning_time'].replace('Z','+00:00'))),
         max_seconds=available_voyage_seconds(resources,when,(0,),environment.end),step_seconds=resources['step_seconds'],
-        max_steps=resources['max_steps'],max_waypoints=resources['max_waypoints'],max_candidates=8)
+        max_steps=resources['max_steps'],max_waypoints=resources['max_waypoints'],max_candidates=8) if candidates else None
     if timings is not None:timings['engine_seconds']=monotonic()-mark
-    mark=monotonic();report=json.loads(export_route_comparison(result));segments=[]
+    mark=monotonic();report=json.loads(export_route_comparison(result)) if result else {
+        'status':'not_simulated','candidates':[],'fastest_candidate':None,'comfortable_candidate':None,
+        'reason':'No complete geometric candidate found within the bounded search'}
+    segments=[]
     for row in report['candidates']:row.update(route_metrics(row))
-    for route in result.candidates:
+    for route in result.candidates if result else ():
         for leg_index,leg in enumerate(route.legs):
             for index,step in enumerate(leg.steps):
                 points=[]
                 for p,t in ((step.start.position,step.start.time),(step.midpoint.position,step.midpoint.time),(step.end_position,step.end_time)):
                     records=environment.samples(p,t)[3]
-                    points.append({'position':asdict(p),'time':t,'estimates':[asdict(r) for r in records]})
+                    estimates=[]
+                    for record in records:
+                        row=asdict(record)
+                        row['source_time']=record.source_time.isoformat()
+                        row['connection_waypoints']=[list(p) for p in record.connection_waypoints]
+                        estimates.append(row)
+                    points.append({'position':asdict(p),'time':t.isoformat(),'estimates':estimates})
                 segments.append({'candidate':route.candidate.name,'leg':leg_index,'step':index,'samples':points})
     if timings is not None:timings['presentation_seconds']=monotonic()-mark
-    return json.loads(canonical({'profile':'vinga-uddevalla','result_qualification':'estimated_high_uncertainty',
-        'weather_limits_verified':False,'comparison':report,'estimated_segments':segments,'provenance':evidence,
-        'configuration':config,'land_margin_m':10,'source_value_bounds':{'wind_abs_components_m_s':environment.wind_components,
-        'wave_height_m':environment.wave_height_bound},'input_sha256':digest({'candidate':saved,'config':config,'provenance':evidence,
+    # Normalize only the small metadata. The large report/segment tree is
+    # already JSON-native; serializing and reparsing it here duplicates the
+    # entire result while the voyage engine's objects are still alive.
+    details=json.loads(canonical({'provenance':evidence,'configuration':config,
+        'source_value_bounds':{'wind_abs_components_m_s':environment.wind_components,'wave_height_m':environment.wave_height_bound}}))
+    return {'profile':'vinga-uddevalla','result_qualification':'estimated_high_uncertainty',
+        'weather_limits_verified':False,'comparison':report,'estimated_segments':segments,
+        **details,'land_margin_m':environment.margin_m,'input_sha256':digest({'candidate':saved,'config':config,'provenance':evidence,
         'departure':when,'request':request,'selected_weather_limits':asdict(environment.policy),'boat':asdict(ConstantBoat(5)),
-        'algorithm':environment.version,'resources':resources,'land_margin_m':environment.margin_m})}))
+        'algorithm':environment.version,'resources':resources,'land_margin_m':environment.margin_m})}
+
+
+def plan_coastal(directory,payload,*,cache_directory=None,timings=None):
+    """Search free regional points, then simulate every complete candidate.
+
+    Offline composition; transport and process timeouts belong to the caller.
+    Search budgets are versioned server settings, never client overrides.
+    """
+    from math import isfinite
+    from time import monotonic
+    from prototype.water_routing import generate_water_routes
+    allowed={'start','target','departure','candidate_limit','boat_profile','max_wind_m_s','max_wave_height_m'}
+    if not isinstance(payload,dict) or set(payload)-allowed or not {'start','target','departure'}<=set(payload):
+        raise ValueError('Explicit regional endpoints and departure required; unknown options rejected')
+    if payload.get('boat_profile','constant-5kn')!='constant-5kn':raise ValueError('Only the existing estimated 5 kn boat is supported')
+    def position(value):
+        if (not isinstance(value,dict) or set(value)!={'longitude','latitude'}
+                or any(type(v) not in (int,float) or not isfinite(v) for v in value.values())
+                or not -180<=value['longitude']<=180 or not -90<=value['latitude']<=90):
+            raise ValueError('Finite WGS84 longitude/latitude endpoints required')
+        return Vector(*FORWARD.transform(value['longitude'],value['latitude'],errcheck=True))
+    start,target=position(payload['start']),position(payload['target'])
+    if (target-start).speed<=.01:raise ValueError('Distinct regional endpoints required')
+    if not isinstance(payload['departure'],str):raise ValueError('Explicit timezone-aware regional departure required')
+    when=utc_time(datetime.fromisoformat(payload['departure'].replace('Z','+00:00')),'Regional departure')
+    search_policy=json.loads((ROOT/'settings/coastal-search.json').read_text())
+    names={'spacing_m','max_cells','max_expansions','max_candidates','max_waypoints','margin_m'}
+    if (set(search_policy)!=names or any(type(v) is not int or v<=0 for v in search_policy.values())
+            or search_policy['max_candidates']>8):raise ValueError('Explicit bounded coastal search settings required')
+    count=payload.get('candidate_limit',search_policy['max_candidates'])
+    if type(count) is not int or not 1<=count<=search_policy['max_candidates']:raise ValueError('Regional candidate budget exceeded')
+    for name in ('max_wind_m_s','max_wave_height_m'):
+        if name in payload and (type(payload[name]) not in (int,float) or not isfinite(payload[name]) or payload[name]<0):
+            raise ValueError('Finite nonnegative selected weather limits required')
+    mark=monotonic()
+    environment,config,evidence,request=load_coastal_weather(directory,margin_m=search_policy['margin_m'],
+        cache_directory=cache_directory,diagnostics=timings)
+    if timings is not None:timings['load_seconds']=monotonic()-mark
+    if not environment.start<=when<environment.end:raise ValueError('Departure outside frozen common coastal validity')
+    environment.frame.matrix(start);environment.frame.matrix(target)
+    environment.policy=WeatherPolicy(payload.get('max_wind_m_s',environment.policy.max_wind_m_s),
+                                     payload.get('max_wave_height_m',environment.policy.max_wave_height_m))
+    request={**request,'start':payload['start'],'target':payload['target'],'departure':when.isoformat()}
+    resources=resource_budget('regional')
+    if search_policy['max_waypoints']>resources['max_waypoints'] or search_policy['max_expansions']>resources['max_expansions']:
+        raise ValueError('Coastal search exceeds regional resource budgets')
+    mark=monotonic();water=environment.water;margin=environment.margin_m
+    search=generate_water_routes(start,target,water.geometry.bounds,lambda a,b:water.clear(a,b,margin),
+        point_clear=lambda p:water.clear(p,p,margin),clear_many=lambda p,ends:water.clear_many(p,ends,margin),
+        **{k:v for k,v in search_policy.items() if k!='margin_m' and k!='max_candidates'},max_candidates=count,
+        **water.grid_callbacks(search_policy['spacing_m'],margin))
+    if timings is not None:timings['search_seconds']=monotonic()-mark
+    search_view=json.loads(canonical(asdict(search)))
+    saved={'water_sha256':water.sha256,'search_policy':search_policy,'geometry_search':search_view}
+    result=_simulate(environment,config,evidence,request,start,target,search.candidates,when,saved,timings)
+    result['geometry_search']=search_view
+    result['search_budget']={**search_policy,'requested_candidates':count,'job_seconds':resources['job_seconds'],
+                             'result_bytes':resources['result_bytes']}
+    return result

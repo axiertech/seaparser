@@ -49,3 +49,13 @@ Beständig materialiseringscache är nu levererad separat från hämtningscachen
 67,27 s vid miss och 41,82 s vid träff med byteidentiskt färdresultat; inläsning
 13,61 respektive 6,49 s. Kallstarten överskrider 60 s. Se materialized-cache.md. Ingen budget höjs och
 hela interaktiva jobbet med fri sökning/flera alternativ återstår att mäta.
+
+Fria regionala ändpunkter och högst två verkliga kandidater kan nu beräknas
+offline med explicit 250 m-grid, en miljon celler, 300 000 expansioner och
+128 mellanvägpunkter. Dessa gridceller är separata från synlighetsgrafens
+`max_nodes`; inga hinder filtreras bort. Se coastal-free-planning.md.
+Fullt resultat med två anlända färder är 25 125 746 byte, inom 64 MiB.
+60 s räknas för hela processen inklusive uppstart; CLI:s interna mätning
+ensam räcker inte. Befintlig förberedd tjänst har 512 MiB totalt minne;
+topp-RSS för ett offlinebarn mäts som Linux `ru_maxrss × 1024` och är inte
+en samtidig-jobb-/cgroup-kvalificering. Begränsningarna höjs inte.

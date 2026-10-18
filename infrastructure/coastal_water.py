@@ -46,6 +46,7 @@ class CoastalWater:
         # Repeated reserve sources share component membership across queries;
         # the cache belongs only to this immutable water snapshot.
         self._component_ids=lru_cache(maxsize=16384)(self._component_ids)
+        self._clear_many=lru_cache(maxsize=1024)(self._clear_many)
 
     @staticmethod
     def coordinates(point):
@@ -69,6 +70,12 @@ class CoastalWater:
         """Use local indexed distance checks, never buffer the entire coastline."""
         return self.clear(start,end,margin_m)
 
+    def grid_callbacks(self,spacing_m,margin_m):
+        """Exact world-grid keys avoid round trips through metre coordinates."""
+        grid=self.grids.get(margin_m)
+        if grid is None or grid.spacing!=spacing_m or grid.margin!=margin_m:return {}
+        return {'grid_point_clear':grid.point_key_clear,'grid_edge_clear':grid.edge_key_clear}
+
     def clear_shapes(self,shapes,margin_m):
         """Vector form of the same prepared covers and closed boundary query."""
         import numpy as np
@@ -83,15 +90,26 @@ class CoastalWater:
 
     def clear_many(self,start,ends,margin_m=0):
         """Batch independent smoothing questions; no approximation or I/O."""
+        if type(margin_m) not in (int,float) or not isfinite(margin_m) or margin_m<0:raise ValueError('Finite nonnegative margin required')
+        return self._clear_many(start,tuple(ends),margin_m)
+
+    def _clear_many(self,start,ends,margin_m):
         import numpy as np
         import shapely
-        if type(margin_m) not in (int,float) or not isfinite(margin_m) or margin_m<0:raise ValueError('Finite nonnegative margin required')
         a=self.coordinates(start);b=np.array([self.coordinates(p) for p in ends])
         if not len(b):return ()
+        # An affine line is connected: from a strict water point it can leave
+        # that water component only by touching its complete boundary. The
+        # same closed dwithin query includes the entire margin and guard.
+        # This avoids rescanning the full coastal polygon for every long line.
+        if not self.clear(start,start,margin_m):return (False,)*len(b)
         shapes=shapely.linestrings(np.stack((np.broadcast_to(a,b.shape),b),axis=1))
         same=np.all(b==a,axis=1)
         if np.any(same):shapes[same]=shapely.points(b[same])
-        return tuple(bool(v) for v in self.clear_shapes(shapes,margin_m))
+        allowed=np.ones(len(b),dtype=bool)
+        hits=self.edge_index.query(shapes,predicate='dwithin',distance=margin_m+GUARD_M)
+        if hits.size:allowed[hits[0]]=False
+        return tuple(bool(v) for v in allowed)
 
     def connection(self,start,end,*,max_distance_m,spacing_m=250,max_cells=30000,max_expansions=10000,margin_m=0):
         """Find a bounded, explicitly checked water path, never a land shortcut.
@@ -116,7 +134,7 @@ class CoastalWater:
         bounds=(middle.east-radius,middle.north-radius,middle.east+radius,middle.north+radius)
         result=generate_water_routes(start,end,bounds,lambda a,b:self.clear(a,b,margin_m),
             point_clear=lambda p:self.clear(p,p,margin_m),clear_many=lambda p,ends:self.clear_many(p,ends,margin_m),spacing_m=spacing_m,max_cells=max_cells,
-            max_expansions=max_expansions,max_candidates=1,max_waypoints=128)
+            max_expansions=max_expansions,max_candidates=1,max_waypoints=128,**self.grid_callbacks(spacing_m,margin_m))
         if not result.candidates:return WaterConnection(result.limit_reason or result.status,expansions=result.expansions,spacing_m=spacing_m)
         points=(start,*result.candidates[0].waypoints,end)
         distance=sum((b-a).speed for a,b in zip(points,points[1:]))

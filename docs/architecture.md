@@ -142,4 +142,11 @@ och en separat uttrycklig uppskattnings-GPX; tidigare verifierad exportgrind
 är oförändrad. Karta visar accepterad simulerad färd, GPX planerade vägpunkter.
 Se coastal-presentation.md; regional liveberäkning för egna punkter återstår.
 
+`plan_coastal` i samma kustkomposition söker nu fria regionala ändpunkter med
+versionsbundna serverbudgetar och simulerar de kompletta kandidaterna i samma
+motor. Rena gridnyckel-/batchfrågor undviker onödiga geometrikonverteringar;
+hela landsegment och källbundna reservförbindelser behålls. CLI-kompositionen
+gör ingen transport under beräkningen. API-/UI-aktivering kräver fortfarande
+att hela processen kvalificeras för regional tid och minne. Se coastal-free-planning.md.
+
 Valbar vinga-native-profil komponerar fast17-oktober-väder/24hinder och exakt900m-kandidatdisk i befintlig A*-graf. Alla hinder och integrerade segmentkontroller kvar,21noder inom26gränsen. Befintlig frontend/layout och jobbsystem återanvänds. Se supported-native-routing.md.

@@ -80,11 +80,34 @@ class CoastalGridTests(unittest.TestCase):
             self.assertEqual(water.clear_many(start,ends,margin),tuple(water.clear(start,p,margin) for p in ends))
         with self.assertRaises(ValueError):water.clear_many(start,(Vector(float('nan'),0),))
         with self.assertRaises(ValueError):water.clear_many(start,ends,-1)
+        with self.assertRaises(ValueError):water.clear_many(start,ends,False)
+        self.assertEqual(water.clear_many(start,list(ends)),tuple(water.clear(start,p) for p in ends))
 
     def test_batched_smoothing_retains_entire_original_search_and_multiple_candidates(self):
         water,_=self.waters();start,target=Vector(0,0),Vector(750,0);bounds=(-90,-90,1090,1090)
+        _,keyed_water=self.waters();keyed_water.grids[0]=CoastalGrid(build_grid(keyed_water,spacing_m=250,margin_m=0))
         for count in (1,3):
             args=dict(spacing_m=250,max_candidates=count,max_waypoints=128)
             scalar=generate_water_routes(start,target,bounds,water.clear,**args)
             batched=generate_water_routes(start,target,bounds,water.clear,clear_many=water.clear_many,**args)
             self.assertEqual(scalar,batched)
+            keyed=generate_water_routes(start,target,bounds,keyed_water.clear,clear_many=keyed_water.clear_many,
+                **args,**keyed_water.grid_callbacks(250,0))
+            self.assertEqual(scalar,keyed)
+        self.assertEqual(keyed_water.grid_callbacks(125,0),{})
+        self.assertEqual(keyed_water.grid_callbacks(250,10),{})
+
+    def test_boundary_based_batch_matches_original_polygon_predicate_over_holes_and_components(self):
+        from random import Random
+        from shapely import unary_union
+        geometry=unary_union([box(-1000,-1000,1000,1000).difference(box(-500,-400,500,400)),
+                              box(1500,-1000,2500,1000).difference(box(1900,-1000,1900.01,700))])
+        water=CoastalWater(to_wkb(geometry),'independent-polygon-reference');random=Random(20261018)
+        starts=[Vector(-800,0),Vector(1700,0),Vector(0,0),Vector(1300,0),Vector(-1000,0)]
+        ends=[Vector(random.uniform(-1200,2700),random.uniform(-1200,1200)) for _ in range(400)]
+        ends.extend((Vector(-500,400),Vector(-500,400.000001),Vector(1900,700),Vector(1900.01,700)))
+        for margin in (0,.1,1,10):
+            for start in starts:
+                with self.subTest(start=start,margin=margin):
+                    expected=tuple(water.clear(start,end,margin) for end in (*ends,start))
+                    self.assertEqual(water.clear_many(start,(*ends,start),margin),expected)
