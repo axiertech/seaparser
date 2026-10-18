@@ -136,4 +136,10 @@ med käll-/kod-/låsidentitet, processlås, atomisk upptagning, integritetskontr
 och disk-/bytebudgetar. Motor och segmentuppslag gör fortsatt ingen I/O.
 Se materialized-cache.md för exakta Decimal-värden och kall/varm verifiering.
 
+`application/coastal_presentation.py` skiljer sparad regional presentation från
+färdmotorn. Förlustfri tabellering av reservposter används av samma PoC-vy
+och en separat uttrycklig uppskattnings-GPX; tidigare verifierad exportgrind
+är oförändrad. Karta visar accepterad simulerad färd, GPX planerade vägpunkter.
+Se coastal-presentation.md; regional liveberäkning för egna punkter återstår.
+
 Valbar vinga-native-profil komponerar fast17-oktober-väder/24hinder och exakt900m-kandidatdisk i befintlig A*-graf. Alla hinder och integrerade segmentkontroller kvar,21noder inom26gränsen. Befintlig frontend/layout och jobbsystem återanvänds. Se supported-native-routing.md.

@@ -14,9 +14,39 @@ from application.geographic_plan import calculate_geographic,scene,compare_alter
 from application.poc import DEPARTURES
 from application.planning import canonical
 from presentation.gpx import export_gpx
+from presentation.gpx import export_estimated_coastal_gpx
 from deployment.prepare_vinga import PUBLIC_ASSETS
 
 ROOT=Path(__file__).resolve().parents[1]
+
+
+def coastal_assets(output):
+    data=json.loads((ROOT/'fixtures/coastal-voyage.json').read_text())
+    shutil.copyfile(ROOT/'fixtures/coastal-voyage.json',output/'coastal-voyage.json')
+    generated={'coastal-voyage.json'};(output/'gpx').mkdir(exist_ok=True)
+    for route in data['routes']:
+        name='gpx/coastal-'+route['id']+'-estimated.gpx'
+        (output/name).write_bytes(export_estimated_coastal_gpx(data,route['id']));generated.add(name)
+    return generated
+
+
+def refresh_presentation(output):
+    """Reuse the already verified local catalog; never recalculate its banks."""
+    output=Path(output).resolve()
+    if output==Path('/home/web/seaparser/public') or Path('/home/web/seaparser/public') in output.parents:
+        raise ValueError('Build outside the public webroot')
+    receipt=json.loads((output/'build-receipt.json').read_text())
+    if any(sha256((output/name).read_bytes()).hexdigest()!=sha for name,sha in receipt['files'].items()):
+        raise ValueError('Existing PoC catalog changed before presentation refresh')
+    subprocess.run(['node','frontend/build.mjs'],cwd=ROOT,check=True)
+    generated=set(receipt['files'])
+    for name in PUBLIC_ASSETS:
+        if name in ('index.html','main.mjs'):continue
+        shutil.copyfile(ROOT/'frontend/dist'/name,output/name);generated.add(name)
+    for name in ('index.html','poc.css','poc-main.mjs','poc-transport.mjs','uddevalla-main.mjs','coastal-view.mjs'):
+        shutil.copyfile(ROOT/'frontend/poc'/name,output/name);generated.add(name)
+    generated.update(coastal_assets(output))
+    (output/'build-receipt.json').write_text(canonical({'schema':1,'files':{n:sha256((output/n).read_bytes()).hexdigest() for n in sorted(generated)},'published':False})+'\n')
 
 
 def compact(result):
@@ -37,9 +67,10 @@ def build(output):
         if name in ('index.html','main.mjs'):continue
         dst=output/name;dst.parent.mkdir(parents=True,exist_ok=True)
         shutil.copyfile(ROOT/'frontend/dist'/name,dst);generated.add(name)
-    for name in ('index.html','poc.css','poc-main.mjs','poc-transport.mjs','uddevalla-main.mjs'):
+    for name in ('index.html','poc.css','poc-main.mjs','poc-transport.mjs','uddevalla-main.mjs','coastal-view.mjs'):
         shutil.copyfile(ROOT/'frontend/poc'/name,output/name);generated.add(name)
     shutil.copyfile(ROOT/'fixtures/vinga-uddevalla-preflight.json',output/'vinga-uddevalla.json');generated.add('vinga-uddevalla.json')
+    generated.update(coastal_assets(output))
     model=scene('vinga-poc');(output/'scene.json').write_text(canonical(model)+'\n');generated.add('scene.json')
     (output/'bank').mkdir(exist_ok=True);(output/'gpx').mkdir(exist_ok=True)
     catalog={'schema':1,'source':'Existing real-data calculation engine; frozen results, not new calculations in the browser',
@@ -78,4 +109,5 @@ def build(output):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--output',type=Path,default=ROOT/'artifacts/poc-site')
-    args=parser.parse_args();build(args.output)
+    parser.add_argument('--presentation-only',action='store_true')
+    args=parser.parse_args();refresh_presentation(args.output) if args.presentation_only else build(args.output)

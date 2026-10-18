@@ -3217,3 +3217,26 @@ Se materialized-cache.md. Samlad leveranskontroll och exakt CI redovisas vid
 push/överlämning. Den regionala fria-punkt-/fleralternativsbudgeten är fortsatt
 PROJECT_BLOCKER före interaktiv aktivering. Nästa: regional scen, jämförelse
 och särskilt märkt GPX i samma PoC, därefter samlad kandidat-/jobbprestanda.
+
+## 2026-10-18: Regional faktisk modellfärd i samma PoC och uppskattnings-GPX
+
+Vinga–Uddevalla-vyn öppnar nu den faktiskt simulerade 18-oktober-färden med
+orange streckad linje, hög osäkerhet, 88,96 km/9 h 34 min, faktisk vind/Hs/ström
+och oförändrad syntetisk komfortmetrik. Ett simulerat alternativ redovisas
+uttryckligt; regional jämförelse mellan flera vägval och fri-punkt-färd återstår.
+Ändrade kartpunkter, koordinater eller tider tar bort sparad färd och GPX.
+
+8 232 reservposter för 592 segment bevaras förlustfritt i cirka 1,42 MB JSON,
+med valbart segments källposition/tid/värde, avstånd, tidsavvikelse och hela
+vattenförbindelsen. Återställning verifieras mot originalsimuleringens kända
+segmenthash. Utfärdanden som null, källantaganden och modellantaganden skiljs.
+GPX är fristående med samma evidens, ruttsammanfattning och 34 planerade
+vägpunkter; huvudtext/metadata anger HÖG OSÄKERHET och ej verifierade vädergränser.
+Tidigare GPX-grind för verifierat segmentstöd är oförändrad och testas fortsatt.
+
+Presentationsbygget återanvänder den kontrollerade befintliga banken. Ny statisk
+publicering använder samma allowlist-/backup-/hash-/rollbackflöde; ingen API-
+aktivering eller nya datauttag behövs. Kall 67,27 s och fria punkt-/alternativ-
+budgeten är fortsatt PROJECT_BLOCKER för regional liveprofil. Se coastal-presentation.md.
+Riktade Python-/Leaflet-/UI-prov passerar; samlade kontroller, exakt CI och faktisk
+publiceringsstatus förs till överlämning/URL-logg vid leverans.

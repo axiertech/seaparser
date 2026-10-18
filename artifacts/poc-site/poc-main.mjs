@@ -5,7 +5,7 @@ const example=document.getElementById('example-choice');
 const regional=new URL(location.href).searchParams.get('example')==='vinga-uddevalla';
 example.value=regional?'vinga-uddevalla':'vinga';
 example.addEventListener('change',()=>{const url=new URL(location.href);if(example.value==='vinga')url.searchParams.delete('example');else url.searchParams.set('example',example.value);location.assign(url);});
-if(regional){const {mountRegional}=await import('./uddevalla-main.mjs');await mountRegional(document,window.L);}
+if(regional){const {mountRegional}=await import('./uddevalla-main.mjs');const view=await mountRegional(document,window.L);if(view){const {attachCoastalView}=await import('./coastal-view.mjs');attachCoastalView(document,view).show();}}
 else {
 const view=await mount(document,(element,scene,pick)=>{
   const view=createMap(window.L,element,scene,pick);

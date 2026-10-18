@@ -432,3 +432,14 @@ Korruption avvisas, disk-/post-/totalbudget gäller och inga rådata raderas.
 Kall/varm process och tidigare okachad färd har byteidentiska resultat.
 Interaktiv fri-punkt-budget och normaliserad delgridåteranvändning återstår;
 se materialized-cache.md. Inga nya väderuttag eller publik aktivering ingår.
+
+## 2026-10-18: Synlig regional uppskattning utan falsk verifieringsstatus
+
+Publicera den faktiskt simulerade regionala färden i samma PoC medan fria
+punkters och flera alternativs samlade jobb-/sökbudget återstår. Presentera
+sparad färd uttryckligt och låt ändrade val ta bort dess linje och GPX.
+Käll-/segmentposter komprimeras förlustfritt med tabellreferenser, inte
+genom att ta bort positioner, tider, avstånd, vattenförbindelser eller variabler.
+Separat uppskattnings-GPX märker hög osäkerhet och ej verifierade vädergränser
+samt innehåller all evidens. Den tidigare strikta GPX-grinden ändras inte.
+Se coastal-presentation.md; detta påstår inte regional livefunktion eller flera funna alternativ.

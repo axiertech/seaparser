@@ -34,7 +34,8 @@ export async function mountRegional(document,L,fetcher=fetch,mapFactory=createMa
       }
       status.textContent=issues.length?issues.join('. ')+'. Ingen ruttberäkning eller GPX.':'Marina gridhörn finns under perioden. Regional vind-, land-, segment- och källkvalificering är inte genomförd för dessa egna punkter. Ingen rutt eller GPX skapas.';
       get('comparison').textContent='Ingen kvalificerbar ruttjämförelse för detta regionala underlag. Färdsimuleringen har inte startats; restid och komfort är inte beräknade.';
-      get('results').replaceChildren();mark();
+      get('results').replaceChildren();view.show({obstacles:empty,routes:empty});mark();
+      document.dispatchEvent(new document.defaultView.Event('seaparser:regional-change'));
     }
     for(const name of ['start','target']){
       const select=get(name+'-place');select.replaceChildren();
@@ -60,7 +61,7 @@ export async function mountRegional(document,L,fetcher=fetch,mapFactory=createMa
         const p=document.createElement('p');p.textContent=`Vind ${wind.speed_m_s.toFixed(2)} m/s (verkliga MET-värden). Vågor: ${wave.value?wave.value[0].toFixed(2)+' m Hs · '+wave.value[1].toFixed(2)+' s Tm02':'värde kan inte interpoleras; '+wave.missing_corners+'/4 hörn saknas'}. Ström: ${current.value?Math.hypot(...current.value).toFixed(2)+' m/s':'värde kan inte interpoleras; '+current.missing_corners+'/4 hörn saknas'}.`;card.append(p);host.append(card);
       }
     }
-    departure.addEventListener('change',samples);samples();
+    departure.addEventListener('change',()=>{samples();check();});samples();
     const ended=Date.now()>Date.parse(data.valid_times.at(-1));
     get('regional-validity').textContent=`${ended?'Historiskt underlag':'Fryst prognosuttag; inte en löpande uppdaterad prognos'}. Gemensamma giltigheter: ${data.valid_times[0]} – ${data.valid_times.at(-1)} (${data.valid_times.length} timsteg, 30 timmar). Modellreferens MET: ${data.reference_time}; utfärdande och körförenlighet ej verifierade.`;
     get('regional-distance').textContent=`Fågelvägsavstånd ${(data.straight_line_distance_m/1000).toFixed(1)} km. Detta är inte en beräknad eller verifierat farbar rutt. Restid och komfort: ej beräknade. GPX: ej tillgänglig.`;
