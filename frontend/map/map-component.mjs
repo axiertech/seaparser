@@ -6,8 +6,21 @@ export function createMap(L, element, scene, onPick) {
     L.geoJSON(scene.land_display, { style: { color: '#9a5830', fillOpacity: 0.35 } }).addTo(map);
     map.attributionControl.addAttribution('Land: <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors, ODbL</a>');
   }
-  L.geoJSON(scene.obstacles, { style: { color: '#9a5830', fillColor: '#c6b38d', fillOpacity: scene.profile !== 'synthetic' ? 0.1 : 0.8 } }).addTo(map);
-  const margins = L.layerGroup().addTo(map);
+  // Calculation geometry remains intact; only its optional display is hidden.
+  const basis = L.layerGroup();
+  const basisStyle={color:'#718795',weight:1,dashArray:'4 5',fillOpacity:0,opacity:.8};
+  L.geoJSON(scene.obstacles,{style:basisStyle}).addTo(basis);
+  const margins = L.layerGroup().addTo(basis);
+  const toggle=L.control({position:'topright'});
+  toggle.onAdd=()=>{
+    const box=L.DomUtil.create('div','leaflet-bar');
+    const button=L.DomUtil.create('button','calculation-overlay-toggle',box);
+    button.type='button';button.textContent='Visa beräkningsunderlag';button.setAttribute('aria-pressed','false');
+    L.DomEvent.disableClickPropagation(box);L.DomEvent.disableScrollPropagation(box);
+    button.addEventListener('click',()=>{const visible=map.hasLayer(basis);if(visible)map.removeLayer(basis);else basis.addTo(map);button.textContent=visible?'Visa beräkningsunderlag':'Dölj beräkningsunderlag';button.setAttribute('aria-pressed',String(!visible));});
+    return box;
+  };
+  toggle.addTo(map);
   const routes = L.layerGroup().addTo(map);
   const markers = L.layerGroup().addTo(map);
   map.fitBounds(coverage.getBounds(), { padding: [20, 20] });
@@ -20,17 +33,17 @@ export function createMap(L, element, scene, onPick) {
       L.circleMarker([point.latitude, point.longitude], { radius: 7, color, fillOpacity: 1 }).bindTooltip(label).addTo(markers);
     }
   }
-  let marginHandler;
   function show(result, identifier = null) {
     routes.clearLayers(); margins.clearLayers();
-    // Buffer strokes visualize metric margin at current map scale, not new routing geometry.
+    // Thin outlines and labels replace the former dominant metric-width stroke.
+    // The numerical margin is still evaluated by the unchanged route engine.
     const drawMargin = () => {
       margins.clearLayers();
-      const pixelsPerMetre = map.getSize().x / Math.max(1, map.distance(map.containerPointToLatLng([0, 0]), map.containerPointToLatLng([map.getSize().x, 0])));
-      L.geoJSON(result.obstacles, { style: feature => ({ color: '#9a5830', fillOpacity: 0, weight: Math.max(1, 2 * feature.properties.margin_m * pixelsPerMetre), lineJoin: 'round' }) }).addTo(margins);
+      L.geoJSON(result.obstacles,{style:basisStyle,onEachFeature:(feature,layer)=>{
+        const text=document.createElement('span');text.textContent=`Hinderhölje · routingmarginal ${feature.properties.margin_m} m (beräkningsvärde)`;layer.bindTooltip(text);
+      }}).addTo(margins);
     };
-    if (marginHandler) map.off('zoomend', marginHandler);
-    marginHandler = drawMargin; map.on('zoomend', drawMargin); drawMargin();
+    drawMargin();
     const selected = { type: 'FeatureCollection', features: result.routes.features.filter(f => identifier === null || f.properties.id === identifier) };
     L.geoJSON(selected, {
       style: feature => ({ color: feature.properties.kind === 'accepted' ? (feature.properties.qualification === 'conditional_on_assumptions' ? '#b78023' : '#087156') : '#6c59a3', weight: feature.properties.kind === 'accepted' ? 4 : 2, dashArray: feature.properties.kind === 'planned' ? '6 5' : null }),

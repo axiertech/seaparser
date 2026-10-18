@@ -77,7 +77,12 @@ for (const profile of process.env.SEAPARSER_DEMO_URL && process.env.SEAPARSER_DE
     view = await mount(document, (node, scene, pick) => createMap(L, node, scene, pick), transport);
     assert.ok(view);
     const scene = await loadScene(fetcher,profile);
-    assert.ok([...document.querySelectorAll('path[stroke="#9a5830"]')].some(path => Number(path.getAttribute('stroke-width')) > 3), 'Vald routingmarginal saknas på kartan');
+    const overlay=document.querySelector('.calculation-overlay-toggle');
+    assert.ok(overlay);assert.equal(overlay.textContent,'Visa beräkningsunderlag');
+    assert.equal(document.querySelectorAll('path[stroke="#718795"]').length,0,'Beräkningsunderlag ska vara dolt från början');
+    overlay.click();assert.equal(overlay.textContent,'Dölj beräkningsunderlag');
+    assert.ok([...document.querySelectorAll('path[stroke="#718795"]')].every(path=>Number(path.getAttribute('stroke-width'))===1 && path.getAttribute('fill-opacity')==='0'));
+    overlay.click();assert.equal(document.querySelectorAll('path[stroke="#718795"]').length,0);
     if (profile === 'vinga') {
       assert.equal(document.getElementById('margin').value, '10');
       assert.ok(document.querySelector('#background'));
