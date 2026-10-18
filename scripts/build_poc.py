@@ -37,8 +37,9 @@ def build(output):
         if name in ('index.html','main.mjs'):continue
         dst=output/name;dst.parent.mkdir(parents=True,exist_ok=True)
         shutil.copyfile(ROOT/'frontend/dist'/name,dst);generated.add(name)
-    for name in ('index.html','poc.css','poc-main.mjs','poc-transport.mjs'):
+    for name in ('index.html','poc.css','poc-main.mjs','poc-transport.mjs','uddevalla-main.mjs'):
         shutil.copyfile(ROOT/'frontend/poc'/name,output/name);generated.add(name)
+    shutil.copyfile(ROOT/'fixtures/vinga-uddevalla-preflight.json',output/'vinga-uddevalla.json');generated.add('vinga-uddevalla.json')
     model=scene('vinga-poc');(output/'scene.json').write_text(canonical(model)+'\n');generated.add('scene.json')
     (output/'bank').mkdir(exist_ok=True);(output/'gpx').mkdir(exist_ok=True)
     catalog={'schema':1,'source':'Existing real-data calculation engine; frozen results, not new calculations in the browser',

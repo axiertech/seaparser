@@ -1,6 +1,6 @@
 // Map rendering only. GeoJSON is always longitude, latitude; Leaflet clicks are lat/lng.
 export function createMap(L, element, scene, onPick) {
-  const map = L.map(element, { maxZoom: 22, minZoom: scene.profile !== 'synthetic' ? 14 : 17, zoomControl: true });
+  const map = L.map(element, { maxZoom: 22, minZoom: scene.map_min_zoom ?? (scene.profile !== 'synthetic' ? 14 : 17), zoomControl: true });
   const coverage = L.geoJSON(scene.coverage, { style: { color: '#577f90', fillOpacity: 0.05, dashArray: '3 6' } }).addTo(map);
   if (scene.land_display) {
     L.geoJSON(scene.land_display, { style: { color: '#9a5830', fillOpacity: 0.35 } }).addTo(map);

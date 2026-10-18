@@ -3091,3 +3091,18 @@ Lokala samlade kontroller: 166+330 Python-tester godkända vid körningen;
 därefter de tre uppdaterade aktiveringsproven gröna. Fem frontendtestfiler gröna;
 två riktiga HTTP-serverprov blockeras lokalt av socketförbud och körs i exakt CI.
 API-aktiveringen måste utföras som root i vanlig terminal; förberett är inte startat.
+
+## 2026-10-18 – regionalt Vinga–Uddevalla-uttag i samma PoC
+
+Återanvända, hashkontrollerade MET-/Copernicus-filer ger 31 gemensamma
+timsteg 18 oktober 09 UTC–19 oktober 15 UTC. OSM-uttaget innehåller
+585179 noder och 12001 kustvägar. Ingen upprepad väderhämtning.
+Målets egna våg- och strömstenciler saknar ett hörn vid samtliga tider;
+även omgivande Uddevalla-celler saknar bilinjärt stöd. Dataförkontrollen
+stoppar därför före ruttmotorn: inga tillverkade restider, komforttal eller GPX.
+Samma PoC får ett valbart regionalt exempel, fria kartpunkter för datastöds-
+kontroll, verkliga provvärden, giltigheter och synliga luckor. Befintlig
+Vinga-beräkning, export och tidigare sidor behålls. Kusturvalet är enbart
+visning; öppna kustkedjor görs inte till falska routingpolygoner.
+Full regional routing kräver källdata med stöd i fjordarna samt regional
+landtopologi och segmentkontroll; högre sökbudget ensam löser inte dataluckan.

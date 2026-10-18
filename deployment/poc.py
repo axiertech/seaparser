@@ -14,7 +14,7 @@ from deployment.vinga_upgrade import atomic_public_copy,tree_hashes
 
 BUILD=ROOT/'artifacts/poc-site'
 URL='https://seaparser.com/poc/'
-ROOT_FILES=set(PUBLIC_ASSETS)-{'main.mjs'}|{'poc-main.mjs','poc-transport.mjs','poc.css','scene.json','catalog.json'}
+ROOT_FILES=set(PUBLIC_ASSETS)-{'main.mjs'}|{'poc-main.mjs','poc-transport.mjs','poc.css','scene.json','catalog.json','uddevalla-main.mjs','vinga-uddevalla.json'}
 
 
 def allowed(name):

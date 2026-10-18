@@ -1,6 +1,12 @@
 import { createMap } from './map-component.mjs';
 import { mount } from './controller.mjs';
 import { createPocTransport } from './poc-transport.mjs';
+const example=document.getElementById('example-choice');
+const regional=new URL(location.href).searchParams.get('example')==='vinga-uddevalla';
+example.value=regional?'vinga-uddevalla':'vinga';
+example.addEventListener('change',()=>{const url=new URL(location.href);if(example.value==='vinga')url.searchParams.delete('example');else url.searchParams.set('example',example.value);location.assign(url);});
+if(regional){const {mountRegional}=await import('./uddevalla-main.mjs');await mountRegional(document,window.L);}
+else {
 const view=await mount(document,(element,scene,pick)=>{
   const view=createMap(window.L,element,scene,pick);
   if(window.L.control.scale) window.L.control.scale({imperial:false}).addTo(view.map);
@@ -11,3 +17,4 @@ const view=await mount(document,(element,scene,pick)=>{
   return view;
 },createPocTransport());
 if(view)document.getElementById('plan-form').dispatchEvent(new Event('submit',{cancelable:true}));
+}
