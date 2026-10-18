@@ -44,7 +44,7 @@ jobs:
           print('POC_HTTPS_VERIFIED',len(verified),'files; HTML, assets, real route results and GPX match this commit')
           PY
   capture-uddevalla:
-    if: contains(github.event.head_commit.message, '[capture-uddevalla]')
+    if: contains(github.event.head_commit.message, '[capture-uddevalla]') || contains(github.event.head_commit.message, '[capture-uddevalla-land]')
     needs: offline
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -61,7 +61,12 @@ jobs:
           python -m pip install --index-url https://pypi.org/simple
           --require-hashes --only-binary=:all: -r requirements.lock
       - name: Capture public native MET and OSM data only
-        run: python -B -m scripts.fetch_uddevalla --output data/uddevalla --request-file settings/vinga-uddevalla-request.json --public-only
+        env:
+          LAND_ONLY: ${{ contains(github.event.head_commit.message, '[capture-uddevalla-land]') }}
+        run: |
+          args=()
+          if [[ "$LAND_ONLY" == true ]]; then args+=(--land-only); fi
+          python -B -m scripts.fetch_uddevalla --output data/uddevalla --request-file settings/vinga-uddevalla-request.json --public-only "${args[@]}"
       - name: Return public capture through repository blobs
         if: always()
         env:

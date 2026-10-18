@@ -119,10 +119,13 @@ def capture_met(output,request,limit):
 
 
 def capture_land(output,request,limit):
-    w,s,e,n=request['bbox'];query=f'[out:xml][timeout:180][maxsize:{limit}];way["natural"="coastline"]({s},{w},{n},{e});(._;>;);out meta;'
+    # Overpass maxsize limits SERVER working memory, not downloaded bytes.
+    # Keep the response budget separate from the normal 512 MiB query memory.
+    w,s,e,n=request['bbox'];query=f'[out:xml][timeout:180][maxsize:536870912];way["natural"="coastline"]({s},{w},{n},{e});(._;>;);out meta;'
     def envelope(body):
         root=ET.fromstring(body)
-        if root.tag!='osm' or root.find('remark') is not None:raise ValueError('Incomplete Overpass response')
+        if root.tag!='osm':raise ValueError('Unexpected Overpass XML root')
+        if root.find('remark') is not None:raise ValueError('Overpass rejected query: '+(root.findtext('remark') or '')[:400])
     body=cached_fetch(Path(output)/'land','coastline.osm','https://overpass-api.de/api/interpreter',limit=limit,data=urlencode({'data':query}).encode(),timeout=210,validator=envelope)
     root=ET.fromstring(body)
     if root.tag!='osm' or root.find('remark') is not None:raise ValueError('Incomplete Overpass response')
@@ -184,7 +187,7 @@ def inspect_marine(directory,request):
 def main(argv=None):
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--output',type=Path,required=True);p.add_argument('--departure');p.add_argument('--public-only',action='store_true');p.add_argument('--request-file',type=Path)
     p.add_argument('--cache',type=Path,default=Path('/tmp/seaparser-copernicus-cache'));p.add_argument('--file-budget-gb',type=float,default=2);p.add_argument('--transfer-budget-gb',type=float,default=10);p.add_argument('--total-transfer-budget-gb',type=float,default=20)
-    p.add_argument('--met-response-mb',type=int,default=32);p.add_argument('--land-response-mb',type=int,default=64);a=p.parse_args(argv)
+    p.add_argument('--met-response-mb',type=int,default=32);p.add_argument('--land-response-mb',type=int,default=64);p.add_argument('--land-only',action='store_true',help='Retry land without repeating wind or marine downloads');a=p.parse_args(argv)
     if a.met_response_mb<=0 or a.land_response_mb<=0:raise ValueError('Positive configurable response budgets required')
     os.umask(0o077);a.output.mkdir(parents=True,exist_ok=True)
     filename=a.output/'request.json'
@@ -196,12 +199,16 @@ def main(argv=None):
     status={'request':request,'started_at':datetime.now(timezone.utc).isoformat(),'phases':{},'routing_enabled':False}
     tasks=[('met',lambda:capture_met(a.output,request,a.met_response_mb*1_000_000)),('land',lambda:capture_land(a.output,request,a.land_response_mb*1_000_000))]
     if not a.public_only:tasks.append(('marine',lambda:capture_marine(a.output,request,a)))
+    if a.land_only:tasks=[task for task in tasks if task[0]=='land']
     for label,task in tasks:
         try:status['phases'][label]={'status':'captured','inventory':task()}
-        except Exception as error:status['phases'][label]={'status':'blocked','error_type':type(error).__name__};print('CAPTURE_BLOCKED',label,type(error).__name__,flush=True)
+        except Exception as error:
+            status['phases'][label]={'status':'blocked','error_type':type(error).__name__}
+            if label=='land' and isinstance(error,ValueError):status['phases'][label]['reason']=str(error)[:500]
+            print('CAPTURE_BLOCKED',label,type(error).__name__,status['phases'][label].get('reason',''),flush=True)
         (a.output/'status.json').write_text(json.dumps(status,indent=2)+'\n')
     status['ended_at']=datetime.now(timezone.utc).isoformat();status['exit_code']=0 if all(v['status']=='captured' for v in status['phases'].values()) else 1
-    if not status['exit_code'] and not a.public_only:
+    if not status['exit_code'] and not a.public_only and not a.land_only:
         met=set(status['phases']['met']['inventory']['times']);marine=set(status['phases']['marine']['inventory']['common_times']);status['common_times']=sorted(met&marine)
         if len(status['common_times'])!=31:status['exit_code']=1;status['common_time_blocker']='Exact shared forecast window missing'
     (a.output/'status.json').write_text(json.dumps(status,indent=2)+'\n');print('CAPTURE_FINISHED',status['exit_code'],str(a.output/'status.json'),'SOURCE_CAPTURE_ONLY; ROUTING_NOT_QUALIFIED',flush=True)

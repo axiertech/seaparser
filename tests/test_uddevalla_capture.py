@@ -37,3 +37,14 @@ class CorridorCaptureTests(unittest.TestCase):
             root=Path(tmp);(root/'request.json').write_text('{}');(root/'met').mkdir();(root/'met/wind.txt').write_text('public nodes')
             (root/'marine').mkdir();(root/'marine/private.txt').write_text('private');(root/'app.env').write_text('secret')
             with tarfile.open(fileobj=BytesIO(bundle(root)),mode='r:gz') as archive:self.assertEqual(set(archive.getnames()),{'request.json','met/wind.txt'})
+    def test_land_retry_never_downloads_wind_or_marine(self):
+        with tempfile.TemporaryDirectory() as tmp,patch.object(f,'capture_met') as met,patch.object(f,'capture_marine') as marine,patch.object(f,'capture_land',return_value={'captured':True}):
+            self.assertEqual(f.main(['--output',tmp,'--land-only']),0)
+            met.assert_not_called();marine.assert_not_called()
+    def test_land_server_memory_and_response_budgets_are_independent(self):
+        from urllib.parse import parse_qs
+        with tempfile.TemporaryDirectory() as tmp,patch.object(f,'cached_fetch',return_value=b'<osm><node id="1"/><way><nd ref="1"/></way></osm>') as fetch:
+            Path(tmp,'land').mkdir()
+            f.capture_land(tmp,f.plan(),1000)
+            self.assertEqual(fetch.call_args.kwargs['limit'],1000)
+            self.assertIn('[maxsize:536870912]',parse_qs(fetch.call_args.kwargs['data'].decode())['data'][0])
