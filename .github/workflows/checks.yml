@@ -43,3 +43,27 @@ jobs:
               verified=list(pool.map(verify,receipt['files'].items()))
           print('POC_HTTPS_VERIFIED',len(verified),'files; HTML, assets, real route results and GPX match this commit')
           PY
+  capture-uddevalla:
+    if: contains(github.event.head_commit.message, '[capture-uddevalla]')
+    needs: offline
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.14.4'
+      - run: >-
+          python -m pip install --index-url https://pypi.org/simple
+          --require-hashes --only-binary=:all: -r requirements.lock
+      - name: Capture public native MET and OSM data only
+        run: python -B -m scripts.fetch_uddevalla --output data/uddevalla --request-file settings/vinga-uddevalla-request.json --public-only
+      - name: Return public capture through repository blobs
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python -B -m scripts.share_public_capture data/uddevalla

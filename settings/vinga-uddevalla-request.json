@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "case": "vinga-uddevalla",
+  "bbox": [
+    11.0,
+    57.45,
+    12.2,
+    58.6
+  ],
+  "planning_area": [
+    11.1,
+    57.55,
+    12.1,
+    58.5
+  ],
+  "reference_time": "2026-10-18T00:00:00+00:00",
+  "departure": "2026-10-18T09:00:00+00:00",
+  "end": "2026-10-19T15:00:00+00:00",
+  "boat_profile": "constant-5kn",
+  "estimated_boat": true,
+  "start": {
+    "longitude": 11.613,
+    "latitude": 57.633,
+    "label": "Vinga, prelimin\u00e4r vattenpunkt \u00f6ster om \u00f6n"
+  },
+  "target": {
+    "longitude": 11.9,
+    "latitude": 58.337,
+    "label": "Uddevalla / Byfjorden, prelimin\u00e4r vattenpunkt"
+  },
+  "assumptions": [
+    "Start och m\u00e5l m\u00e5ste verifieras mot nytt landunderlag innan ber\u00e4kning.",
+    "Modellreferens \u00e4r inte verifierad utf\u00e4rdandetid; k\u00f6rf\u00f6renlighet m\u00e5ste redovisas separat.",
+    "V\u00e5g- och str\u00f6mmasker g\u00e4ller var sin produkt. Saknade v\u00e4rden f\u00e5r inte fyllas med noll.",
+    "Ingen ut\u00f6kning av nuvarande 900m-routing sker genom datah\u00e4mtningen."
+  ],
+  "routing_enabled": false
+}
