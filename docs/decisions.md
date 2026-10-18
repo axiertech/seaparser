@@ -405,3 +405,18 @@ vindreserv. Verkligt regionalt stödprov har inga kvarvarande luckor på den
 geometriska kandidaten, men bevisar inte färden vid dess simulerade tider.
 Nästa steg återanvänder källnormalisering och färdmotor samt inför regional
 rörelse-/segmentkomposition och uppskattningsstatus utan falsk verifiering.
+
+## 2026-10-18: Regional uppskattad färd med befintlig motor
+
+Samma Copernicus-adapter får ett uttryckligt kustläge med egna grid och
+reservpolicyer; befintlig NetCDF-materialiserare och MET-native-läsare återanvänds.
+En separat regional rörelseram använder befintlig fysisk WGS84-/AEQD-differential,
+utan att lyfta äldre lokala gränser. Hela landsegment och valda vädergränser
+kontrolleras fortsatt. Stöd via marina källvittnen och ett konfigurerat regionalt
+native-koordinathölje redovisas som utvecklingsmodell, inte verifierat källbevis.
+
+Verklig Vinga–Uddevalla-kandidat når mål med befintlig 5 kn-båtmodell och
+återanvända data. Uppskattningar märks hög osäkerhet; weather_limits_verified=false
+och motorns weather_segment_status=not_available bevaras. Inga befintliga
+GPX-/UI-grindar försvagas. Särskild uppskattningspresentation och interaktiv
+koppling till samma PoC återstår. Se coastal-voyage.md för resultat och budget.

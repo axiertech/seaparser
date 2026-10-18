@@ -134,6 +134,25 @@ def freeze(directory):
     return payload
 
 
+def freeze_coastal_with_audit(directory,request,*,max_source_bytes=64*1024*1024):
+    """Read the already captured region with the same detached field materializer."""
+    from hashlib import sha256
+    from scripts.fetch_uddevalla import inspect_marine
+    directory=Path(directory)
+    report=inspect_marine(directory,request,write_inventory=False)
+    manifest=json.loads((directory/'manifest.json').read_text());sources={};entries={}
+    for entry in manifest['files']:
+        path=directory/entry['filename']
+        if path.stat().st_size>max_source_bytes:raise ValueError('Materialization source memory budget exceeded')
+        data=path.read_bytes()
+        if len(data)>max_source_bytes or sha256(data).hexdigest()!=entry['sha256']:raise ValueError('Coastal source bytes changed')
+        sources[entry['filename']]=data
+        entries['static' if entry['product']=='wave-mask' else entry['product']]=entry
+    products=_materialize_products(sources,entries,{'waves':{'issued_at':None},'current':{'issued_at':None}})
+    return dict(schema=1,bundle_id='copernicus-baltic-coastal-reference',
+        bundle_version='vinga-uddevalla-20261018',products=products),report
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('directory', type=Path)

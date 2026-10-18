@@ -32,3 +32,14 @@ simulerad gräns och serverbudget redovisas separat i nya ruttresultat.
 
 Konfigurerad offshorekapacitet betyder inte att offshoreprofiler är levererade.
 Ingen global skalbarhet eller kall/varm prestanda är ännu uppmätt för dem.
+
+Den nya separata kustkompositionen har nu en uttrycklig 120 km-rörelseram och
+segmentmodell för regionala uppskattningar; äldre 900/1 000/1 500 m-profiler
+behåller sina gränser. Se coastal-voyage.md. Ett verkligt fall med redan sparad
+geometrikandidat tog efter uppslagsmemoization 46,68 s inklusive inläsning och
+presentation. Ny sökning för fria punkter, fler kandidater/avgångar och kall
+gemensam cache ingår inte i det måttet. Regionala 60 s/64 MiB-gränser är kvar;
+de behöver verifieras i den samlade interaktiva kopplingen innan aktivering.
+Avslutande CLI-prov tog 62,10 s med oförändrat färdresultat. Den nu observerade
+variationen 46,68–62,10 s innebär att 60 s ännu inte är robust kvalificerat,
+även utan ny geometrisökning. Beständig återanvändning är ett konkret nästa steg.

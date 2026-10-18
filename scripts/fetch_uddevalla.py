@@ -153,7 +153,7 @@ def capture_marine(output,request,args):
     return inspect_marine(directory,request,max_decoded_chunk_bytes=args.decode_chunk_mb*1024*1024)
 
 
-def inspect_marine(directory,request,*,max_decoded_chunk_bytes=64*1024*1024):
+def inspect_marine(directory,request,*,max_decoded_chunk_bytes=64*1024*1024,write_inventory=True):
     import numpy as np
     import xarray as xr
     from scripts.audit_copernicus import coordinate,finite_statistics
@@ -181,7 +181,8 @@ def inspect_marine(directory,request,*,max_decoded_chunk_bytes=64*1024*1024):
     needed={(utc(request['departure'])+timedelta(hours=i)).isoformat() for i in range(31)}
     if not needed<=common:raise ValueError('Marine products lack the entire requested common time window')
     result=dict(products=products,common_times=sorted(common),model_run_compatibility='unverified',routing_enabled=False)
-    (directory/'inventory.json').write_text(json.dumps(result,indent=2)+'\n');return result
+    if write_inventory:(directory/'inventory.json').write_text(json.dumps(result,indent=2)+'\n')
+    return result
 
 
 def main(argv=None):

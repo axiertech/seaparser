@@ -72,7 +72,8 @@ def configured_reserve_policies(config):
 
 
 class MarineReserve:
-    def __init__(self,product,longitude,latitude,times,values,water,policies):
+    def __init__(self,product,longitude,latitude,times,values,water,policies,*,metadata=None):
+        self.metadata=metadata
         self.product=product;self.longitude=tuple(float(v) for v in longitude);self.latitude=tuple(float(v) for v in latitude);self.times=tuple(utc_time(t,'Marine time') for t in times)
         self.variables=('wave_height_m','wave_period_seconds','wave_direction_from_degrees') if product=='waves' else ('current_east_m_s','current_north_m_s')
         if product not in ('waves','current') or set(policies)!=set(self.variables) or any(type(p) is not ReservePolicy for p in policies.values()):raise ValueError('Known marine product and per-variable reserve policies required')

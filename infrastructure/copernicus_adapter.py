@@ -92,10 +92,25 @@ class CopernicusMarineAdapter:
         except (KeyError, TypeError, IndexError) as error:
             raise ValueError('Incomplete or malformed Copernicus CF fixture') from error
 
-    def _waves(self, raw, static, *, native_radius_m=None):
+    def normalize_coastal(self,payload,water,policies,*,bounds):
+        """Same CF normalization, explicit regional geometry/reserve representation."""
+        if (len(bounds)!=4 or any(type(v) not in (int,float) or not isfinite(v) for v in bounds)
+                or not -180<=bounds[0]<bounds[2]<=180 or not -90<=bounds[1]<bounds[3]<=90):
+            raise ValueError('Explicit coastal source bounds required')
+        try:
+            if payload['schema']!=1:raise ValueError('Unsupported Copernicus fixture schema')
+            products=payload['products'];region=(tuple(bounds),water,policies)
+            waves=self._waves(products['waves'],products['static'],coastal=region)
+            current=self._current(products['current'],coastal=region)
+            if waves.times!=current.times:raise ValueError('Wave/current validity differs')
+            return current,waves
+        except (KeyError,TypeError,IndexError) as error:
+            raise ValueError('Incomplete coastal Copernicus CF fixture') from error
+
+    def _waves(self, raw, static, *, native_radius_m=None,coastal=None):
         validate_fields(raw['variables'], WAVE_FIELDS)
         validate_fields(static['variables'], BATHY_FIELDS)
-        bbox=VINGA_BBOX if native_radius_m is None else (11.55,57.60,11.66,57.67)
+        bbox=coastal[0] if coastal else VINGA_BBOX if native_radius_m is None else (11.55,57.60,11.66,57.67)
         latitude = _axis(raw['latitude'], 'wave latitude', bbox[1], bbox[3])
         longitude = _axis(raw['longitude'], 'wave longitude', bbox[0], bbox[2])
         if tuple(static['latitude']) != latitude or tuple(static['longitude']) != longitude:
@@ -114,6 +129,9 @@ class CopernicusMarineAdapter:
                                               fields['VMDR'][k][j][i], mask[j][i])
                                    for i in range(len(longitude)))
                              for j in range(len(latitude))) for k in range(len(times)))
+        if coastal:
+            return self._coastal_product(raw,'waves',latitude,longitude,times,values,coastal,
+                ('m','s','1','1'),'ground-from-true-east-north-tm02')
         if native_radius_m is not None:
             return self._native_product(raw,'waves',latitude,longitude,times,values,native_radius_m,
                 ('m','s','1','1'),'ground-from-true-east-north-tm02')
@@ -121,9 +139,9 @@ class CopernicusMarineAdapter:
         return self._product(raw, 'waves', east, north, times, values,
                              ('m', 's', '1', '1'), 'ground-from-true-east-north-tm02')
 
-    def _current(self, raw, *, native_radius_m=None):
+    def _current(self, raw, *, native_radius_m=None,coastal=None):
         validate_fields(raw['variables'], CURRENT_FIELDS)
-        bbox=VINGA_BBOX if native_radius_m is None else (11.55,57.60,11.66,57.67)
+        bbox=coastal[0] if coastal else VINGA_BBOX if native_radius_m is None else (11.55,57.60,11.66,57.67)
         latitude = _axis(raw['latitude'], 'current latitude', bbox[1], bbox[3])
         longitude = _axis(raw['longitude'], 'current longitude', bbox[0], bbox[2])
         depth = tuple(raw['depth_m'])
@@ -144,6 +162,9 @@ class CopernicusMarineAdapter:
         values = tuple(tuple(tuple(current_node(fields['uo'][k][j][i], fields['vo'][k][j][i])
                                    for i in range(len(longitude)))
                              for j in range(len(latitude))) for k in range(len(times)))
+        if coastal:
+            return self._coastal_product(raw,'current',latitude,longitude,times,values,coastal,
+                ('m/s','m/s'),'ground-to-true-east-north')
         if native_radius_m is not None:
             return self._native_product(raw,'current',latitude,longitude,times,values,native_radius_m,
                 ('m/s','m/s'),'ground-to-true-east-north')
@@ -182,3 +203,21 @@ class CopernicusMarineAdapter:
         if name=='current':blockers+=('current_native_wet_mask_unverified',)
         metadata=replace(metadata,planning_blockers=blockers)
         return NativeMarineProduct(metadata,tuple(longitude),tuple(latitude),times,values,radius)
+
+    @staticmethod
+    def _coastal_product(raw,name,latitude,longitude,times,values,coastal,units,reference_frame):
+        import numpy as np
+        from infrastructure.land import FORWARD
+        from infrastructure.marine_reserve import MarineReserve
+        from dataclasses import replace
+        _,water,policies=coastal
+        lon,lat=np.meshgrid(longitude,latitude);x,y=FORWARD.transform(lon,lat,errcheck=True)
+        coverage=Coverage(float(x.min())-1,float(y.min())-1,float(x.max())+1,float(y.max())+1,*VINGA_ORIGIN)
+        metadata=CopernicusMarineAdapter._metadata(raw,name,times,coverage,units,reference_frame)
+        blockers=metadata.planning_blockers+('marine_time_support_unverified',)
+        if name=='current':blockers+=('current_native_wet_mask_unverified',)
+        metadata=replace(metadata,planning_blockers=blockers)
+        components=4 if name=='waves' else 2
+        nodes=np.array([node if node is not None else (np.nan,)*components for plane in values for row in plane for node in row])
+        nodes=nodes.reshape(len(times),len(latitude),len(longitude),components)
+        return MarineReserve(name,longitude,latitude,times,nodes,water,policies[name],metadata=metadata)

@@ -123,4 +123,11 @@ reservvägar runt uddar återanvänder samma rena kandidatgenerator med explicit
 budgetar och spårbar förbindelse. Regional färdkomposition återstår;
 se coastal-reserve.md.
 
+`application/coastal_plan.py` komponerar samma CF-/MET-normalisering och
+befintliga färdmotor för regionala uppskattningar. `CoastalForecast` håller
+frysta källor och rena segmentkontroller; källmetadata och modellantaganden
+skiljs i resultatet. Regional rörelseram är separat från äldre lokala gränser.
+Uppskattningsstatus upphäver inga gamla certifierings-/exportgrindar.
+Se coastal-voyage.md för faktiskt simulerad färd och kvarvarande UI-/API-koppling.
+
 Valbar vinga-native-profil komponerar fast17-oktober-väder/24hinder och exakt900m-kandidatdisk i befintlig A*-graf. Alla hinder och integrerade segmentkontroller kvar,21noder inom26gränsen. Befintlig frontend/layout och jobbsystem återanvänds. Se supported-native-routing.md.

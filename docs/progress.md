@@ -3160,3 +3160,36 @@ publicering eller ändring av aktiv startare/lås. Befintlig PoC är oförändra
 Exakt CI redovisas i överlämningen efter push. Nästa funktionsdel: komposition
 av befintlig normalisering och färdmotor, regional rörelseram/segmentkontroll
 samt per-segment-osäkerhet och uppskattningsstatus i karta/jämförelse/GPX.
+
+## 2026-10-18 – verklig regional uppskattad färd
+
+Tredje begränsade delen i samma pass, från 13:11 UTC. Samma CF-/MET-normalisering
+och befintlig färdmotor komponerar nu regional vind, vågor och ström med
+landmedvetna reservuppslag. Råbunten återanvänds utan nya uttag eller omskriven
+inventering. Regional WGS84-/AEQD-rörelseram är separat från äldre lokala gränser.
+Hela landsegment, 10 m marginal, källstödsvittnen, valda vädergränser, tidsstöd
+och separat ankomstkontroll finns kvar. En särskild regional omslutning av
+native-koordinater är ett uttryckligt numeriskt modellantagande, inte källverifiering.
+
+Den verkliga sparade Vinga–Uddevalla-kandidaten når mål: 88 955,90 m fysisk
+distans, 34 452,631393 s (cirka 9 h 34 min), syntetisk komfortexponering 3 449,09.
+592 accepterade segment över 33 ben; inga saknade mittpunktsvärden.
+8 232 reservposter är bundna till segmentens provpositioner/tider. Källmetadata
+med issued_at=null, specifika källantaganden och modellantaganden hålls separata.
+Resultatet är estimated_high_uncertainty, weather_limits_verified=false och
+motorns weather_segment_status=not_available. Inga gamla UI-/GPX-grindar lyfts.
+
+Första körningen överskred 60 s med 93,15 s. Begränsad memoization av identiska
+uppslag gav 46,68 s i ny process, exakt samma restid/komfort: inläsning 12,03 s,
+motor 30,99 s, presentation 2,47 s, plus slutlig serialisering. Detta avser
+sparad geometri; ny fri-punkt-sökning och fler alternativ behöver samlad budget.
+Avslutande CLI-prov gav identiskt färdresultat men 62,10 s. PROJECT_BLOCKER:
+regionala 60 s är inte robust kvalificerat. Beständig återanvändning och mätt
+kandidatsökning behövs före interaktiv aktivering; leveransen är offline.
+
+540 Pythonprov godkända i samlad lås-/syntax-/arkitekturkontroll. Riktade prov
+prövar analytisk färdtid/komfort, determinism, hårda hinder-/väder-/datagränser
+och oberoende regionala geodetiska referenser. Kommandorad i scripts/simulate_coastal.py;
+se coastal-voyage.md. Exakt CI redovisas i överlämningen efter push.
+Ingen ny publicering. Nästa: regional scen och uppskattningspresentation i samma
+PoC, GPX med explicit osäkerhet, fria kartpunkter och mätt kandidat-/jobb-/cachebudget.

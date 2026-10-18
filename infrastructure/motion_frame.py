@@ -57,3 +57,13 @@ class AeqdMotionFrame:
         physical=Vector((d*local_direction.east-b*local_direction.north)/det,
                         (-c*local_direction.east+a*local_direction.north)/det)
         return physical.scaled(1/physical.speed)
+
+
+@dataclass(frozen=True)
+class RegionalAeqdMotionFrame(AeqdMotionFrame):
+    """Explicit coastal development frame; legacy 1500 m frame stays bounded."""
+    radius_m: float=120000
+
+    def __post_init__(self):
+        if type(self.radius_m) not in (int,float) or not isfinite(self.radius_m) or not 0<self.radius_m<=120000:
+            raise ValueError('Regional motion frame requires bounded radius <=120000 m')
