@@ -32,7 +32,9 @@ class CoastalWater:
         if self.geometry.is_empty or not self.geometry.is_valid or self.geometry.geom_type not in ('Polygon','MultiPolygon'):
             raise ValueError('Valid materialized water polygons required')
         self.prepared=prep(self.geometry)
-        self.components=STRtree(list(self.geometry.geoms) if self.geometry.geom_type=='MultiPolygon' else [self.geometry])
+        components=list(self.geometry.geoms) if self.geometry.geom_type=='MultiPolygon' else [self.geometry]
+        self.components=STRtree(components)
+        self.prepared_components=tuple(prep(component) for component in components)
         boundary=self.geometry.boundary;parts=list(boundary.geoms) if hasattr(boundary,'geoms') else [boundary]
         # Short indexed pieces make exact closed margin checks local, rather
         # than rescanning every coastline vertex for every integration step.
@@ -41,6 +43,9 @@ class CoastalWater:
             coordinates=list(part.coords)
             for i in range(0,len(coordinates)-1,64):self.edges.append(LineString(coordinates[i:i+65]))
         self.edge_index=STRtree(self.edges)
+        # Repeated reserve sources share component membership across queries;
+        # the cache belongs only to this immutable water snapshot.
+        self._component_ids=lru_cache(maxsize=16384)(self._component_ids)
 
     @staticmethod
     def coordinates(point):
@@ -100,11 +105,12 @@ class CoastalWater:
                 or any(type(v) is not int or v<=0 for v in (max_cells,max_expansions))):
             raise ValueError('Positive water connection search budgets required')
         if type(margin_m) not in (int,float) or not isfinite(margin_m) or margin_m<0:raise ValueError('Finite nonnegative water path margin required')
+        self.coordinates(start);self.coordinates(end)
         if (end-start).speed>max_distance_m:return WaterConnection('distance_limit')
         if self.clear(start,end,margin_m):return WaterConnection('found',(start,end),(end-start).speed)
         if not self.clear(start,start,margin_m) or not self.clear(end,end,margin_m):return WaterConnection('endpoint_blocked')
-        a=set(self.components.query(Point(self.coordinates(start)),predicate='within'))
-        b=set(self.components.query(Point(self.coordinates(end)),predicate='within'))
+        a=self._component_ids(start)
+        b=self._component_ids(end)
         if not a.intersection(b):return WaterConnection('disconnected_water')
         middle=(start+end).scaled(.5);radius=max_distance_m/2
         bounds=(middle.east-radius,middle.north-radius,middle.east+radius,middle.north+radius)
@@ -116,3 +122,9 @@ class CoastalWater:
         distance=sum((b-a).speed for a,b in zip(points,points[1:]))
         if distance>max_distance_m:return WaterConnection('distance_limit',expansions=result.expansions,spacing_m=spacing_m)
         return WaterConnection('found',points,distance,result.expansions,spacing_m)
+
+    def _component_ids(self,point):
+        shape=Point(self.coordinates(point))
+        # P.within(polygon) == polygon.contains(P). Preparing the large polygon
+        # keeps the same strict boundary rule while avoiding a vertex scan.
+        return frozenset(i for i in self.components.query(shape) if self.prepared_components[i].contains(shape))

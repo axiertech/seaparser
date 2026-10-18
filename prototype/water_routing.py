@@ -33,8 +33,10 @@ def generate_water_routes(start,target,bounds,clear,*,point_clear=None,clear_man
     imin,imax,jmin,jmax=ceil(w/spacing_m),floor(e/spacing_m),ceil(s/spacing_m),floor(n/spacing_m)
     if (imax-imin+1)*(jmax-jmin+1)>max_cells:return WaterRoutes('grid_limit',(),0,0,True,'max_cells',spacing_m)
     if not clear(start,start) or not clear(target,target):return WaterRoutes('endpoint_blocked',(),0,0,False,'',spacing_m)
-    allowed=point_clear or (lambda p:clear(p,p));points={};edges={}
-    def point(key):return Vector(key[0]*spacing_m,key[1]*spacing_m)
+    allowed=point_clear or (lambda p:clear(p,p));points={};edges={};coordinates={}
+    def point(key):
+        if key not in coordinates:coordinates[key]=Vector(key[0]*spacing_m,key[1]*spacing_m)
+        return coordinates[key]
     def supported(key):
         if not imin<=key[0]<=imax or not jmin<=key[1]<=jmax:return False
         if key not in points:points[key]=bool(allowed(point(key)))

@@ -49,3 +49,33 @@ class CoastalWaterTests(unittest.TestCase):
         from shapely import unary_union
         water=CoastalWater(to_wkb(unary_union([box(0,0,40,100),box(60,0,100,100)])),'test')
         self.assertEqual(water.connection(Vector(30,50),Vector(70,50),max_distance_m=1000).status,'disconnected_water')
+
+    def test_prepared_component_membership_excludes_holes_and_closed_boundaries(self):
+        from shapely import unary_union
+        water=CoastalWater(to_wkb(unary_union([box(0,0,40,100).difference(box(10,10,20,20)),
+                                             box(60,0,100,100)])),'test')
+        left=water._component_ids(Vector(5,5));right=water._component_ids(Vector(80,50))
+        self.assertEqual(len(left),1);self.assertEqual(len(right),1);self.assertFalse(left.intersection(right))
+        for point in (Vector(15,15),Vector(10,15),Vector(0,50),Vector(50,50),Vector(100,100)):
+            with self.subTest(point=point):self.assertEqual(water._component_ids(point),frozenset())
+
+    def test_cached_components_keep_connection_budget_margin_and_snapshot_rejections(self):
+        from unittest.mock import patch
+        geometry=box(0,0,100,100).difference(box(40,0,60,80))
+        water=CoastalWater(to_wkb(geometry),'test');a,b=Vector(30,50),Vector(70,50)
+        options=dict(max_distance_m=120,spacing_m=5,margin_m=1)
+        first=water.connection(a,b,**options)
+        self.assertEqual(first.status,'found')
+        with patch.object(water.components,'query',side_effect=AssertionError('Exact component membership must be reused')):
+            self.assertEqual(water.connection(a,b,**options),first)
+        for changes,status in (({'max_distance_m':30},'distance_limit'),({'max_cells':1},'max_cells'),
+                               ({'max_expansions':1},'max_expansions'),({'margin_m':10},'endpoint_blocked')):
+            with self.subTest(changes=changes):
+                self.assertEqual(water.connection(a,b,**(options|changes)).status,status)
+        closed=CoastalWater(to_wkb(box(0,0,100,100).difference(box(40,0,60,100))),'different-snapshot')
+        self.assertEqual(closed.connection(a,b,**options).status,'disconnected_water')
+        # Warming the geometry cache must not bypass search argument validation.
+        water.connection(a,b,**(options|{'max_cells':1}))
+        for changes in ({'max_cells':True},{'margin_m':True},{'spacing_m':False},{'max_distance_m':float('nan')}):
+            with self.subTest(changes=changes),self.assertRaises(ValueError):
+                water.connection(a,b,**(options|changes))

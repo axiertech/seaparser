@@ -3240,3 +3240,22 @@ aktivering eller nya datauttag behövs. Kall 67,27 s och fria punkt-/alternativ-
 budgeten är fortsatt PROJECT_BLOCKER för regional liveprofil. Se coastal-presentation.md.
 Riktade Python-/Leaflet-/UI-prov passerar; samlade kontroller, exakt CI och faktisk
 publiceringsstatus förs till överlämning/URL-logg vid leverans.
+
+## 2026-10-18: Nästa begränsade regionala prestandadel
+
+Exakt CI för d9fd35df27ae88c15f30a461eee526cb2dcc24d1 återverifierad
+completed/success, inklusive publika PoC-hashar. Profilering av bevarad verklig
+färd visar att reservförbindelsernas geometrisökning dominerar. Förberedda
+vattenkomponenter, instansbunden exakt medlemskaps-LRU och återanvända
+gridpunkter minskar upprepat arbete utan ändrade sökresultat/kontroller.
+31 riktade prov passerar. Slutlig tom cache 43,76 s, ny process/träff 39,39 s;
+hela resultatfilen har fortsatt SHA-256 8853ec2a853c7363a34db10ad3c4bec968297fcd00de984df0c84e2324a9e4ae.
+Källa och cache återanvänds; inget nytt uttag. Se materialized-cache.md.
+
+PROJECT_BLOCKER: samlad budget för ny sökning med fria punkter och flera
+verkligt simulerade alternativ är ännu inte kvalificerad. Nästa funktion
+komponerar detta med befintlig motor/normalisering och mäter hela jobbet;
+ingen API-aktivering eller ändring av den publicerade sparade färden ingår här.
+Samlade lokala kontroller passerar: 556 Python-tester, frontendstruktur och
+30 frontendtester, med låsta beroenden och oförändrade tidsgränser.
+Exakt leverans-CI redovisas i sessionens överlämning.

@@ -443,3 +443,14 @@ genom att ta bort positioner, tider, avstånd, vattenförbindelser eller variabl
 Separat uppskattnings-GPX märker hög osäkerhet och ej verifierade vädergränser
 samt innehåller all evidens. Den tidigare strikta GPX-grinden ändras inte.
 Se coastal-presentation.md; detta påstår inte regional livefunktion eller flera funna alternativ.
+
+## 2026-10-18: Återanvänd exakta kustkomponenter och gridpunkter
+
+Profilering av den bevarade verkliga färden visar att reservförbindelsernas
+geometrisökning dominerar motorkostnaden. Förbered varje vattenpolygon för
+exakt punktmedlemskap och återanvänd medlemskap per exakt position, bundet
+till vatteninstansen. Återanvänd oföränderliga gridpunkter inom den befintliga
+rena sökningen. Inga frågepositioner avrundas, inga förbindelser över land
+tillkommer och inga sök-/väderbudgetar höjs. Hela verkliga färdresultatet ska
+förbli byteidentiskt. Fria punkters nya sökning och flera simulerade alternativ
+måste fortfarande mätas samlat före interaktiv aktivering.

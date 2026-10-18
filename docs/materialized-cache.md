@@ -67,3 +67,35 @@ Slutprovets kalla 67,27 s överskrider regionala 60 s. Cachen är alltså ingen
 robust kvalificering av den gränsen. Detta kvalificerar inte fria kartpunkter, flera alternativ,
 hela API-jobbets 60 s/64 MiB-budget eller andra havsområden. Regional
 interaktiv aktivering och samma PoC:s uppskattningspresentation återstår.
+
+## Exakta vattenkomponenter och gridpunkter under en beräkning
+
+`CoastalWater` återanvänder vattenkomponenternas medlemskap för exakta
+positioner i en instansbunden LRU med högst 16 384 poster. Polygonerna är
+förberedda även för första frågan: `polygon.contains(point)` behåller samma
+strikta gränsregel som `point.within(polygon)`. Frågor om samma
+källposition behöver inte gå igenom hela den stora kustpolygonen igen.
+Varje konkret förbindelse behåller sin slutna segment-/marginalkontroll,
+avståndsgräns och egen begränsade sökning. Komponentmedlemskap bevisar
+fortfarande inte att det raka segmentet är landfritt. Andra vattenunderlag
+har separata cachear. Sökargument valideras vid varje anrop.
+
+Den rena befintliga kandidatgeneratorn återanvänder också oföränderliga
+`Vector`-objekt för exakt samma gridnyckel inom en sökning. Det minskar
+upprepade allokeringar utan ändrad sökordning, kantpredikat, kostnad eller
+budget. Ingen avrundning eller sammanslagning av frågepositioner införs.
+Inget uppskattat vädervärde eller vädergränsresultat lagras i dessa cachear.
+
+Slutlig verklig körning 18 oktober 2026, nya processer och samma bevarade
+Vinga–Uddevalla-kandidat:
+
+| Cache | Totalt | Inläsning | Motor | Presentation |
+|---|---:|---:|---:|---:|
+| Tom materialiserings-/geometricache | 43,76 s | 21,69 s | 19,63 s | 1,89 s |
+| Ny process, beständig träff | 39,39 s | 7,16 s | 27,43 s | 2,62 s |
+
+Båda resultatfilerna är byteidentiska med originalet ovan, inklusive alla
+reservförbindelser, segment, värden och källposter. Motorvariation mellan
+processerna kvarstår; detta är ingen garanterad latens eller kvalificering av
+hela fria-punkt-flödet. Ny geometrisökning och flera alternativ ingår inte.
+Inga nya rådatauttag eller publik API-aktivering genomfördes.
