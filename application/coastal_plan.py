@@ -17,8 +17,7 @@ from prototype.model import Vector,ConstantBoat
 from prototype.routes import RouteCandidate,compare_routes
 from prototype.weather import WeatherPolicy
 from prototype.presentation import export_route_comparison
-from scripts.build_uddevalla import wind_sample
-from scripts.freeze_copernicus_reference import freeze_coastal_with_audit
+from application.coastal_inputs import coastal_inputs
 from application.development_weather import REQUIRED
 from application.planning import canonical,digest
 from application.poc import route_metrics
@@ -27,7 +26,7 @@ from application.geographic_budget import resource_budget,available_voyage_secon
 ROOT=Path(__file__).resolve().parents[1]
 
 
-def load_coastal_weather(directory,*,policy=None,margin_m=10):
+def load_coastal_weather(directory,*,policy=None,margin_m=10,cache_directory=None,diagnostics=None):
     directory=Path(directory);request=json.loads((directory/'request.json').read_text())
     config=json.loads((ROOT/'settings/coastal-weather-assumptions.json').read_text())
     if (config['mode']!='coastal_development_estimates' or config['source_bundle']!=directory.name
@@ -42,7 +41,7 @@ def load_coastal_weather(directory,*,policy=None,margin_m=10):
             or sha256(coast.read_bytes()).hexdigest()!=land['source_sha256'] or source_index['sha256']!=land['source_sha256']):
         raise ValueError('Coastal water/source snapshot changed')
     water=CoastalWater(data,land['source_sha256'])
-    sample=wind_sample(directory/'met',request);payload,audit=freeze_coastal_with_audit(directory/'marine',request)
+    sample,payload,audit=coastal_inputs(directory,request,cache_directory=cache_directory,diagnostics=diagnostics)
     current,waves=CopernicusMarineAdapter().normalize_coastal(payload,water,policies,bounds=config['source_bounds'])
     wind=NativeWindWithReserve(sample,water,policies['wind'])
     issued=datetime.fromisoformat(config['assumed_issued_at'].replace('Z','+00:00'))
@@ -62,10 +61,10 @@ def load_coastal_weather(directory,*,policy=None,margin_m=10):
     return environment,config,evidence,request
 
 
-def simulate_coastal_candidate(directory,candidate_file,*,departure=None,policy=None,timings=None):
+def simulate_coastal_candidate(directory,candidate_file,*,departure=None,policy=None,timings=None,cache_directory=None):
     from time import monotonic
     mark=monotonic()
-    environment,config,evidence,request=load_coastal_weather(directory,policy=policy)
+    environment,config,evidence,request=load_coastal_weather(directory,policy=policy,cache_directory=cache_directory,diagnostics=timings)
     if timings is not None:timings['load_seconds']=monotonic()-mark
     saved=json.loads(Path(candidate_file).read_text())
     if saved['water_sha256']!=environment.water.sha256:raise ValueError('Candidate uses another coastal water snapshot')

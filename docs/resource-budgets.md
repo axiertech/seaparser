@@ -43,3 +43,9 @@ de behöver verifieras i den samlade interaktiva kopplingen innan aktivering.
 Avslutande CLI-prov tog 62,10 s med oförändrat färdresultat. Den nu observerade
 variationen 46,68–62,10 s innebär att 60 s ännu inte är robust kvalificerat,
 även utan ny geometrisökning. Beständig återanvändning är ett konkret nästa steg.
+
+Beständig materialiseringscache är nu levererad separat från hämtningscachen:
+64 MiB/post, 256 MiB totalt och 256 MiB diskreserv. Verkliga nya processer gav
+67,27 s vid miss och 41,82 s vid träff med byteidentiskt färdresultat; inläsning
+13,61 respektive 6,49 s. Kallstarten överskrider 60 s. Se materialized-cache.md. Ingen budget höjs och
+hela interaktiva jobbet med fri sökning/flera alternativ återstår att mäta.

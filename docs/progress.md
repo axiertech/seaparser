@@ -3193,3 +3193,27 @@ och oberoende regionala geodetiska referenser. Kommandorad i scripts/simulate_co
 se coastal-voyage.md. Exakt CI redovisas i överlämningen efter push.
 Ingen ny publicering. Nästa: regional scen och uppskattningspresentation i samma
 PoC, GPX med explicit osäkerhet, fria kartpunkter och mätt kandidat-/jobb-/cachebudget.
+
+## 2026-10-18: Beständig regional materialisering med oförändrat färdresultat
+
+Ny uttryckligt vald indatacache återanvänder befintliga MET-/NetCDF-läsare före
+samma normalisering. Säker JSON bevarar exakta Decimal-värden, marina null och
+källmetadata/antaganden. Identiteten binder källbytes/manifest, begäran,
+läsarvalidering och beroendelås; varje träff hashar råkällorna. Processlås,
+atomisk upptagning och innehållshash skyddar återanvändningen. 64 MiB/post,
+256 MiB totalt och 256 MiB diskreserv; ingen automatisk radering eller transport.
+
+Slutlig verklig kall process tog 67,27 s med miss, inläsning 13,61 s. Ny process med
+beständig träff tog 41,82 s, inläsning 6,49 s. Tidigare par gav 55,45/38,14 s.
+Kallstarten överskrider 60 s; motorvariation särredovisas och gränsen är inte robust.
+Inga motorresultat eller geometribeslut lagras beständigt. Hela färdresultatet
+är byteidentiskt med tidigare okachad körning: 13 071 350 byte, SHA-256
+8853ec2a853c7363a34db10ad3c4bec968297fcd00de984df0c84e2324a9e4ae.
+Alla 30 bevarade råfiler har oförändrade för-sessionen-tider. Inga nya uttag.
+
+Riktade prov täcker korrupt cache, ändrade källbytes, disk-/bytebudget,
+misslyckad upptagning och exakta Decimal-/null-/metadata genom beständig träff.
+Se materialized-cache.md. Samlad leveranskontroll och exakt CI redovisas vid
+push/överlämning. Den regionala fria-punkt-/fleralternativsbudgeten är fortsatt
+PROJECT_BLOCKER före interaktiv aktivering. Nästa: regional scen, jämförelse
+och särskilt märkt GPX i samma PoC, därefter samlad kandidat-/jobbprestanda.

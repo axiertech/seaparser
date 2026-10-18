@@ -420,3 +420,15 @@ Verklig Vinga–Uddevalla-kandidat når mål med befintlig 5 kn-båtmodell och
 och motorns weather_segment_status=not_available bevaras. Inga befintliga
 GPX-/UI-grindar försvagas. Särskild uppskattningspresentation och interaktiv
 koppling till samma PoC återstår. Se coastal-voyage.md för resultat och budget.
+
+## 2026-10-18: Beständig materialisering före befintlig normalisering
+
+Återanvänd de granskade MET-/NetCDF-läsarna och lagra deras frysta indata som
+säker JSON med exakta Decimal-strängar. Ingen alternativ normaliserare eller
+cachelagrad vädergränsstatus införs. Innehållsadress binder alla använda
+väderkällor, manifest, begäran, läsarkod och beroendelås; källorna hashas även
+vid träff. Processlås och atomiskt upptagning deduplicerar materialisering.
+Korruption avvisas, disk-/post-/totalbudget gäller och inga rådata raderas.
+Kall/varm process och tidigare okachad färd har byteidentiska resultat.
+Interaktiv fri-punkt-budget och normaliserad delgridåteranvändning återstår;
+se materialized-cache.md. Inga nya väderuttag eller publik aktivering ingår.

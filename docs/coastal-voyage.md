@@ -110,6 +110,11 @@ Reproducerbar körning utan nya uttag eller ändring av rådata:
   --output /tmp/seaparser-coastal-voyage.json
 ```
 
+Beständig materialisering finns nu med uttryckligt `--cache`; se
+materialized-cache.md. Slutlig kall/varm ny process tog 67,27/41,82 s, med byteidentiskt
+fullständigt resultat jämfört med körningen utan cache. Detta minskar
+inläsningskostnaden men kvalificerar ännu inte hela fria-punkt-flödet eller 60 s.
+
 Nästa leverans kopplar regional scen/beräkning till samma PoC, med synlig hög
 osäkerhet i karta, jämförelse och särskilt märkt GPX. Fria ändpunkter behöver
 budgeterad kandidatsökning och beständig återanvändning. Befintlig webb/API

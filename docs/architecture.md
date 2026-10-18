@@ -130,4 +130,10 @@ skiljs i resultatet. Regional rörelseram är separat från äldre lokala gräns
 Uppskattningsstatus upphäver inga gamla certifierings-/exportgrindar.
 Se coastal-voyage.md för faktiskt simulerad färd och kvarvarande UI-/API-koppling.
 
+`application/coastal_inputs.py` materialiserar befintliga frysta läsare före
+samma normalisering. `infrastructure/materialized_cache.py` lagrar säker JSON
+med käll-/kod-/låsidentitet, processlås, atomisk upptagning, integritetskontroll
+och disk-/bytebudgetar. Motor och segmentuppslag gör fortsatt ingen I/O.
+Se materialized-cache.md för exakta Decimal-värden och kall/varm verifiering.
+
 Valbar vinga-native-profil komponerar fast17-oktober-väder/24hinder och exakt900m-kandidatdisk i befintlig A*-graf. Alla hinder och integrerade segmentkontroller kvar,21noder inom26gränsen. Befintlig frontend/layout och jobbsystem återanvänds. Se supported-native-routing.md.
