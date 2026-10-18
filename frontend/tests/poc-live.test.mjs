@@ -41,7 +41,11 @@ test('free map clicks → live real-data API → comparison → GPX; coverage/ti
   document.getElementById('departure-choice').value='0';
   const submit=async()=>{document.getElementById('plan-form').dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));await until(()=>!document.getElementById('calculate').disabled);};
   await submit();const link=document.querySelector('.route a');assert.ok(link,document.getElementById('status').textContent);
-  assert.ok(document.querySelectorAll('.leaflet-overlay-pane path').length>24);
+  assert.equal(document.querySelectorAll('path[stroke="#718795"]').length,0,'Alla beräkningspolygoner ska vara dolda');
+  assert.ok(document.querySelectorAll('path[stroke="#087156"],path[stroke="#b78023"]').length>0,'Beräknade rutter ska fortfarande visas');
+  const overlay=document.querySelector('.calculation-overlay-toggle');overlay.click();
+  assert.ok(document.querySelectorAll('path[stroke="#718795"]').length>=24,'Land, hinder och marginaler ska visas med samma kontroll');
+  overlay.click();assert.equal(document.querySelectorAll('path[stroke="#718795"]').length,0);
   assert.match(document.getElementById('comparison').textContent,/Kortast restid/);
   document.querySelector('.route button').click();assert.ok(document.querySelector('.route.picked'));
   const gpx=await fetcher(new URL(link.href).pathname);assert.equal(gpx.status,200);const xml=new dom.window.DOMParser().parseFromString(await gpx.text(),'application/xml');
