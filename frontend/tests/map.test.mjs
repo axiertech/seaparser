@@ -71,7 +71,9 @@ for (const profile of process.env.SEAPARSER_DEMO_URL && process.env.SEAPARSER_DE
     element.getBoundingClientRect = () => ({ x: 0, y: 0, left: 0, top: 0, right: 800, bottom: 480, width: 800, height: 480 });
     const require = createRequire(import.meta.url); delete require.cache[require.resolve('leaflet')];
     const L = require('leaflet');
-    const transport = { loadScene: () => loadScene(fetcher,profile), plan: (payload, options) => plan(payload, { ...options, fetcher, pause: () => wait(profile !== 'synthetic' ? 250 : 10) }) };
+    // Exercise the production 250 ms interval. A 10 ms test override shrinks
+    // the same 120-poll budget to 1.2 s and fails under parallel browser load.
+    const transport = { loadScene: () => loadScene(fetcher,profile), plan: (payload, options) => plan(payload, { ...options, fetcher }) };
     view = await mount(document, (node, scene, pick) => createMap(L, node, scene, pick), transport);
     assert.ok(view);
     const scene = await loadScene(fetcher,profile);
