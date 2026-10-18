@@ -17,8 +17,8 @@ export async function mountRegional(document,L,fetcher=fetch,mapFactory=createMa
     document.querySelector('.snapshot').textContent='Frysta prognoser · 18–19 oktober 2026';
     get('mode-notice').textContent='Verkliga regionala prognosdata. Ruttberäkning stoppas före sökning när nödvändigt stöd saknas. Kartpunkter kan väljas fritt för kontroll av datatäckning.';
     document.querySelector('.map-heading span').textContent='Vinga–Uddevalla · uttagsområde och dataluckor';
-    document.querySelector('.map-note').textContent='Ramen visar uttaget, inte godkänd routing. Brun kustlinje är förenklad enbart för visning. OSM-kartbakgrund är inget officiellt sjökort; djup och landfullständighet är okända.';
-    document.querySelector('.legend').textContent='Brunt: fryst OSM-kustlinje · rött/orange: saknade marina interpolationshörn nära Uddevalla. Inga linjer visas som beräknade rutter.';
+    document.querySelector('.map-note').textContent='Ramen visar uttaget, inte godkänd routing. Fryst OSM-kustunderlag visas med Visa beräkningsunderlag och är förenklat enbart för visning. Baskartans kustlinjer påverkas inte. OSM-kartbakgrund är inget officiellt sjökort; djup och landfullständighet är okända.';
+    document.querySelector('.legend').textContent='Gråblå streckade konturer: valbart beräkningsunderlag · rött/orange: saknade marina interpolationshörn nära Uddevalla. Inga linjer visas som beräknade rutter.';
     const [w,s,e,n]=data.bbox,ring=[[w,s],[e,s],[e,n],[w,n],[w,s]],empty={type:'FeatureCollection',features:[]};
     const scene={profile:'vinga-uddevalla',map_min_zoom:7,coverage:{type:'FeatureCollection',features:[{type:'Feature',properties:{kind:'source_extract_extent'},geometry:{type:'Polygon',coordinates:[ring]}}]},obstacles:empty,land_display:data.coastline_display};
     let selected='start',view;

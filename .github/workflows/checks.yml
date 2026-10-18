@@ -43,6 +43,7 @@ jobs:
               verified=list(pool.map(verify,receipt['files'].items()))
           print('POC_HTTPS_VERIFIED',len(verified),'files; HTML, assets, real route results and GPX match this commit')
           PY
+          SEAPARSER_PUBLIC_MAP_TEST=1 node --test frontend/tests/map-overlay.test.mjs
   capture-uddevalla:
     if: contains(github.event.head_commit.message, '[capture-uddevalla]') || contains(github.event.head_commit.message, '[capture-uddevalla-land]')
     needs: offline

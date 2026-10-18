@@ -2,13 +2,13 @@
 export function createMap(L, element, scene, onPick) {
   const map = L.map(element, { maxZoom: 22, minZoom: scene.map_min_zoom ?? (scene.profile !== 'synthetic' ? 14 : 17), zoomControl: true });
   const coverage = L.geoJSON(scene.coverage, { style: { color: '#577f90', fillOpacity: 0.05, dashArray: '3 6' } }).addTo(map);
-  if (scene.land_display) {
-    L.geoJSON(scene.land_display, { style: { color: '#9a5830', fillOpacity: 0.35 } }).addTo(map);
-    map.attributionControl.addAttribution('Land: <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors, ODbL</a>');
-  }
   // Calculation geometry remains intact; only its optional display is hidden.
   const basis = L.layerGroup();
   const basisStyle={color:'#718795',weight:1,dashArray:'4 5',fillOpacity:0,opacity:.8};
+  if (scene.land_display) {
+    L.geoJSON(scene.land_display,{style:basisStyle}).addTo(basis);
+    map.attributionControl.addAttribution('Land: <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors, ODbL</a>');
+  }
   L.geoJSON(scene.obstacles,{style:basisStyle}).addTo(basis);
   const margins = L.layerGroup().addTo(basis);
   const toggle=L.control({position:'topright'});
