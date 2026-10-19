@@ -5,6 +5,28 @@ from infrastructure.coastal_water import CoastalWater
 from prototype.model import Vector
 
 class CoastalWaterTests(unittest.TestCase):
+    def test_component_membership_keeps_lakes_land_and_touching_boundaries_without_second_sea_index(self):
+        from shapely import MultiPolygon,Point
+        from unittest.mock import patch
+        sea=box(0,0,10,10).difference(box(3,3,7,7));lake=box(4,4,6,6)
+        water=CoastalWater(to_wkb(MultiPolygon((sea,lake))),'synthetic-sea-lake')
+        with patch.object(water.prepared_components[0],'contains',side_effect=AssertionError('Duplicate sea index')):
+            self.assertEqual(water._component_ids(Vector(1,1)),frozenset((0,)))
+            self.assertEqual(water._component_ids(Vector(5,5)),frozenset((1,)))
+            for p in ((3.5,5),(4,5),(0,5),(11,5)):
+                self.assertEqual(water._component_ids(Vector(*p)),frozenset())
+        # Compare the complete predicate at a known lattice, including every
+        # source boundary, overlapping bounding boxes, dry island and lake.
+        components=(sea,lake)
+        for x in range(-1,12):
+            for y in range(-1,12):
+                expected=frozenset(i for i,c in enumerate(components) if c.contains(Point(x,y)))
+                self.assertEqual(water._component_ids(Vector(x,y)),expected)
+        touching=CoastalWater(to_wkb(MultiPolygon((box(0,0,1,1),box(1,1,2,2)))),'touching')
+        self.assertEqual(touching._component_ids(Vector(1,1)),frozenset())
+        self.assertEqual(touching._component_ids(Vector(.5,.5)),frozenset((0,)))
+        self.assertEqual(touching._component_ids(Vector(1.5,1.5)),frozenset((1,)))
+
     def test_sequential_build_stages_admit_only_validated_water_and_reject_corruption(self):
         import json
         from pathlib import Path

@@ -35,6 +35,7 @@ class CoastalWater:
         components=list(self.geometry.geoms) if self.geometry.geom_type=='MultiPolygon' else [self.geometry]
         self.components=STRtree(components)
         self.prepared_components=tuple(prep(component) for component in components)
+        self.component_areas=tuple(component.area for component in components)
         boundary=self.geometry.boundary;parts=list(boundary.geoms) if hasattr(boundary,'geoms') else [boundary]
         # Short indexed pieces make exact closed margin checks local, rather
         # than rescanning every coastline vertex for every integration step.
@@ -146,6 +147,12 @@ class CoastalWater:
 
     def _component_ids(self,point):
         shape=Point(self.coordinates(point))
-        # P.within(polygon) == polygon.contains(P). Preparing the large polygon
-        # keeps the same strict boundary rule while avoiding a vertex scan.
-        return frozenset(i for i in self.components.query(shape) if self.prepared_components[i].contains(shape))
+        # Valid MultiPolygon interiors are disjoint. A strict union-interior
+        # point belongs to exactly one bbox candidate. Eliminate the smaller
+        # candidates first, then infer the last without preparing a second
+        # index for the huge sea component beside the existing union index.
+        if not self.prepared.contains(shape):return frozenset()
+        candidates=sorted(self.components.query(shape),key=lambda i:self.component_areas[i])
+        for i in candidates[:-1]:
+            if self.prepared_components[i].contains(shape):return frozenset((i,))
+        return frozenset(candidates[-1:])

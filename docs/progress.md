@@ -3441,3 +3441,29 @@ bit for bit in both bundles: Vinga–Uddevalla 31×138×83×2 and Trelleborg
 50×455×208×2; zero differing float bits. Logs:
 compact-weather-full-check-20261019.log, compact-weather-frontend-tests-20261019.log,
 wind-component-bit-equivalence-20261019.log and marine-cache-byte-equivalence-20261019.log.
+
+## 2026-10-19 16:21 UTC — reuse the union index for exact water membership
+
+The real target/current reserve query attempted to prepare a second large sea
+component index beside the union index and exceeded the 900 MiB RSS probe stop.
+For valid Polygon/MultiPolygon water, a strict union-interior point belongs to
+exactly one component. Check union contains first, eliminate smaller bbox
+candidates with the existing exact predicate, then infer the last candidate.
+No new index is needed for that largest remaining component. Outside, land,
+lake and touching-boundary cases retain the original strict membership rule;
+connection segments still undergo every closed land/margin/distance check.
+
+41 targeted coastal water/grid/marine/voyage tests passed, including an
+independent sea/island/lake lattice, touching polygons and a guard against
+building the duplicate sea index. No motion/source/scenario bounds were raised.
+The approval review initially failed due to usage; read diagnostics succeeded
+after the indicated reset. The prompt's 13:17 time was stale: actual clock read
+16:19 UTC, so only this already-started fix and closing delivery checks were
+continued. The immutable 16:32:08 UTC deadline and all locks remain unchanged.
+
+Real endpoint rerun passed: start and target both have wind, current and waves.
+Start marine estimates use nearest_valid_visible_water; target estimates use
+nearest_valid_water_path. Total81.64s/876.4MiB peakRSS under unchanged diagnostic
+900MiB RSS/1500MiB virtualAS/180s bounds. Log:
+trelleborg-endpoint-component-fixed-20261019T1619.log. This verifies endpoint
+support and memory, not an integrated voyage or weather-limit qualification.
