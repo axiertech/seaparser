@@ -14,12 +14,12 @@ from deployment.vinga_upgrade import atomic_public_copy,tree_hashes
 
 BUILD=ROOT/'artifacts/poc-site'
 URL='https://seaparser.com/poc/'
-ROOT_FILES=set(PUBLIC_ASSETS)-{'main.mjs'}|{'poc-main.mjs','poc-transport.mjs','poc.css','scene.json','catalog.json','uddevalla-main.mjs','vinga-uddevalla.json','coastal-view.mjs','coastal-voyage.json'}
+ROOT_FILES=set(PUBLIC_ASSETS)-{'main.mjs'}|{'poc-main.mjs','poc-transport.mjs','poc.css','scene.json','catalog.json','uddevalla-main.mjs','vinga-uddevalla.json','coastal-view.mjs','coastal-voyage.json','trelleborg-main.mjs','trelleborg-voyage.json'}
 ROOT_FILES|={'assets/logos/seaparser-logo.svg','assets/logos/favicon.ico','assets/logos/favicon-256.png'}
 
 
 def allowed(name):
-    return name in ROOT_FILES or bool(re.fullmatch(r'bank/[abc]{2}-(normal|wind|waves)\.json',name)) or bool(re.fullmatch(r'gpx/[abc]{2}-(normal|wind|waves)-[0-3]-auto-[0-3]\.gpx',name)) or bool(re.fullmatch(r'gpx/coastal-water-[0-7]-estimated\.gpx',name))
+    return name in ROOT_FILES or bool(re.fullmatch(r'bank/[abc]{2}-(normal|wind|waves)\.json',name)) or bool(re.fullmatch(r'gpx/[abc]{2}-(normal|wind|waves)-[0-3]-auto-[0-3]\.gpx',name)) or bool(re.fullmatch(r'gpx/(coastal|trelleborg)-water-[0-7]-estimated\.gpx',name))
 
 
 def clean_commit():

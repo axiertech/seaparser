@@ -6,16 +6,18 @@ def export_estimated_coastal_gpx(view,route_id):
     """Explicit estimate export; the existing verified-result gate stays intact."""
     import json
     route=next((r for r in view['routes'] if r['id']==route_id),None)
-    if (view.get('profile')!='vinga-uddevalla' or view.get('result_qualification')!='estimated_high_uncertainty' or view.get('weather_limits_verified') is not False
-            or route is None or route['status']!='arrived' or route['arrival_weather_status']!='passed_at_arrival'
+    if (view.get('profile') not in ('vinga-uddevalla','trelleborg-stromstad') or view.get('result_qualification')!='estimated_high_uncertainty' or view.get('weather_limits_verified') is not False
+            or route is None or not ((route['status']=='arrived' and route['arrival_weather_status']=='passed_at_arrival') or (view.get('profile')=='trelleborg-stromstad' and route.get('partial') is True and route['waypoints']==route['path'] and len(route['path'])>=2))
             or route.get('result_qualification')!='estimated_high_uncertainty'
             or route.get('weather_limits_verified') is not False):
         raise ValueError('Explicit arrived coastal estimate required')
     root=Element('gpx',{'xmlns':'http://www.topografix.com/GPX/1/1','xmlns:sp':'https://seaparser.com/ns/estimate/1',
                         'version':'1.1','creator':'SeaParser coastal development estimate'})
     meta=SubElement(root,'metadata')
-    SubElement(meta,'name').text='Vinga–Uddevalla · UPPSKATTNING · HÖG OSÄKERHET'
-    SubElement(meta,'desc').text='Verkliga frysta prognoser 18–19 oktober 2026 med landmedvetna reservdata. Vädergränser EJ verifierade. Uppskattad 5 kn-båt. Djup och landfullständighet okända. Ej navigationsunderlag eller GPS-spår.'
+    label='Trelleborg–Strömstad' if view['profile']=='trelleborg-stromstad' else 'Vinga–Uddevalla'
+    SubElement(meta,'name').text=label+(' · DELRUTT · MÅLET EJ NÅTT' if route.get('partial') else '')+' · UPPSKATTNING · HÖG OSÄKERHET'
+    SubElement(meta,'desc').text=('Verkliga frysta prognoser 18–19 oktober 2026' if view['profile']=='vinga-uddevalla' else 'Verkliga frysta prognoser 19–21 oktober 2026')+' med landmedvetna reservdata. Vädergränser EJ verifierade. Uppskattad 5 kn-båt. Djup och landfullständighet okända. Ej navigationsunderlag eller GPS-spår.'
+    if route.get('partial'):meta.find('desc').text+=' DELRUTT: endast accepterade simulerade segment; målet ej nått. Ingen prognosextrapolering. Stopp: '+route['stop_reason']
     extensions=SubElement(meta,'extensions')
     SubElement(extensions,'sp:qualification').text='estimated_high_uncertainty'
     SubElement(extensions,'sp:weather_limits_verified').text='false'

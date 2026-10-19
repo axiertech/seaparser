@@ -1,0 +1,29 @@
+{
+  "mode": "coastal_development_estimates",
+  "source_bundle": "trelleborg-stromstad-20261019",
+  "planning_time": "2026-10-19T09:00:00Z",
+  "assumed_issued_at": "2026-10-19T00:00:00Z",
+  "max_age_seconds": 86400,
+  "motion_radius_m": 350000,
+  "source_bounds": [
+    10.5,
+    55.2,
+    13.5,
+    59.15
+  ],
+  "max_wind_m_s": 18,
+  "max_wave_height_m": 3,
+  "source_assumptions": {
+    "model_issue_time_unverified": "Utfärdandetid antas enligt assumed_issued_at i konfigurationen för ålderskontroll; inte källverifierad.",
+    "cross_product_model_run_compatibility_unverified": "Frysta MET/WAV/PHY kombineras inom gemensamma giltigheter; körförenlighet antas, inte verifierad.",
+    "current_native_wet_mask_unverified": "Finita strömnoder antas giltiga där alla egna interpolationsnoder finns. Ingen vågmask överförs.",
+    "wind_native_geometry_unqualified": "Regional WGS84-to-MET source-sphere mapping assumed usable with explicit 2 m enclosure guard; datum equivalence is not source-qualified.",
+    "wind_vector_frame_unqualified": "MET:s FRÅN-riktning antas sann nord i WGS84:s lokala tangentrum. Vind, ström och båthastighet behålls som fysiska öst/nord-komponenter i m/s; endast positionens derivata avbildas till AEQD. Källans ram-/datumekvivalens är inte verifierad.",
+    "wind_validity_mask_unverified": "Finita native vindnoder med giltig styrka/riktning antas giltiga; landfraktion används inte som giltighetsmask.",
+    "wind_mean_window_unverified": "10-minutersvinden behandlas vid märkta giltigheter med linjär komponentinterpolation; medelfönstrets placering är antagen.",
+    "marine_time_support_unverified": "Producentens ursprungliga WAV-tidsetiketter och PHY-etiketter antas användbara för utvecklingsinterpolation. Fysisk tidsmedelsplacering och run-förenlighet är inte verifierade; ingen ARCO-offset tillämpas."
+  },
+  "model_assumptions": {
+    "native_coordinate_enclosure": "Coastal AEQD-to-MET coordinate mapping assumed 2-Lipschitz within 350 km, with 2 m guard; numerical development assumption, not source qualification."
+  }
+}

@@ -29,13 +29,22 @@ ROOT=Path(__file__).resolve().parents[1]
 
 def load_coastal_weather(directory,*,policy=None,margin_m=10,cache_directory=None,diagnostics=None):
     directory=Path(directory);request=json.loads((directory/'request.json').read_text())
-    config=json.loads((ROOT/'settings/coastal-weather-assumptions.json').read_text())
+    profile=request.get('case')
+    config_name={'vinga-uddevalla':'coastal-weather-assumptions.json','trelleborg-stromstad':'trelleborg-weather-assumptions.json'}.get(profile)
+    if config_name is None:raise ValueError('Unknown source-bound coastal profile')
+    config=json.loads((ROOT/'settings'/config_name).read_text())
     if (config['mode']!='coastal_development_estimates' or config['source_bundle']!=directory.name
             or set(config['source_assumptions'])!=REQUIRED or any(not isinstance(v,str) or not v.strip() for v in config['source_assumptions'].values())):
         raise ValueError('Explicit source-bound coastal assumptions required')
-    if config['model_assumptions']!={'native_coordinate_enclosure':'Coastal AEQD-to-MET coordinate mapping assumed 2-Lipschitz within 120 km, with 2 m guard; numerical development assumption, not source qualification.'}:
+    radius={'vinga-uddevalla':120000,'trelleborg-stromstad':350000}[profile]
+    if config['motion_radius_m']!=radius:raise ValueError('Source-bound motion radius required')
+    if config['model_assumptions']!={'native_coordinate_enclosure':'Coastal AEQD-to-MET coordinate mapping assumed 2-Lipschitz within '+str(radius//1000)+' km, with 2 m guard; numerical development assumption, not source qualification.'}:
         raise ValueError('Explicit regional coordinate enclosure assumption required')
-    reserve_config=json.loads((ROOT/'settings/vinga-uddevalla-reserve.json').read_text());policies=configured_reserve_policies(reserve_config)
+    reserve_config=json.loads((ROOT/'settings/vinga-uddevalla-reserve.json').read_text())
+    if profile=='trelleborg-stromstad':
+        for fields in reserve_config['products'].values():
+            for entry in fields.values():entry['water_path_spacing_m']=500
+    policies=configured_reserve_policies(reserve_config)
     land=json.loads((directory/'land/water.json').read_text());data=(directory/'land/water.wkb').read_bytes()
     coast=directory/'land/coastline.osm';source_index=json.loads((directory/'land/sources.json').read_text())['coastline.osm']
     if (sha256(data).hexdigest()!=land['water_sha256'] or land['projection']!=FRAME
@@ -45,21 +54,21 @@ def load_coastal_weather(directory,*,policy=None,margin_m=10,cache_directory=Non
     if cache_directory is not None:
         margins={0,margin_m}
         for product in policies.values():margins.add(max(p.water_path_margin_m for p in product.values()))
-        for margin in sorted(margins):attach_grid(water,cache_directory,margin_m=margin,diagnostics=diagnostics)
+        for margin in sorted(margins):attach_grid(water,cache_directory,spacing_m=500 if profile=="trelleborg-stromstad" else 250,margin_m=margin,diagnostics=diagnostics)
     sample,payload,audit=coastal_inputs(directory,request,cache_directory=cache_directory,diagnostics=diagnostics)
     current,waves=CopernicusMarineAdapter().normalize_coastal(payload,water,policies,bounds=config['source_bounds'])
     marine_source_hashes={k:v['source_sha256'] for k,v in payload['products'].items()}
     del payload # normalized products own their immutable numeric arrays
     wind=NativeWindWithReserve(sample,water,policies['wind'])
     issued=datetime.fromisoformat(config['assumed_issued_at'].replace('Z','+00:00'))
-    wm=ProductMetadata('wind','MET-Nordic-coastal-frozen','20261018','MET Nordic original native wind',None,
+    wm=ProductMetadata('wind','MET-Nordic-coastal-frozen',request['reference_time'] if profile=='trelleborg-stromstad' else '20261018','MET Nordic original native wind',None,
         sample.times[0],sample.times[-1],current.metadata.coverage,('m/s','m/s'),'ground-to-true-east-north',
-        source_sha256=dict(sample.source_hashes)['wind.txt'],planning_blockers=tuple(sorted(REQUIRED)))
+        source_sha256=digest(dict(sample.source_hashes)) if profile=='trelleborg-stromstad' else dict(sample.source_hashes)['wind.txt'],planning_blockers=tuple(sorted(REQUIRED)))
     raw=(wm,current.metadata,waves.metadata)
     if any(not set(m.planning_blockers)<=REQUIRED for m in raw):raise ValueError('New coastal source blocker requires explicit assumption')
     metadata=tuple(replace(m,issued_at=issued,planning_blockers=(),assumed_fields=('issued_at',*sorted(REQUIRED))) for m in raw)
     selected=policy or WeatherPolicy(config['max_wind_m_s'],config['max_wave_height_m'])
-    environment=CoastalForecast(wind,current,waves,metadata,water,selected,margin_m=margin_m,radius_m=config['motion_radius_m'])
+    environment=CoastalForecast(wind,current,waves,metadata,water,selected,margin_m=margin_m,radius_m=config['motion_radius_m'],profile=profile)
     evidence={'source_metadata':[asdict(m) for m in raw],'wind_source_hashes':dict(sample.source_hashes),
         'marine_source_hashes':marine_source_hashes,
         'source_qualification':'unverified','source_assumptions':config['source_assumptions'],
@@ -77,7 +86,7 @@ def simulate_coastal_candidate(directory,candidate_file,*,departure=None,policy=
     if saved['water_sha256']!=environment.water.sha256:raise ValueError('Candidate uses another coastal water snapshot')
     start=Vector(*FORWARD.transform(request['start']['longitude'],request['start']['latitude']))
     target=Vector(*FORWARD.transform(request['target']['longitude'],request['target']['latitude']))
-    candidates=tuple(RouteCandidate(c['name'],tuple(Vector(*p) for p in c['waypoints'])) for c in saved['candidates'])
+    candidates=tuple(RouteCandidate(c['name'],tuple(Vector(p['east'],p['north']) if isinstance(p,dict) else Vector(*p) for p in c['waypoints'])) for c in saved.get('candidates',saved.get('search',{}).get('candidates',[])))
     when=datetime.fromisoformat((departure or request['departure']).replace('Z','+00:00'))
     return _simulate(environment,config,evidence,request,start,target,candidates,when,saved,timings)
 
@@ -117,7 +126,7 @@ def _simulate(environment,config,evidence,request,start,target,candidates,when,s
     # entire result while the voyage engine's objects are still alive.
     details=json.loads(canonical({'provenance':evidence,'configuration':config,
         'source_value_bounds':{'wind_abs_components_m_s':environment.wind_components,'wave_height_m':environment.wave_height_bound}}))
-    return {'profile':'vinga-uddevalla','result_qualification':'estimated_high_uncertainty',
+    return {'profile':request['case'],'result_qualification':'estimated_high_uncertainty',
         'weather_limits_verified':False,'comparison':report,'estimated_segments':segments,
         **details,'land_margin_m':environment.margin_m,'input_sha256':digest({'candidate':saved,'config':config,'provenance':evidence,
         'departure':when,'request':request,'selected_weather_limits':asdict(environment.policy),'boat':asdict(ConstantBoat(5)),

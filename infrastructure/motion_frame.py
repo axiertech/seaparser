@@ -67,3 +67,13 @@ class RegionalAeqdMotionFrame(AeqdMotionFrame):
     def __post_init__(self):
         if type(self.radius_m) not in (int,float) or not isfinite(self.radius_m) or not 0<self.radius_m<=120000:
             raise ValueError('Regional motion frame requires bounded radius <=120000 m')
+
+
+@dataclass(frozen=True)
+class SwedishCoastAeqdMotionFrame(AeqdMotionFrame):
+    """Explicit Trelleborg–Strömstad frame; older profile bounds unchanged."""
+    radius_m: float=350000
+
+    def __post_init__(self):
+        if type(self.radius_m) not in (int,float) or not isfinite(self.radius_m) or not 0<self.radius_m<=350000:
+            raise ValueError('Swedish coast motion frame requires bounded radius <=350000 m')

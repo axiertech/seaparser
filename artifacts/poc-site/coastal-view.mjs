@@ -23,7 +23,7 @@ export function attachCoastalView(document,view,fetcher=fetch) {
   try{
    const response=await fetcher('coastal-voyage.json');if(!response.ok)throw new Error('Den simulerade färden kunde inte läsas');
    const data=await response.json();if(revision!==expected)return;
-   if(data.profile!=='vinga-uddevalla'||data.result_qualification!=='estimated_high_uncertainty'||data.weather_limits_verified!==false||!data.routes.length)throw new Error('Saknad uttrycklig uppskattningsstatus');
+   if(!['vinga-uddevalla','trelleborg-stromstad'].includes(data.profile)||data.result_qualification!=='estimated_high_uncertainty'||data.weather_limits_verified!==false||!data.routes.length)throw new Error('Saknad uttrycklig uppskattningsstatus');
    shown=true;renderCoastalView(document,view,data);
   }catch(error){reset();get('status').textContent=error.message;}finally{button.disabled=false;}
  });
@@ -33,7 +33,7 @@ export function attachCoastalView(document,view,fetcher=fetch) {
 
 export function renderCoastalView(document,view,data,{live=false,gpx=id=>`gpx/coastal-${encodeURIComponent(id)}-estimated.gpx`,evidenceUrl='coastal-voyage.json'}={}) {
  const get=id=>document.getElementById(id),empty={type:'FeatureCollection',features:[]},legend=document.querySelector('.legend');
- if(data.profile!=='vinga-uddevalla'||data.result_qualification!=='estimated_high_uncertainty'||data.weather_limits_verified!==false)throw new Error('Saknad uttrycklig uppskattningsstatus');
+ if(!['vinga-uddevalla','trelleborg-stromstad'].includes(data.profile)||data.result_qualification!=='estimated_high_uncertainty'||data.weather_limits_verified!==false)throw new Error('Saknad uttrycklig uppskattningsstatus');
  if(!data.routes?.length){
   view.show({obstacles:empty,routes:empty});get('results').replaceChildren();
   const reasons={endpoint_blocked:'Start eller mål berör land eller modellens 10 m marginal.',no_endpoint_connection:'Ingen landfri anslutning till sökgriden.',max_expansions:'Sökbudgeten tog slut innan ett komplett alternativ hittades.',no_grid_path:'Ingen sammanhängande landfri väg hittades i sökgriden.'};
@@ -41,9 +41,10 @@ export function renderCoastalView(document,view,data,{live=false,gpx=id=>`gpx/co
   get('status').textContent='Ingen genomförbar modellrutt. '+(reasons[key]||data.failures?.map(f=>`${f.status}: ${f.reason}`).join('; ')||data.geometry_search?.limit_reason||'Inget komplett alternativ inom tillgängliga data och budgetar.');
   get('comparison').textContent='Ingen anländ rutt; ingen GPX. Valda land- och väderkontroller har behållits.';return;
  }
- if(data.routes.some(r=>r.status!=='arrived'||r.arrival_weather_status!=='passed_at_arrival'||r.weather_limits_verified!==false))throw new Error('Färden har inte nått modellankomst');
+ const valid=r=>((r.status==='arrived'&&r.arrival_weather_status==='passed_at_arrival')||(data.profile==='trelleborg-stromstad'&&r.partial===true))&&r.weather_limits_verified===false;
+ if(data.routes.some(r=>!valid(r)))throw new Error('Färden har inte nått modellankomst');
    const evidence=data.reserve_evidence,route=data.routes[0];
-   if(route.status!=='arrived'||route.arrival_weather_status!=='passed_at_arrival'||route.weather_limits_verified!==false)throw new Error('Färden har inte nått godkänd modellankomst');
+   if(!valid(route))throw new Error('Färden har inte nått godkänd modellankomst');
    get('mode-notice').textContent=(live?'Nyberäknad färd för valda punkter och avgång':'Sparad, faktiskt simulerad färd')+' med verklig vind, vågor och ström samt uttryckliga landmedvetna reservdata. HÖG OSÄKERHET. Vädergränser är inte verifierat klarade. Ändrade punkter och tider kräver ny beräkning.';
    get('regional-blocker').textContent='De strikta proven nedan saknar fortsatt egna gridhörn. Den visade färden använder i stället uttryckliga reservpolicyer för vågor/ström med kontrollerad vattenförbindelse, källposition/tid och avstånd. Hög osäkerhet; gränser ej verifierade.';
    legend.textContent='Orange streckad linje: uppskattad modellfärd · hög osäkerhet längs hela rutten. Vädergränser ej verifierade. Beräkningsunderlag växlas separat.';
@@ -57,7 +58,7 @@ export function renderCoastalView(document,view,data,{live=false,gpx=id=>`gpx/co
    for(const r of data.routes){
     const card=document.createElement('article');card.className='route unknown';
     const title=document.createElement('h3');title.textContent=`${r.id} · ${data.comparison?.fastest_candidate===r.id?'kortast restid · ':''}${data.comparison?.comfortable_candidate===r.id?'komfortval inom tidsram · ':''}HÖG OSÄKERHET`;card.append(title);
-    const p=document.createElement('p');p.textContent=`${(r.distance_m/1000).toFixed(2)} km · ${Math.floor(r.travel_seconds/3600)} h ${Math.round(r.travel_seconds%3600/60)} min · ankomst ${new Date(r.arrival_time).toISOString().slice(11,19)} UTC. Komfortexponering ${r.comfort_exposure.toFixed(2)} (syntetiskt, ej validerat mått).`;card.append(p);
+    const p=document.createElement('p');p.textContent=`${(r.distance_m/1000).toFixed(2)} km · ${Math.floor((r.travel_seconds??r.elapsed_seconds)/3600)} h ${Math.round((r.travel_seconds??r.elapsed_seconds)%3600/60)} min · ${r.partial?'slut på delrutt':'ankomst'} ${new Date(r.arrival_time??r.end_time).toISOString().replace('T',' ').slice(0,19)} UTC. Komfortexponering ${r.comfort_exposure==null?'ej fullföljd':r.comfort_exposure.toFixed(2)} (syntetiskt, ej validerat mått).`;card.append(p);if(r.partial){const stop=document.createElement('p');stop.textContent='DELRUTT · STRÖMSTAD EJ NÅTT. Stopp: '+r.stop_reason+'. Endast faktiskt simulerad del visas; ingen dold prognosextrapolering.';card.append(stop);}
     const weather=document.createElement('p');weather.textContent=['wind_m_s','wave_height_m','current_m_s'].map((key,i)=>{const v=r.weather_summary[key];return `${['Vind','Hs','Ström'][i]} ${v.min.toFixed(3)}–${v.max.toFixed(3)} ${i===1?'m':'m/s'} (${v.sample_count} mittpunkter, ${v.missing_samples} saknade)`;}).join(' · ');card.append(weather);
     const notice=document.createElement('p');notice.textContent='Vädergränser EJ verifierade. Hela landsegment, 10 m modellmarginal och valda gränskontroller behållna; käll-/modellantaganden och reservdata innebär hög osäkerhet.';card.append(notice);
     const link=document.createElement('a');link.href=gpx(r.id);link.textContent='GPX · UPPSKATTNING / HÖG OSÄKERHET';link.download='';card.append(link);
@@ -73,6 +74,7 @@ export function renderCoastalView(document,view,data,{live=false,gpx=id=>`gpx/co
    get('regional-distance').textContent=`Simulerad färd ${(route.distance_m/1000).toFixed(2)} km. ${route.segment_count} accepterade modellsegment. Hög osäkerhet; inte verifierad navigerbarhet.`;
    get('assumptions').textContent=JSON.stringify({source_assumptions:data.provenance.source_assumptions,model_assumptions:data.provenance.model_assumptions,reserve_policies:data.provenance.reserve_policies},null,2);
    get('provenance').textContent=JSON.stringify({input_sha256:data.input_sha256,source_metadata:data.provenance.source_metadata,water:data.provenance.water,configuration:data.configuration},null,2);
-   get('status').textContent=(live?'Beräkning klar för dina val. ':'Visar sparad modellfärd. ')+`${data.routes.length} anlända alternativ · avgång ${route.departure_time}. HÖG OSÄKERHET; vädergränser ej verifierade. Ändrade punkter eller tid tar bort färden och GPX.`;
+   if(route.partial)get('comparison').textContent='DELRUTT · Strömstad ej nått. Ingen full rutt eller jämförelse mellan fulla färder. Stopp: '+route.stop_reason;
+   get('status').textContent=(route.partial?'DELRUTT · målet ej nått. ':'')+(live?'Beräkning klar för dina val. ':'Visar sparad modellfärd. ')+`${data.routes.length} ${route.partial?'delrutt':'anlända alternativ'} · avgång ${route.departure_time}. HÖG OSÄKERHET; vädergränser ej verifierade. Ändrade punkter eller tid tar bort färden och GPX.`;
 
 }

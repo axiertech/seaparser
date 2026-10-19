@@ -22,7 +22,7 @@ class CoastalFreePlanTests(unittest.TestCase):
         return env,config,payload
 
     def calculate(self,env,config,payload):
-        with patch('application.coastal_plan.load_coastal_weather',return_value=(env,config,{},{})):
+        with patch('application.coastal_plan.load_coastal_weather',return_value=(env,config,{}, {'case':'vinga-uddevalla'})):
             return plan_coastal('unused-test-source',payload)
 
     def test_free_points_find_actual_voyages_and_match_known_current_time(self):

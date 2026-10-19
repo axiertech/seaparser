@@ -11,7 +11,7 @@ from functools import lru_cache
 import numpy as np
 
 from infrastructure.land import INVERSE
-from infrastructure.motion_frame import RegionalAeqdMotionFrame
+from infrastructure.motion_frame import RegionalAeqdMotionFrame,SwedishCoastAeqdMotionFrame
 from prototype.environment import Conditions,WaveData
 from prototype.forecast_data import DataUnavailable
 from prototype.obstacles import ObstacleCollision
@@ -27,10 +27,10 @@ class CoastalObstacle:
 
 
 class CoastalForecast:
-    def __init__(self,wind,current,waves,metadata,water,policy,*,margin_m=10,radius_m=120000):
+    def __init__(self,wind,current,waves,metadata,water,policy,*,margin_m=10,radius_m=120000,profile="vinga-uddevalla"):
         self.wind=wind;self.current=current;self.waves=waves;self.water=water;self.policy=policy
-        self.product_metadata=tuple(metadata);self.margin_m=margin_m;self.frame=RegionalAeqdMotionFrame(radius_m)
-        self.dataset_id='vinga-uddevalla-real-coastal-estimates';self.version='20261018-water-path-v1'
+        self.product_metadata=tuple(metadata);self.margin_m=margin_m;self.frame=(SwedishCoastAeqdMotionFrame if profile=="trelleborg-stromstad" else RegionalAeqdMotionFrame)(radius_m)
+        self.dataset_id=profile+'-real-coastal-estimates';self.version='20261018-water-path-v1'
         self.start=max(m.valid_from for m in metadata);self.end=min(m.valid_until for m in metadata)
         self.issued=min(m.issued_at for m in metadata)
         self.wind_components=tuple(float(np.nanmax(np.abs(wind.values[...,i]))) for i in (0,1))

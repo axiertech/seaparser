@@ -10,7 +10,7 @@ from infrastructure.coastal_water import CoastalWater
 from infrastructure.coastal_forecast import CoastalForecast,CoastalObstacle
 from infrastructure.copernicus_adapter import CopernicusMarineAdapter
 from infrastructure.marine_reserve import NativeWindWithReserve,ReservePolicy,configured_reserve_policies
-from infrastructure.motion_frame import RegionalAeqdMotionFrame,AeqdMotionFrame
+from infrastructure.motion_frame import RegionalAeqdMotionFrame,AeqdMotionFrame,SwedishCoastAeqdMotionFrame
 from infrastructure.land import FORWARD,INVERSE
 from prototype.forecast_metadata import ProductMetadata
 from prototype.forecast import FixedClock,ForecastPolicy
@@ -94,3 +94,26 @@ class CoastalCompositionTests(unittest.TestCase):
                 for i in range(-50,51):
                     q=p+delta.scaled(i/100);a,b=env.wind.native._xy(*INVERSE.transform(q.east,q.north))
                     self.assertLessEqual(abs(a-x),guard);self.assertLessEqual(abs(b-y),guard)
+
+    def test_swedish_coast_motion_and_wind_enclosure_against_independent_references(self):
+        from math import cos,sin,pi
+        frame=SwedishCoastAeqdMotionFrame();geod=Geod(ellps='WGS84');native=self.environment().wind.native
+        # Whole 350 km disk, including both endpoints, axes and boundary.
+        for radius in (0,120000,270400,350000):
+            for angle in range(0,360,15):
+                p=Vector(radius*cos(angle*pi/180),radius*sin(angle*pi/180))
+                if p.speed>350000:p=p.scaled(350000/p.speed)
+                lon,lat=INVERSE.transform(p.east,p.north)
+                for v in (Vector(1,0),Vector(0,1),Vector(3,-4)):
+                    a=geod.fwd(lon,lat,v.course,v.speed*.5);b=geod.fwd(lon,lat,v.course+180,v.speed*.5)
+                    ax,ay=FORWARD.transform(*a[:2]);bx,by=FORWARD.transform(*b[:2]);rate=frame.position_rate(p,v)
+                    self.assertAlmostEqual(rate.east,ax-bx,delta=2e-6)
+                    self.assertAlmostEqual(rate.north,ay-by,delta=2e-6)
+                x,y=native._xy(lon,lat)
+                for direction in range(0,360,30):
+                    delta=Vector(500*cos(direction*pi/180),500*sin(direction*pi/180))
+                    for i in range(-5,6):
+                        q=p+delta.scaled(i/5);a,b=native._xy(*INVERSE.transform(q.east,q.north))
+                        self.assertLessEqual(abs(a-x),1002);self.assertLessEqual(abs(b-y),1002)
+        with self.assertRaises(ValueError):RegionalAeqdMotionFrame(350000)
+        with self.assertRaises(ValueError):frame.matrix(Vector(350001,0))

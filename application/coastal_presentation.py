@@ -17,7 +17,7 @@ def full_result_digest(result):
 
 
 def coastal_view(result,*,allow_empty=False):
-    if (result['profile'] != 'vinga-uddevalla' or result['result_qualification'] != 'estimated_high_uncertainty'
+    if (result['profile'] not in ('vinga-uddevalla','trelleborg-stromstad') or result['result_qualification'] != 'estimated_high_uncertainty'
             or result['weather_limits_verified'] is not False):
         raise ValueError('Explicit coastal estimate required')
     sources=[];connections=[];records=[];indexes=[{}, {}, {}]
@@ -45,17 +45,23 @@ def coastal_view(result,*,allow_empty=False):
             sample['estimate_refs']=refs
     routes=[]
     for candidate in result['comparison']['candidates']:
-        if (candidate['status']!='arrived' or not candidate['destination_reached']
-                or candidate['arrival_weather_status']!='passed_at_arrival'):
-            continue
+        arrived=(candidate['status']=='arrived' and candidate['destination_reached'] and candidate['arrival_weather_status']=='passed_at_arrival')
+        partial=(result['profile']=='trelleborg-stromstad' and candidate['status']!='arrived')
+        if not arrived and not partial:continue
         own=[s for s in segments if s['candidate']==candidate['candidate']['name']]
-        if not own:raise ValueError('Accepted coastal segments required')
+        if not own:
+            if partial:continue
+            raise ValueError('Accepted coastal segments required')
         path=[[s['samples'][0]['longitude'],s['samples'][0]['latitude']] for s in own]
         path.append([own[-1]['samples'][-1]['longitude'],own[-1]['samples'][-1]['latitude']])
         waypoints=[path[0],*[list(INVERSE.transform(p['east'],p['north'])) for p in candidate['candidate']['waypoints']],
                    list(INVERSE.transform(candidate['target']['east'],candidate['target']['north']))]
+        if partial:waypoints=path # Never export the untraversed tail of a partial route.
         routes.append({**{k:deepcopy(candidate[k]) for k in ('status','arrival_weather_status','weather_segment_status',
             'departure_time','arrival_time','travel_seconds','distance_m','comfort_exposure','weather_summary')},
+            'partial':partial,'stop_reason':candidate['reason'],'requested_target':candidate['target'],
+            'end_time':own[-1]['samples'][-1]['time'],
+            'elapsed_seconds':candidate['elapsed_seconds'],
             'id':candidate['candidate']['name'],'path':path,'waypoints':waypoints,'segment_count':len(own),
             'result_qualification':'estimated_high_uncertainty','weather_limits_verified':False})
     if not routes and not allow_empty:raise ValueError('No arrived coastal estimate to present')
@@ -91,3 +97,8 @@ def coastal_coverage():
     path=Path(__file__).resolve().parents[1]/'fixtures/vinga-uddevalla-preflight.json'
     data=json.loads(path.read_text())
     return {k:data[k] for k in ('bbox','valid_times','reference_time')}
+
+
+def swedish_coast_snapshot():
+    """Return the saved simulation; no large weather load on HTTP requests."""
+    return json.loads((Path(__file__).resolve().parents[1]/'fixtures/trelleborg-voyage.json').read_text())

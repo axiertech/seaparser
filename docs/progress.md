@@ -3467,3 +3467,38 @@ nearest_valid_water_path. Total81.64s/876.4MiB peakRSS under unchanged diagnosti
 900MiB RSS/1500MiB virtualAS/180s bounds. Log:
 trelleborg-endpoint-component-fixed-20261019T1619.log. This verifies endpoint
 support and memory, not an integrated voyage or weather-limit qualification.
+
+## 2026-10-19 — Trelleborg–Strömstad: faktisk ankomst och PoC-koppling
+
+Arbetsroten klarade skapa/läsa/radera-prov. Sandboxen nekade systemd med
+Operation not permitted, HTTPS med DNS-fel och webbrot/cache med Errno30.
+Begränsat körgodkännande verifierade offentlig PoC, skriv-/raderingsprov i
+webbroot samt tillgång till befintlig cache. PoC-API var faktiskt inactive/0.
+Inga ägare eller filrättigheter ändrades. De fem tidigare deploymentändringarna
+bevaras ostagade; ingen extern serveraktivitet från annan session förutsätts.
+
+Separat 350 km-rörelseram, källbunden konfiguration och befintlig 500 m-kandidat
+når Strömstad på 161208,814044 s över 438695,5269904306 m: ankomst21okt05:46:48UTC.
+49 h räcker med cirka4h13min marginal. 2699 accepterade segment, noll saknade
+mittpunkter. Prognoscache hit; inga nya kart-/väderhämtningar utöver liten
+källmetadataförfrågan som bekräftar samma MET-körnings sista giltighet.
+119,05 s offline, varav78,10s inläsning och38,83s motor. Ingen livebudget påstås.
+
+Samma PoC-scenarioval/karta och särskilt märkt GPX återanvänder sparat resultat.
+API-koden har separata läs-/GPX-endpoints för samma frysta scenario. En kandidat
+och en avgång, hög osäkerhet, vädergränser ej verifierade. Se trelleborg-stromstad.md.
+Nästa steg: samlade kontroller, granskad commit, exakt CI och atomisk statisk
+publicering med återställning; API-tjänståtkomst redovisas separat.
+
+Slutlig verklig omkörning: cacheträffar,138,38s; hela41MB-resultatet byteidentiskt
+med första körningen. Kompaktvy återställer alla käll-/segmentposter exakt.
+592 Python-tester passerade. Sandboxens två localhost-bindande frontendtester
+nekades; sviten körs om med begränsat körgodkännande. Start av befintlig API-unit
+nekades med Access denied / requires interactive authentication även där.
+Den gamla uniten pekar på31ba37d5; statisk leverans går vidare oberoende.
+
+Frontendomkörningen passerade:38tester,37godkända,0fel,1uttryckligt överhoppat
+publikt API-prov. Direkt sandboxprov av uvicorn mot127.0.0.1:0 gav
+`could not bind on any address`,exit3; ingen kodändring behövdes för att hela
+sviten skulle passera med begränsat körgodkännande. Diff-/hemlighetskontroller
+passerade. Leveransen förbereds som sparad statisk färd med separat API-hinder.

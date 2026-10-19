@@ -18,7 +18,7 @@ class CoastalApiTests(unittest.IsolatedAsyncioTestCase):
         self.coverage={'bbox':[11,57,13,59],'valid_times':[self.env.start.isoformat(),self.env.end.isoformat()],'reference_time':self.env.start.isoformat()}
         self.cover=patch('application.coastal_presentation.coastal_coverage',return_value=self.coverage);self.cover.start()
         async def calculate(payload):
-            with patch('application.coastal_plan.load_coastal_weather',return_value=(self.env,self.config,{},{})):
+            with patch('application.coastal_plan.load_coastal_weather',return_value=(self.env,self.config,{}, {'case':'vinga-uddevalla'})):
                 return coastal_view(plan_coastal('reference-test',payload),allow_empty=True)
         self.regional=JobStore(runner=calculate,timeout=3,max_active=1,max_jobs=2)
         self.local=JobStore()
@@ -121,3 +121,19 @@ class CoastalApiTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(called);self.assertEqual(self.regional.get(key).status,'failed')
         self.assertFalse(self.regional.tasks_by_key)
         _,state=await self.finished(self.payload);self.assertEqual(state['status'],'completed')
+
+
+    async def test_saved_trelleborg_scenario_and_gpx_use_same_simulation_without_jobs(self):
+        response=await self.client.get('/api/coastal/scenarios/trelleborg-stromstad')
+        self.assertEqual(response.status_code,200)
+        view=response.json();route=view['routes'][0]
+        self.assertEqual(view['profile'],'trelleborg-stromstad')
+        self.assertEqual(route['status'],'arrived');self.assertEqual(route['segment_count'],2699)
+        self.assertAlmostEqual(route['travel_seconds'],161208.814044)
+        self.assertLess(route['arrival_time'],view['scenario']['valid_until'])
+        self.assertFalse(view['weather_limits_verified']);self.assertFalse(route['partial'])
+        self.assertTrue(all(v['missing_samples']==0 for v in route['weather_summary'].values()))
+        gpx=await self.client.get('/api/coastal/scenarios/trelleborg-stromstad/routes/'+route['id']+'/gpx')
+        self.assertEqual(gpx.status_code,200);self.assertIn('Trelleborg–Strömstad',gpx.text)
+        self.assertEqual(len(fromstring(gpx.content).findall('{http://www.topografix.com/GPX/1/1}rte/{http://www.topografix.com/GPX/1/1}rtept')),18)
+        self.assertEqual(self.regional.jobs,{})

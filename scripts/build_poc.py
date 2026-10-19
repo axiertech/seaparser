@@ -36,6 +36,11 @@ def coastal_assets(output):
     for route in data['routes']:
         name='gpx/coastal-'+route['id']+'-estimated.gpx'
         (output/name).write_bytes(export_estimated_coastal_gpx(data,route['id']));generated.add(name)
+    data=json.loads((ROOT/'fixtures/trelleborg-voyage.json').read_text())
+    shutil.copyfile(ROOT/'fixtures/trelleborg-voyage.json',output/'trelleborg-voyage.json');generated.add('trelleborg-voyage.json')
+    for route in data['routes']:
+        name='gpx/trelleborg-'+route['id']+'-estimated.gpx'
+        (output/name).write_bytes(export_estimated_coastal_gpx(data,route['id']));generated.add(name)
     return generated
 
 
@@ -52,7 +57,7 @@ def refresh_presentation(output):
     for name in PUBLIC_ASSETS:
         if name in ('index.html','main.mjs'):continue
         shutil.copyfile(ROOT/'frontend/dist'/name,output/name);generated.add(name)
-    for name in ('index.html','poc.css','poc-main.mjs','poc-transport.mjs','uddevalla-main.mjs','coastal-view.mjs'):
+    for name in ('index.html','poc.css','poc-main.mjs','poc-transport.mjs','uddevalla-main.mjs','coastal-view.mjs','trelleborg-main.mjs'):
         shutil.copyfile(ROOT/'frontend/poc'/name,output/name);generated.add(name)
     generated.update(coastal_assets(output))
     generated.update(brand_assets(output))
@@ -77,7 +82,7 @@ def build(output):
         if name in ('index.html','main.mjs'):continue
         dst=output/name;dst.parent.mkdir(parents=True,exist_ok=True)
         shutil.copyfile(ROOT/'frontend/dist'/name,dst);generated.add(name)
-    for name in ('index.html','poc.css','poc-main.mjs','poc-transport.mjs','uddevalla-main.mjs','coastal-view.mjs'):
+    for name in ('index.html','poc.css','poc-main.mjs','poc-transport.mjs','uddevalla-main.mjs','coastal-view.mjs','trelleborg-main.mjs'):
         shutil.copyfile(ROOT/'frontend/poc'/name,output/name);generated.add(name)
     shutil.copyfile(ROOT/'fixtures/vinga-uddevalla-preflight.json',output/'vinga-uddevalla.json');generated.add('vinga-uddevalla.json')
     generated.update(coastal_assets(output))

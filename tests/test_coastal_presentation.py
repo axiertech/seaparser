@@ -57,3 +57,18 @@ class CoastalPresentationTests(unittest.TestCase):
             elif mutate=='arrival':bad['routes'][0]['arrival_weather_status']='failed'
             else:bad['result_qualification']='verified'
             with self.assertRaises(ValueError):export_estimated_coastal_gpx(bad,'water-0')
+
+
+    def test_partial_swedish_coast_export_excludes_untraversed_target(self):
+        view=deepcopy(self.view);view['profile']='trelleborg-stromstad'
+        route=view['routes'][0];route.update(partial=True,status='limit_reached',arrival_weather_status='not_requested',
+            stop_reason='Common forecast validity ends before target',arrival_time=None,travel_seconds=None)
+        route['waypoints']=route['path'][:4];route['path']=route['path'][:4]
+        root=ET.fromstring(export_estimated_coastal_gpx(view,'water-0'))
+        ns={'g':'http://www.topografix.com/GPX/1/1'}
+        self.assertIn('DELRUTT',root.findtext('g:metadata/g:name',namespaces=ns))
+        self.assertIn('målet ej nått',root.findtext('g:metadata/g:desc',namespaces=ns))
+        points=root.findall('g:rte/g:rtept',ns);self.assertEqual(len(points),4)
+        self.assertAlmostEqual(float(points[-1].get('lon')),route['path'][-1][0],places=9)
+        route['waypoints']=[*route['path'],[11.15,58.93]]
+        with self.assertRaises(ValueError):export_estimated_coastal_gpx(view,'water-0')

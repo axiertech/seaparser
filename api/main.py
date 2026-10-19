@@ -56,6 +56,18 @@ def create_app(store=None,*,resource_profile='local',coastal_store=None):
             'server_timeout_seconds':regional.timeout,'max_active':regional.max_active,
             'performance_target_seconds':policy['performance_target_seconds']}
 
+    @app.get('/api/coastal/scenarios/trelleborg-stromstad')
+    async def swedish_coast_snapshot():
+        from application.coastal_presentation import swedish_coast_snapshot
+        return swedish_coast_snapshot()
+
+    @app.get('/api/coastal/scenarios/trelleborg-stromstad/routes/{route_id}/gpx')
+    async def swedish_coast_gpx(route_id:str):
+        from application.coastal_presentation import swedish_coast_snapshot
+        try:content=export_estimated_coastal_gpx(swedish_coast_snapshot(),route_id)
+        except ValueError as error:raise HTTPException(422,str(error)) from error
+        return Response(content,media_type='application/gpx+xml')
+
     @app.post('/api/coastal/plans',status_code=202)
     async def create_coastal_plan(request:CoastalPlanInput):
         try:
