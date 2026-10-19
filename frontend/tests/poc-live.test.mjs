@@ -9,7 +9,8 @@ import {createMap} from '../map/map-component.mjs';
 const source=readFileSync(new URL('../poc/poc-transport.mjs',import.meta.url),'utf8').replace("'./client.mjs'",JSON.stringify(new URL('../map/client.mjs',import.meta.url).href));
 const {createPocTransport}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
-async function until(check,ms=30000){const end=Date.now()+ms;while(Date.now()<end){if(check())return;await wait(50);}assert.fail('PoC integration timed out');}
+async function until(check,ms){const end=Date.now()+ms;while(Date.now()<end){if(check())return;await wait(50);}assert.fail('PoC integration timed out');}
+async function assertIdle(api){const r=await fetch(api.url+(api.public?'/api/poc/health':'/api/health'));assert.equal(r.status,200);const health=await r.json();assert.deepEqual(health.active_jobs,{local:0,regional:0},'Föregående jobb måste vara avslutat och reapat före nästa test');}
 async function server(){
  if(process.env.SEAPARSER_POC_URL)return {url:process.env.SEAPARSER_POC_URL.replace(/\/$/,''),public:true,close:async()=>{}};
  const root=new URL('../../',import.meta.url),local=new URL('.venv/bin/python',root),python=process.env.PYTHON||(existsSync(local)?local.pathname:'python');
@@ -19,9 +20,10 @@ async function server(){
  return {url,public:false,close:async()=>{if(child.exitCode!==null)return;const done=new Promise(r=>child.once('exit',r));child.kill();await done;}};
 }
 
-test('free map clicks → live real-data API → comparison → GPX; coverage/time/limits remain enforced',async()=>{
+test('free map clicks → live real-data API → comparison → GPX; coverage/time/limits remain enforced',{timeout:240000},async()=>{
  const api=await server();let view,dom;
  try{
+  await assertIdle(api);
   const html=await fetch(api.url+(api.public?'/poc/index.html':'/'));assert.equal(html.status,200);
   const text=await html.text();assert.equal(text,readFileSync(new URL('../../artifacts/poc-site/index.html',import.meta.url),'utf8'));
   dom=new JSDOM(text,{url:api.url+'/poc/'});globalThis.window=dom.window;globalThis.document=dom.window.document;
@@ -39,7 +41,7 @@ test('free map clicks → live real-data API → comparison → GPX; coverage/ti
   click(start);click(target);assert.equal(document.getElementById('start-place').value,'custom');assert.equal(document.getElementById('target-place').value,'custom');
   assert.equal(Number(document.getElementById('start-lat').value),Number(start.latitude.toFixed(10)));
   document.getElementById('departure-choice').value='0';
-  const submit=async()=>{document.getElementById('plan-form').dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));await until(()=>!document.getElementById('calculate').disabled);};
+  const submit=async()=>{document.getElementById('plan-form').dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));await view.whenIdle();};
   await submit();const link=document.querySelector('.route a');assert.ok(link,document.getElementById('status').textContent);
   assert.equal(document.querySelectorAll('path[stroke="#718795"]').length,0,'Alla beräkningspolygoner ska vara dolda');
   assert.ok(document.querySelectorAll('path[stroke="#087156"],path[stroke="#b78023"]').length>0,'Beräknade rutter ska fortfarande visas');
@@ -56,7 +58,7 @@ test('free map clicks → live real-data API → comparison → GPX; coverage/ti
   await assert.rejects(transport.plan({profile:'vinga-poc',start,target,candidate_limit:4,departure_offsets_seconds:[43200]},{}),/Avgången saknar/);
   document.getElementById('departure-choice').value='0';document.getElementById('weather-preset').value='waves';document.getElementById('weather-preset').dispatchEvent(new dom.window.Event('change'));await submit();
   assert.equal(document.querySelectorAll('.route a').length,0);assert.match(document.getElementById('status').textContent,/Ingen GPX/);
- }finally{view?.dispose();dom?.window.close();await api.close();}
+ }finally{try{await view?.dispose();await assertIdle(api);}finally{dom?.window.close();await api.close();}}
 });
 
 test('published regional clicks → asynchronous real-data job → comparison → estimated GPX',{
@@ -64,6 +66,7 @@ test('published regional clicks → asynchronous real-data job → comparison �
 },async()=>{
  const api=await server();assert.equal(api.public,true,'Regional public verification requires the activated deployment');let view,dom;
  try{
+  await assertIdle(api);
   const response=await fetch(api.url+'/poc/index.html?example=vinga-uddevalla');assert.equal(response.status,200);
   const html=await response.text();assert.equal(html,readFileSync(new URL('../../artifacts/poc-site/index.html',import.meta.url),'utf8'));
   dom=new JSDOM(html,{url:api.url+'/poc/'});globalThis.window=dom.window;globalThis.document=dom.window.document;
@@ -84,7 +87,7 @@ test('published regional clicks → asynchronous real-data job → comparison �
   document.getElementById('departure-choice').value='0';
   document.getElementById('plan-form').dispatchEvent(new dom.window.Event('submit',{cancelable:true}));
   assert.equal(document.getElementById('calculate').disabled,true);
-  await until(()=>!document.getElementById('calculate').disabled,275000);
+  await view.whenIdle();
   assert.match(document.getElementById('status').textContent,/Beräkning klar för dina val/);
   assert.ok(document.querySelectorAll('#results .route').length>=1);
   assert.match(document.getElementById('results').textContent,/kortast restid.*HÖG OSÄKERHET/);
@@ -96,5 +99,5 @@ test('published regional clicks → asynchronous real-data job → comparison �
   assert.match(xml.querySelector('metadata desc').textContent,/Vädergränser EJ verifierade/);
   document.querySelector('#results button').click();assert.ok(document.querySelector('.route.picked'));
   view.map.fire('click',{latlng:L.latLng(0,0)});assert.equal(document.querySelectorAll('#results a').length,0);
- }finally{view?.dispose();dom?.window.close();await api.close();}
+ }finally{try{await view?.dispose();await assertIdle(api);}finally{dom?.window.close();await api.close();}}
 });

@@ -12,21 +12,30 @@ export async function loadScene(fetcher = fetch, profile = 'vinga') {
   return json(await fetcher('/api/scene?profile=' + profile));
 }
 async function runPlan(path,payload,{fetcher=fetch,pause=ms=>new Promise(resolve=>setTimeout(resolve,ms)),signal,onStatus=()=>{},interval=250}={}) {
-  const created=await json(await fetcher(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal}));
+  const created=await json(await fetcher(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(25000)}));
   if(!/^[a-f0-9]{32}$/.test(created.id))throw new Error('Ogiltigt jobb-id');
   const seconds=created.poll_timeout_seconds??30;
-  if(typeof seconds!=='number'||!Number.isFinite(seconds)||seconds<=0||seconds>3600)throw new Error('Ogiltig beräkningstidsbudget');
-  onStatus({status:'queued',elapsed_seconds:0,server_timeout_seconds:created.server_timeout_seconds});
-  const deadline=Date.now()+seconds*1000;
-  for(let index=0;index<Math.ceil(seconds*1000/interval)&&Date.now()<deadline;index++){
-    if(signal?.aborted)throw new Error('Avbrutet');
-    const state=await json(await fetcher(`${path}/${created.id}`,{signal}));onStatus(state);
-    if(state.status==='completed')return {id:created.id,result:state.result};
-    if(state.status==='failed')throw new Error(state.reason||'Beräkningen misslyckades');
-    await pause(interval);
+  let terminal=false;
+  try {
+    if(typeof seconds!=='number'||!Number.isFinite(seconds)||seconds<=0||seconds>3600)throw new Error('Ogiltig beräkningstidsbudget');
+    onStatus({id:created.id,status:'queued',elapsed_seconds:0,server_timeout_seconds:created.server_timeout_seconds,poll_timeout_seconds:seconds});
+    const deadline=Date.now()+seconds*1000;
+    for(let index=0;index<Math.ceil(seconds*1000/interval)&&Date.now()<deadline;index++){
+      if(signal?.aborted)throw new Error('Avbrutet');
+      const state=await json(await fetcher(`${path}/${created.id}`,{signal}));onStatus(state);
+      if(state.status==='completed'){terminal=true;return {id:created.id,result:state.result};}
+      if(state.status==='failed'){terminal=true;throw new Error(state.reason||'Beräkningen misslyckades');}
+      await pause(interval);
+    }
+    throw new Error('Svarstiden överskreds');
+  } finally {
+    if(!terminal){
+      try {const stopped=await json(await fetcher(`${path}/${created.id}`,{method:'DELETE',signal:AbortSignal.timeout(10000),keepalive:true}));if(stopped.active!==false)throw new Error('Saknat kvitto på avslutat jobb');}
+      catch(cause){const error=new Error('Kunde inte verifiera att det avbrutna jobbet städats; starta inte nästa beräkning.',{cause});error.cleanupFailed=true;throw error;}
+    }
   }
-  throw new Error('Svarstiden överskreds');
 }
+
 export function plan(payload,options){return runPlan('/api/plans',payload,options);}
 export function planCoastal(payload,{fetcher=fetch,...options}={}){
   const bounded=async(path,request={})=>{

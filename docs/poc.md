@@ -119,3 +119,22 @@ skrivbar utanför tjänstens privata temporärkatalog. Aktiveringens HTTPS-prov
 kontrollerar både befintliga Vinga-flödet och regionala fria kartpunkter/GPX.
 Exakt förberedd release och root-kommando redovisas i aktuell överlämning;
 återanvänd inte äldre aktiveringspaket med inaktuell commit/låsfil.
+
+Aktiveringsreparation 2026-10-19: det tidigare provets fasta 30 s väntan
+avbröt klienten före Vinga-jobbets 60 s processgräns. Serverjobbet fortsatte
+och kunde därför blockera nästa regionala prov. Proven väntar nu på
+klientens verkliga slutförande med serverns annonserade pollbudget (70 s
+Vinga, 255 s regionalt), med bibehållna resultat- och GPX-assertions.
+Vid avbrott används DELETE på jobbets statusadress. API:t svarar först efter
+att barnprocessen har avslutats och reapats; UI och test väntar på städningen
+före nästa jobb/DOM-stängning. Sena svar får inte skriva till stängd DOM.
+Health redovisar aktiva lokala/regionala jobb, och varje prov kräver tom kapacitet.
+
+Återställning stoppar PoC-tjänsten innan unit-filen tas bort, återställer
+proxy, kör daemon-reload och kontrollerar både filhashar och systemd-manager
+(not-found, inaktiv, PID 0), tom PoC-cgroup och port 8766 utan lyssnare.
+Äldre API-health och Apache-omladdning måste också lyckas innan ett nytt
+rollback-success.json skrivs. activation.log innehåller hela aktiveringsflödet;
+restoration-check.json skiljer verifierad återställning från enbart återställda filer.
+Samma återställningskontroll körs före en ny aktivering. Ingen root-aktivering
+utförs från den hanterade utvecklingsmiljön.

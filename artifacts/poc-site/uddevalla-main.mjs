@@ -23,11 +23,12 @@ export async function mountRegional(document,L,fetcher=fetch,mapFactory=createMa
     document.querySelector('.legend').textContent='Gråblå streckade konturer: valbart beräkningsunderlag · rött/orange: saknade marina interpolationshörn nära Uddevalla. Inga linjer visas som beräknade rutter.';
     const [w,s,e,n]=data.bbox,ring=[[w,s],[e,s],[e,n],[w,n],[w,s]],empty={type:'FeatureCollection',features:[]};
     const scene={profile:'vinga-uddevalla',map_min_zoom:7,coverage:{type:'FeatureCollection',features:[{type:'Feature',properties:{kind:'source_extract_extent'},geometry:{type:'Polygon',coordinates:[ring]}}]},obstacles:empty,land_display:data.coastline_display};
-    let selected='start',view,revision=0;
+    let selected='start',view,revision=0,disposed=false,abort,pending=Promise.resolve(),cleanupError;
     const setPoint=(name,p)=>{get(name+'-lat').value=p.latitude;get(name+'-lon').value=p.longitude;};
     const point=name=>({latitude:Number(get(name+'-lat').value),longitude:Number(get(name+'-lon').value)});
     const mark=()=>view.endpoints(point('start'),point('target'));
     function check() {
+      if(disposed)return;abort?.abort();get('calculate').disabled=false;
       revision++;document.dispatchEvent(new document.defaultView.Event('seaparser:regional-change'));
       const points=[point('start'),point('target')];
       const issues=[];
@@ -58,21 +59,26 @@ export async function mountRegional(document,L,fetcher=fetch,mapFactory=createMa
     const departure=get('departure-choice');departure.previousSibling.textContent='Avgång / provtid · UTC';departure.replaceChildren();
     for(let i=0;i<data.valid_times.length;i++){const option=document.createElement('option');option.value=String(i);option.textContent=new Date(data.valid_times[i]).toISOString().slice(0,16).replace('T',' ')+' UTC';departure.append(option);}
     get('calculate').textContent='Beräkna regionala rutter';get('show-all').disabled=true;
-    get('plan-form').addEventListener('submit',async event=>{
-      event.preventDefault();check();const expected=revision;
+    const submit=async(event,previous)=>{
+      event.preventDefault();check();const expected=revision;abort=new AbortController();const signal=abort.signal;
       const departureTime=data.valid_times[Number(departure.value)],start=point('start'),target=point('target');
+      get('calculate').disabled=true;status.textContent='Startar regional beräkning…';
+      try{
+        await previous;if(disposed||revision!==expected)return;if(cleanupError)throw cleanupError;
       if([start,target].some(p=>!Number.isFinite(p.latitude)||!Number.isFinite(p.longitude)||p.longitude<w||p.longitude>e||p.latitude<s||p.latitude>n)){status.textContent='Start eller mål ligger utanför det markerade regionala prognosområdet. Ingen beräkning startas.';return;}
       if(!departureTime||departureTime===data.valid_times.at(-1)){status.textContent='Avgången saknar tillräcklig gemensam prognostid. Välj en tidigare tid.';return;}
       const preset=presets[get('weather-preset').value];if(!preset){status.textContent='Välj befintliga vädergränser.';return;}
-      get('calculate').disabled=true;status.textContent='Startar regional beräkning…';
-      try{
-        const job=await planCoastal({start,target,departure:departureTime,boat_profile:'constant-5kn',candidate_limit:2,max_wind_m_s:preset.wind,max_wave_height_m:preset.waves},{fetcher,
-          onStatus:state=>{if(revision===expected&&state.status!=='completed')status.textContent=`${state.status==='queued'?'Köad':'Beräknar'} · ${Math.round(state.elapsed_seconds||0)} s. Måltid 60 s; jobbet får ta högst ${state.server_timeout_seconds||240} s. Behåll sidan öppen.`;}});
-        if(revision!==expected)return;
+        const job=await planCoastal({start,target,departure:departureTime,boat_profile:'constant-5kn',candidate_limit:2,max_wind_m_s:preset.wind,max_wave_height_m:preset.waves},{fetcher,signal,
+          onStatus:state=>{if(!disposed&&revision===expected&&state.status!=='completed')status.textContent=`${state.status==='queued'?'Köad':'Beräknar'} · ${Math.round(state.elapsed_seconds||0)} s. Måltid 60 s; jobbet får ta högst ${state.server_timeout_seconds||240} s. Behåll sidan öppen.`;}});
+        if(disposed||revision!==expected)return;
         renderCoastalView(document,view,job.result,{live:true,gpx:id=>`/api/poc/coastal/plans/${job.id}/routes/${encodeURIComponent(id)}/gpx`,evidenceUrl:`/api/poc/coastal/plans/${job.id}`});
-      }catch(error){if(revision===expected){status.textContent=error.message.includes('404')?'Det regionala API:t är ännu inte aktiverat. Ingen beräkning eller ny GPX har skapats.':error.message;get('results').replaceChildren();}}
-      finally{get('calculate').disabled=false;}
-    });
+      }catch(error){if(error.cleanupFailed)cleanupError=error;if(!disposed&&revision===expected){status.textContent=error.message.includes('404')?'Det regionala API:t är ännu inte aktiverat. Ingen beräkning eller ny GPX har skapats.':error.message;get('results').replaceChildren();}}
+      finally{if(!disposed&&revision===expected)get('calculate').disabled=Boolean(cleanupError);}
+    };
+    get('plan-form').addEventListener('submit',event=>{event.preventDefault();if(!disposed)pending=submit(event,pending);});
+    view.whenIdle=()=>pending;
+    const dispose=view.dispose?.bind(view);let disposal;
+    view.dispose=()=>disposal??=(async()=>{disposed=true;revision++;abort?.abort();dispose?.();await pending;if(cleanupError)throw cleanupError;})();
     function samples(){
       const i=Number(departure.value),host=get('regional-samples');host.replaceChildren();
       for(const [name,probe] of Object.entries(data.probes)){

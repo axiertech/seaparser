@@ -37,7 +37,7 @@ class JobStore:
         self.runner=runner or self.compute
         self.timeout=timeout;self.max_active=max_active;self.max_jobs=max_jobs;self.ttl=ttl
         self.max_result_bytes=max_result_bytes
-        self.jobs={};self.tasks=set()
+        self.jobs={};self.tasks=set();self.tasks_by_key={}
 
     def prune(self):
         now=monotonic()
@@ -56,8 +56,10 @@ class JobStore:
         if len(self.jobs)>=self.max_jobs:
             raise BusyError('Beräkningskapaciteten är upptagen; försök igen senare')
         key=uuid4().hex;self.jobs[key]=Job()
-        task=asyncio.create_task(self.run(key,payload));self.tasks.add(task)
-        task.add_done_callback(self.tasks.discard)
+        task=asyncio.create_task(self.run(key,payload));self.tasks.add(task);self.tasks_by_key[key]=task
+        def finished(task):
+            self.tasks.discard(task);self.tasks_by_key.pop(key,None)
+        task.add_done_callback(finished)
         return key
 
     def get(self,key):
@@ -107,8 +109,18 @@ class JobStore:
                     pass
                 await process.wait()
 
+    async def cancel(self,key):
+        """Release capacity only after cancellation has reaped the worker."""
+        job=self.jobs.get(key)
+        if job is None:return None
+        task=self.tasks_by_key.get(key)
+        if task is not None:
+            if not task.done() and not task.cancelling():task.cancel()
+            # A disconnected DELETE caller must not interrupt worker cleanup.
+            await asyncio.shield(asyncio.gather(task,return_exceptions=True))
+        if job.status in ('queued','running'):
+            job.status='failed';job.reason='Beräkningen avbröts';job.result=None
+        return job
+
     async def close(self):
-        pending=tuple(self.tasks)
-        for task in pending:
-            task.cancel()
-        await asyncio.gather(*pending,return_exceptions=True)
+        await asyncio.gather(*(self.cancel(key) for key in tuple(self.tasks_by_key)))

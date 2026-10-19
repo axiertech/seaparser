@@ -84,3 +84,40 @@ class CoastalApiTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(self.regional.jobs),2)
         self.assertEqual((await self.client.get('/api/coastal/plans/'+keys[0])).status_code,404)
         self.assertEqual((await self.client.get('/api/coastal/plans/'+keys[-1])).status_code,200)
+
+    async def test_cancel_reaps_real_worker_before_next_job_and_gpx(self):
+        import os
+        original=asyncio.create_subprocess_exec;children=[]
+        async def spawn(*args,**kwargs):
+            child=await original(*args,**kwargs);children.append(child);return child
+        reference=self.regional.runner
+        for store,path,payload in ((self.regional,'/api/coastal/plans',self.payload),
+            (self.local,'/api/plans',{'profile':'synthetic','start':{'latitude':58,'longitude':11},'target':{'latitude':58.001,'longitude':11}})):
+            with self.subTest(path=path),patch('infrastructure.planning_jobs.asyncio.create_subprocess_exec',side_effect=spawn):
+                store.runner=store.compute;before=len(children)
+                response=await self.client.post(path,json=payload);self.assertEqual(response.status_code,202)
+                key=response.json()['id']
+                for _ in range(100):
+                    if len(children)>before:break
+                    await asyncio.sleep(.01)
+                self.assertGreater(len(children),before)
+                cancelled=await asyncio.gather(self.client.delete(path+'/'+key),self.client.delete(path+'/'+key))
+                self.assertTrue(all(r.status_code==200 and r.json()['active'] is False for r in cancelled))
+                child=children[-1];self.assertIsNotNone(child.returncode)
+                with self.assertRaises(ProcessLookupError):os.kill(child.pid,0)
+                self.assertFalse(store.tasks_by_key)
+                self.assertEqual((await self.client.get('/api/health')).json()['active_jobs'],{'local':0,'regional':0})
+        self.regional.runner=reference
+        key,state=await self.finished(self.payload);self.assertEqual(state['status'],'completed')
+        route=state['result']['routes'][0]
+        self.assertEqual((await self.client.get(f'/api/coastal/plans/{key}/routes/{route["id"]}/gpx')).status_code,200)
+
+    async def test_cancel_before_start_does_not_leave_queued_capacity(self):
+        called=[]
+        async def runner(payload):called.append(True);return {}
+        self.regional.runner=runner
+        key=self.regional.submit(self.payload)
+        await self.regional.cancel(key)
+        self.assertFalse(called);self.assertEqual(self.regional.get(key).status,'failed')
+        self.assertFalse(self.regional.tasks_by_key)
+        _,state=await self.finished(self.payload);self.assertEqual(state['status'],'completed')

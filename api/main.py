@@ -31,7 +31,9 @@ def create_app(store=None,*,resource_profile='local',coastal_store=None):
 
     @app.get('/api/health')
     async def health():
-        return {'status':'ok','synthetic':False}
+        return {'status':'ok','synthetic':False,'active_jobs':{
+            'local':sum(j.status in ('queued','running') for j in jobs.jobs.values()),
+            'regional':sum(j.status in ('queued','running') for j in regional.jobs.values())}}
 
     @app.get('/api/scene')
     async def get_scene(profile:Literal['synthetic','vinga','vinga-native','vinga-poc']='vinga'):
@@ -69,6 +71,11 @@ def create_app(store=None,*,resource_profile='local',coastal_store=None):
         if found is None:raise HTTPException(404,'Jobbet saknas eller har gått ut; beräkna på nytt')
         return found
 
+    @app.delete('/api/coastal/plans/{key}')
+    async def cancel_coastal_plan(key:str):
+        regional_job(key);found=await regional.cancel(key)
+        return {'id':key,'status':found.status,'active':False}
+
     @app.get('/api/coastal/plans/{key}')
     async def get_coastal_plan(key:str):
         found=regional_job(key)
@@ -89,6 +96,11 @@ def create_app(store=None,*,resource_profile='local',coastal_store=None):
         if found is None:
             raise HTTPException(404,'Jobbet saknas eller har gått ut')
         return found
+
+    @app.delete('/api/plans/{key}')
+    async def cancel_plan(key:str):
+        job(key);found=await jobs.cancel(key)
+        return {'id':key,'status':found.status,'active':False}
 
     @app.get('/api/plans/{key}')
     async def get_plan(key:str):

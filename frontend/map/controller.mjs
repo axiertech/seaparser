@@ -22,7 +22,7 @@ export async function mount(document, mapFactory, transport = { loadScene, plan 
   const status = byId('status'); const results = byId('results');
   const setPoint = (name, point) => { byId(`${name}-lat`).value = point.latitude.toFixed(10); byId(`${name}-lon`).value = point.longitude.toFixed(10); };
   const getPoint = name => ({ latitude: Number(byId(`${name}-lat`).value), longitude: Number(byId(`${name}-lon`).value) });
-  let selected = 'start'; let generation = 0; let abort; let lastResult;
+  let selected = 'start'; let generation = 0; let abort; let lastResult; let pending=Promise.resolve(),disposed=false,cleanupError;
   try {
     const profile = document.documentElement.dataset.profile || 'vinga';
     const scene = await transport.loadScene(undefined, profile);
@@ -93,6 +93,7 @@ export async function mount(document, mapFactory, transport = { loadScene, plan 
       return { ...scene.obstacles, features: scene.obstacles.features.map(feature => ({ ...feature, properties: { ...feature.properties, margin_m: margin } })) };
     }
     function invalidate() {
+      if(disposed)return;
       generation++; abort?.abort(); lastResult=null; if(byId('show-all'))byId('show-all').disabled=true; results.replaceChildren(); if (byId('comparison')) byId('comparison').textContent = ''; byId('provenance').textContent = '';
       view.show({ routes: { features: [] }, obstacles: previewObstacles() });
       view.endpoints(getPoint('start'), getPoint('target')); byId('calculate').disabled = false;
@@ -104,10 +105,11 @@ export async function mount(document, mapFactory, transport = { loadScene, plan 
     if (background && scene.profile !== 'synthetic') background.addEventListener('click', () => { view.background(); background.disabled = true; }, { once: true });
     for (const name of ['start', 'target']) byId(`choose-${name}`).addEventListener('click', () => { selected = name; status.textContent = `Klicka för att välja ${name === 'start' ? 'start' : 'mål'}.`; });
     byId('plan-form').addEventListener('input', invalidate);
-    byId('plan-form').addEventListener('submit', async event => {
+    const submit=async(event,previous)=>{
       event.preventDefault(); invalidate(); const current = generation; abort = new AbortController();
       byId('calculate').disabled = true; status.textContent = scene.static_catalog ? 'Hämtar undersökta ruttalternativ…' : 'Beräknar rutter…';
       try {
+        await previous;if(disposed||current!==generation)return;if(cleanupError)throw cleanupError;
         if(profile==='vinga-poc'&&!scene.static_catalog){
           if(!withinCoverage(getPoint('start'),scene.coverage)||!withinCoverage(getPoint('target'),scene.coverage))throw new Error('Start eller mål ligger utanför det markerade prognosområdet.');
           if(!['all',...scene.departure_options.map(d=>String(d.offset_seconds))].includes(byId('departure-choice').value))throw new Error('Avgången saknar tillgängliga prognosdata. Välj en av de angivna tiderna.');
@@ -115,7 +117,7 @@ export async function mount(document, mapFactory, transport = { loadScene, plan 
         const [candidateChoice, departureChoice] = (byId('search-budget')?.value || '2:0,600').split(':');
         const departureOffsets = byId('departure-choice') ? (byId('departure-choice').value==='all' ? scene.departure_options.map(d=>d.offset_seconds) : [Number(byId('departure-choice').value)]) : regional ? departureChoice.split(',').map(Number) : [0, 600];
         const response = await transport.plan({ profile, start: getPoint('start'), target: getPoint('target'), margin_m: Number(byId('margin').value), scenario: regional ? 'baseline' : byId('scenario').value, ...(regional ? { candidate_limit: profile==='vinga-poc' ? 4 : Number(candidateChoice), ...(profile==='vinga-poc'?{boat_profile:byId('boat-profile').value}:{}), max_wind_m_s: Number(byId('wind-limit').value), max_wave_height_m: Number(byId('wave-limit').value) } : {}), departure_offsets_seconds: departureOffsets }, { signal: abort.signal });
-        if (current !== generation) return;
+        if (disposed||current !== generation) return;
         const result = response.result; lastResult=result; if(byId('show-all'))byId('show-all').disabled=false; view.show(result,profile==='vinga-poc'?result.alternative_comparison.fastest_id:null);
         const summary = result.geometry_search;
         const comparison = result.alternative_comparison;
@@ -144,9 +146,13 @@ export async function mount(document, mapFactory, transport = { loadScene, plan 
           if (['verified', 'assumed'].includes(category(route))) { const link = document.createElement('a'); link.href = transport.gpxUrl ? transport.gpxUrl(response.id,route.id) : gpxUrl(response.id, route.id); link.textContent = 'Hämta planerad GPX'; link.download = 'seaparser-plan.gpx'; card.append(link); }
           results.append(card);
         }
-      } catch (error) { if (current === generation) status.textContent = error.message; }
-      finally { if (current === generation) byId('calculate').disabled = false; }
-    });
+      } catch (error) { if(error.cleanupFailed)cleanupError=error; if (!disposed&&current === generation) status.textContent = error.message; }
+      finally { if (!disposed&&current === generation) byId('calculate').disabled = Boolean(cleanupError); }
+    };
+    byId('plan-form').addEventListener('submit',event=>{event.preventDefault();if(!disposed)pending=submit(event,pending);});
+    view.whenIdle=()=>pending;
+    const dispose=view.dispose?.bind(view);let disposal;
+    view.dispose=()=>disposal??=(async()=>{disposed=true;generation++;abort?.abort();dispose?.();await pending;if(cleanupError)throw cleanupError;})();
     status.textContent = `${scene.notice} Klicka för start, därefter mål, och beräkna.`;
     return view;
   } catch (error) { status.textContent = `Kan inte starta: ${error.message}. Kontrollera sidans dataresurser och API-anslutning.`; }

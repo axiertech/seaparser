@@ -4,6 +4,19 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { mount } from '../map/controller.mjs';
 
+test('disposing a pending controller prevents late writes to a closed DOM',async()=>{
+ const dom=new JSDOM(readFileSync(new URL('../map/index.html',import.meta.url),'utf8'));
+ const result=JSON.parse(readFileSync(new URL('../../artifacts/real-route-budget/result.json',import.meta.url),'utf8'));
+ let release,started=false;const delayed=new Promise(r=>release=r);
+ const view=await mount(dom.window.document,()=>({show(){},endpoints(){},dispose(){}}),{
+  loadScene:async()=>({profile:'synthetic',start:[11,58],target:[11,58.001],obstacles:result.obstacles,notice:'test'}),
+  plan:async()=>{started=true;await delayed;return {id:'a'.repeat(32),result};}
+ });
+ dom.window.document.getElementById('plan-form').dispatchEvent(new dom.window.Event('submit',{cancelable:true}));
+ await new Promise(r=>setImmediate(r));assert.equal(started,true);
+ const stopped=view.dispose();dom.window.close();release();await stopped;await view.whenIdle();
+});
+
 for (const [profile, artifact] of [['vinga', 'real-route-budget'], ['vinga-native', 'supported-native-routes']]) test(`${profile}: utvecklingsval och rätt avgångstider visar gemensam vinnare`, async () => {
   const dom = new JSDOM(readFileSync(new URL('../map/index.html', import.meta.url), 'utf8'));
   try {

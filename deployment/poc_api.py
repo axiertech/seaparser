@@ -82,10 +82,37 @@ def atomic_root_copy(source,target):
         if created and pending.exists():pending.unlink()
 
 
+def restored_state(stage,manifest):
+    """Check disk AND systemd after daemon-reload, including leftover workers."""
+    from datetime import datetime,timezone
+    if UNIT.exists() or UNIT.is_symlink():raise ValueError('PoC unit still exists after rollback')
+    check_system(manifest)
+    r=subprocess.run(['/usr/bin/systemctl','show','seaparser-poc-api.service',
+        '--property=LoadState,ActiveState,MainPID,ControlGroup'],capture_output=True,text=True)
+    fields=dict(line.split('=',1) for line in r.stdout.splitlines() if '=' in line)
+    if (r.returncode not in (0,1,4) or fields.get('LoadState')!='not-found'
+            or fields.get('ActiveState') not in ('inactive','failed') or fields.get('MainPID')!='0'):
+        raise ValueError('PoC manager state not cleared; daemon-reload/stop must finish: '+str(fields))
+    group=fields.get('ControlGroup','')
+    groups={'system.slice/seaparser-poc-api.service'}
+    if group:groups.add(group.lstrip('/'))
+    for name in groups:
+        root=Path('/sys/fs/cgroup')/name
+        if any(p.read_text().strip() for p in root.rglob('cgroup.procs')):
+            raise ValueError('PoC cgroup still contains processes')
+    if subprocess.check_output(['/usr/bin/ss','-H','-ltn','sport = :8766'],text=True).strip():
+        raise ValueError('PoC port 8766 still has a listener')
+    result={'verified':True,'commit':manifest['commit'],'systemd':fields,'port_8766':'not_listening',
+            'worker_processes':'none in stopped PoC cgroup','checked_at':datetime.now(timezone.utc).isoformat()}
+    (stage/'restoration-check.json').write_text(json.dumps(result,indent=2)+'\n')
+    return result
+
+
 def root_action(action,stage):
     if os.geteuid()!=0:raise ValueError('Run activation as root in the ordinary SSH terminal')
     with (stage/'activation.lock').open('a') as lock:
-        fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB);m=verify(stage,runtime=action!='restore')
+        fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB);m=verify(stage,runtime=action not in ('restore','verify-restored'))
+        if action=='verify-restored':return restored_state(stage,m)
         if action in ('preflight','install'):
             if subprocess.check_output(['/usr/sbin/runuser','-u','seaparser','--','git','-C',str(CHECKOUT),'rev-parse','HEAD'],text=True).strip()!=m['commit'] or subprocess.check_output(['/usr/sbin/runuser','-u','seaparser','--','git','-C',str(CHECKOUT),'status','--porcelain'],text=True).strip():raise ValueError('Reviewed checkout changed')
             ci=json.loads((stage/'ci-success.json').read_text())
@@ -108,8 +135,8 @@ def root_action(action,stage):
 
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('action',choices=('prepare','verify','preflight','install','restore'));p.add_argument('stage',type=Path);a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('action',choices=('prepare','verify','preflight','install','restore','verify-restored'));p.add_argument('stage',type=Path);a=p.parse_args()
     try:
         result=prepare(a.stage) if a.action=='prepare' else verify(a.stage) if a.action=='verify' else root_action(a.action,a.stage)
-        if a.action=='prepare':print(json.dumps(result,indent=2))
+        if a.action in ('prepare','verify-restored'):print(json.dumps(result,indent=2))
     except (ValueError,OSError,KeyError) as e:p.exit(1,str(e)+'\n')

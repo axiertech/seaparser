@@ -127,8 +127,8 @@ for (const profile of process.env.SEAPARSER_DEMO_URL && process.env.SEAPARSER_DE
     document.getElementById('margin').value = '3';
     document.getElementById('margin').dispatchEvent(new dom.window.Event('input', { bubbles: true }));
     assert.equal(document.querySelectorAll('a[download]').length, 0);
-    view.dispose(); view = null; dom.window.close();
-  } finally { view?.dispose(); await api.close(); }
+    await view.dispose(); view = null; dom.window.close();
+  } finally { await view?.dispose(); await api.close(); }
 });
 
 test('endast fullständigt verifierad ankomst är grön; hårt väderfel rött', () => {

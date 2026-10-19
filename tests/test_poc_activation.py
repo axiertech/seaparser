@@ -1,10 +1,49 @@
 """PoC activation isolates its service and proxy; failure/rollback retain the old demo."""
 from pathlib import Path
-import json,tempfile,unittest
+import json,tempfile,unittest,subprocess,os
+from types import SimpleNamespace
 from unittest.mock import patch
 from deployment import poc_api as p
 
 class PocActivationTests(unittest.TestCase):
+    def test_rollback_requires_unloaded_manager_zero_pid_and_empty_port(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            stage=Path(tmp);unit=stage/'absent.service';manifest={'commit':'a'*40}
+            state='LoadState=not-found\nActiveState=inactive\nMainPID=0\nControlGroup=\n'
+            with patch.object(p,'UNIT',unit),patch.object(p,'check_system'),patch.object(p.subprocess,'run') as manager,patch.object(p.subprocess,'check_output',return_value='') as port:
+                for invalid in (state.replace('not-found','loaded'),state.replace('MainPID=0','MainPID=123'),state.replace('inactive','active')):
+                    manager.return_value=SimpleNamespace(returncode=0,stdout=invalid)
+                    with self.assertRaises(ValueError):p.restored_state(stage,manifest)
+                    self.assertFalse((stage/'restoration-check.json').exists())
+                manager.return_value=SimpleNamespace(returncode=0,stdout=state);port.return_value='LISTEN 8766'
+                with self.assertRaises(ValueError):p.restored_state(stage,manifest)
+                port.return_value='';self.assertTrue(p.restored_state(stage,manifest)['verified'])
+
+    def test_failed_sequential_public_flow_stops_before_removing_unit_and_reloads(self):
+        # Exercise the actual shell's ERR path with simulated system commands only.
+        with tempfile.TemporaryDirectory() as tmp:
+            stage=Path(tmp);(stage/'release').mkdir();(stage/'manifest.json').write_text(json.dumps({'release':str(stage/'release')}))
+            fake=stage/'fake';fake.write_text('''#!/bin/bash
+echo "$*" >> "$TRACE"
+if [[ "$1 $2" == 'poc verify-restored' ]]; then echo '{"verified":true}' > "$STAGE/restoration-check.json"; fi
+if [[ "$1" == runuser ]]; then exit 7; fi
+if [[ "$1 $2" == 'systemctl show' ]]; then echo 123; fi
+''');fake.chmod(0o700)
+            source=(Path(__file__).resolve().parents[1]/'deployment/activate-poc-api.sh').read_text()
+            source=source.replace('/usr/bin/test "$(/usr/bin/id -u)" -eq 0','true').replace('/home/web/seaparser/autonomy/run.lock',str(stage/'run.lock'))
+            source=source.replace('/usr/bin/python3 -B -m deployment.poc_api',str(fake)+' poc')
+            for command,path in (('systemctl','/usr/bin/systemctl'),('apache2ctl','/usr/sbin/apache2ctl'),('curl','/usr/bin/curl'),('ss','/usr/bin/ss'),('runuser','/usr/sbin/runuser')):
+                source=source.replace(path,str(fake)+' '+command)
+            script=stage/'activate.sh';script.write_text(source)
+            result=subprocess.run(['/bin/bash',str(script)],env=os.environ|{'TRACE':str(stage/'trace'),'STAGE':str(stage)},capture_output=True,text=True)
+            self.assertEqual(result.returncode,7,result.stdout+result.stderr)
+            lines=(stage/'trace').read_text().splitlines();start=next(i for i,s in enumerate(lines) if s.startswith('runuser'))
+            tail=lines[start+1:]
+            expected=('systemctl stop seaparser-poc-api.service','poc restore ','systemctl daemon-reload','apache2ctl configtest','systemctl reload apache2','curl ','poc verify-restored ')
+            self.assertEqual(len(tail),len(expected),tail)
+            self.assertTrue(all(line.startswith(prefix) for line,prefix in zip(tail,expected)),tail)
+            self.assertTrue((stage/'rollback-success.json').exists())
+
     def test_existing_confinement_is_retained_in_isolated_service(self):
         before=(Path(__file__).resolve().parents[1]/'deployment/seaparser-api.service').read_text()
         result=p.unit_for_release(before,Path('/home/web/seaparser/releases/poc-'+'a'*40))

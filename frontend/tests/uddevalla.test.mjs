@@ -7,6 +7,25 @@ const source=readFileSync(new URL('../poc/uddevalla-main.mjs',import.meta.url),'
 const {mountRegional,missingCell}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 const data=JSON.parse(readFileSync(new URL('../../fixtures/vinga-uddevalla-preflight.json',import.meta.url),'utf8'));
 
+test('regional disposal awaits an in-flight response without touching the closed DOM',async()=>{
+ const dom=new JSDOM(readFileSync(new URL('../poc/index.html',import.meta.url),'utf8'));
+ let release,polled=false;const delayed=new Promise(r=>release=r),id='b'.repeat(32);
+ const layer={addTo(){return this;}},L={layerGroup:()=>layer,geoJSON:()=>layer};
+ const view=await mountRegional(dom.window.document,L,async(path,options)=>{
+  if(path==='vinga-uddevalla.json')return new Response(JSON.stringify(data));
+  if(options?.method==='POST')return new Response(JSON.stringify({id,poll_timeout_seconds:255}));
+  polled=true;await delayed;return new Response(JSON.stringify({status:'completed',result:{}}));
+ },()=>({map:{},background(){},show(){},endpoints(){},dispose(){}}));
+ dom.window.document.getElementById('plan-form').dispatchEvent(new dom.window.Event('submit',{cancelable:true}));
+ for(let i=0;i<20&&!polled;i++)await new Promise(r=>setImmediate(r));assert.equal(polled,true);
+ // An invalid second submission must also retain the first job's cleanup chain.
+ dom.window.document.getElementById('start-lat').value='0';
+ dom.window.document.getElementById('plan-form').dispatchEvent(new dom.window.Event('submit',{cancelable:true}));
+ let finished=false;const stopped=view.dispose().then(()=>finished=true);
+ dom.window.close();await new Promise(r=>setImmediate(r));assert.equal(finished,false);
+ release();await stopped;await view.whenIdle();assert.equal(finished,true);
+});
+
 test('regional native masks reject missing corners and outside points; zero is not a gap',()=>{
  const product={longitude:[11,12],latitude:[57,58],node_valid_all_times:[[true,true],[true,false]]};
  assert.equal(missingCell(product,{longitude:11.1,latitude:57.1}),'missing');
@@ -33,7 +52,7 @@ test('same PoC displays source gaps and free regional points without fabricating
   view.map.fire('click',{latlng:L.latLng(0,0)});assert.match(document.getElementById('status').textContent,/utanför källans native-grid/);
   assert.equal(document.querySelectorAll('#results a').length,0);assert.equal(requests.length,1);
   assert.ok(document.querySelector('#example-choice option[value="vinga"]'));
- }finally{view?.dispose();dom.window.close();for(const [key,value] of Object.entries(old)){if(value===undefined)delete globalThis[key];else globalThis[key]=value;}}
+ }finally{await view?.dispose();dom.window.close();for(const [key,value] of Object.entries(old)){if(value===undefined)delete globalThis[key];else globalThis[key]=value;}}
 });
 
 test('free regional clicks post selected points, show long-job status, compare routes and clear stale GPX',async()=>{
@@ -68,5 +87,5 @@ test('free regional clicks post selected points, show long-job status, compare r
   document.querySelector('#results button').click();assert.ok(document.querySelector('.route.picked'));
   view.map.fire('click',{latlng:L.latLng(0,0)});assert.equal(document.querySelectorAll('#results a').length,0);
   assert.equal(document.querySelectorAll('path[stroke="#718795"]').length,0);
- }finally{release();for(let i=0;i<100&&document.getElementById('calculate').disabled;i++)await new Promise(r=>setTimeout(r,10));view?.dispose();dom.window.close();for(const [k,v] of Object.entries(old)){if(v===undefined)delete globalThis[k];else globalThis[k]=v;}}
+ }finally{release();for(let i=0;i<100&&document.getElementById('calculate').disabled;i++)await new Promise(r=>setTimeout(r,10));await view?.dispose();dom.window.close();for(const [k,v] of Object.entries(old)){if(v===undefined)delete globalThis[k];else globalThis[k]=v;}}
 });
