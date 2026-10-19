@@ -141,3 +141,42 @@ Den stora OSM-filens separata strömmande inventering tar 14,70 s med
 19 848 ways och 14 125 individuellt slutna ways matchar bevarad inventering;
 källhashen är oförändrad. Detta är inte färdig polygonisering eller bevis på
 navigerbarhet. Den negativa landmarginalbuffringen kvarstår som nästa hinder.
+
+## Stora kustfält: samma data med begränsade temporära buffertar
+
+Cacheschema 4 delar marina `data`-fält per yttersta arrayelement: tidsplan för
+prognoser, rader för statiska fält. Källmetadata lagras separat. Alla delar har
+strikt zlib-framing; den summerade storleken räknar exakt den ursprungliga
+kompakta JSON-payloadens metadata, hakparenteser, kommatecken och värden.
+Gränsen är fortfarande **128 MiB totalt**, inte 128 MiB per del. Förlorade
+fält, ändrade platshållare och avvikande deklarerad avkodad storlek avvisas.
+Ingen ny adapter, källhämtning eller automatisk radering införs. Äldre poster
+bevaras; schema och kodfingerprint ger en ny separat post.
+
+Vindkomponenter beräknas radvis med tidigare taloperationer och kontroller;
+endast slutliga komponentarrayer är stora. Kustläget i samma Copernicus-adapter
+konsumerar samma normaliserade noder radvis till oföränderliga arrayer. Äldre
+lokal/native-utdata förblir fullständigt frysta tuple-strukturer. Form, CF,
+mask, riktning, källvärden och sena fel kontrolleras fortfarande. Råa marina
+listor frigörs före vindnormalisering, efter att proveniensens källhashar sparats.
+
+Det verkliga Trelleborg-underlagets avkodade marina payload är byteidentisk
+med tidigare schema: 73 513 511 byte, SHA-256
+`59a6497cf5e3d24c5b660ee0fd4b4f9db819d82b36456932041c9fa28d785b89`.
+Detta bevarar även null, signerad nolla, metadata och axel-/tidsordning.
+Ingen vädergräns eller reservmetod ändras av minnesoptimeringen.
+
+Tjänstens 1 GiB-gräns är oförändrad. Offlineprov skiljer virtuell adressrymd
+från faktiskt resident minne: 1100 MiB AS gav fortfarande allokeringsfel trots
+lägre RSS. Det följande provet tillåter högst 1500 MiB virtuell adressrymd men
+stoppar samma enda process vid **900 MiB RSS**, med 180 s yttre timeout och
+en intern beräkningstråd. Detta är en mätgräns, ingen ändring av API-tjänsten
+eller bevis för hela ruttjobbets minnes-/tidsbudget.
+
+Slutligt verkligt samlat prov 19 oktober 2026: land + cacheträff + normaliserad
+ström/våg/vind tog 60,18 s och 830,8 MiB topp-RSS. Båda föreslagna ändpunkter
+klarade oförändrad 10 m landmarginal. Före frigjord rå payload var motsvarande
+prov 63,81 s / 895,2 MiB. Ny kall cache utan land tog 50,54 s inklusive
+vindnormalisering / 768,4 MiB. Dessa delprov omfattar inte sökning,
+färdsimulering, resultat, parent-API eller samtidiga jobb. Det större scenariot
+är alltså ännu inte interaktivt kvalificerat.

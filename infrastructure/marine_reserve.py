@@ -156,15 +156,31 @@ class MarineReserve:
         return value,records
 
 
-def _native_wind_array(values,shape):
-    """Convert one validated row at a time, without NumPy retaining Decimals."""
+def _native_wind_rows(values,shape):
+    """Validate the complete source shape, yielding one compact numeric row."""
     if len(values)!=shape[0]:raise ValueError('Exact native wind source shape required')
-    result=np.empty(shape,dtype=float)
     for k,plane in enumerate(values):
         if len(plane)!=shape[1]:raise ValueError('Exact native wind source shape required')
         for j,row in enumerate(plane):
             if len(row)!=shape[2]:raise ValueError('Exact native wind source shape required')
-            result[k,j]=np.fromiter(row,dtype=float,count=shape[2])
+            yield k,j,np.fromiter(row,dtype=float,count=shape[2])
+
+
+def _native_wind_array(values,shape):
+    result=np.empty(shape,dtype=float)
+    for k,j,row in _native_wind_rows(values,shape):result[k,j]=row
+    return result
+
+
+def _native_wind_components(speeds,directions,shape):
+    """Same vector arithmetic, with temporary arrays bounded to one row."""
+    result=np.empty((*shape,2),dtype=float)
+    for (k,j,speed),(_,_,direction) in zip(_native_wind_rows(speeds,shape),_native_wind_rows(directions,shape),strict=True):
+        if np.isinf(speed).any() or np.isinf(direction).any() or np.any(speed[np.isfinite(speed)]<0) or np.any((direction[np.isfinite(direction)]<0)|(direction[np.isfinite(direction)]>360)):
+            raise ValueError('Invalid source wind')
+        result[k,j,:,0]=-speed*np.sin(np.deg2rad(direction))
+        result[k,j,:,1]=-speed*np.cos(np.deg2rad(direction))
+    result.flags.writeable=False
     return result
 
 
@@ -183,10 +199,7 @@ class NativeWindWithReserve(MarineReserve):
         native_x,native_y=np.meshgrid(np.array(sample.x_m,dtype=float),np.array(sample.y_m,dtype=float))
         self.grid_longitude,self.grid_latitude=MET_FORWARD.transform(native_x,native_y,direction='INVERSE',errcheck=True)
         expected=(len(self.times),len(sample.y_m),len(sample.x_m))
-        speed=_native_wind_array(sample.speed_m_s,expected);direction=_native_wind_array(sample.direction_from_degrees,expected)
-        if speed.shape!=expected or direction.shape!=expected:raise ValueError('Exact native wind source shape required')
-        if np.isinf(speed).any() or np.isinf(direction).any() or np.any(speed[np.isfinite(speed)]<0) or np.any((direction[np.isfinite(direction)]<0)|(direction[np.isfinite(direction)]>360)):raise ValueError('Invalid source wind')
-        self.values=np.stack((-speed*np.sin(np.deg2rad(direction)),-speed*np.cos(np.deg2rad(direction))),axis=-1);self.values.flags.writeable=False
+        self.values=_native_wind_components(sample.speed_m_s,sample.direction_from_degrees,expected)
         self.valid=np.isfinite(self.values).all(axis=-1);self.x,self.y=FORWARD.transform(self.grid_longitude,self.grid_latitude)
         if (self.grid_longitude.shape!=self.valid.shape[1:] or self.grid_latitude.shape!=self.valid.shape[1:]
                 or not np.isfinite(self.grid_longitude).all() or not np.isfinite(self.grid_latitude).all()):raise ValueError('Exact finite native wind coordinates required')

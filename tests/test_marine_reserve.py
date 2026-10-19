@@ -79,6 +79,24 @@ class MarineReserveTests(unittest.TestCase):
         self.assertEqual(records[0].source_time,sample.times[-1])
         self.assertEqual(records[0].time_offset_seconds,-3600)
 
+    def test_row_components_keep_vectors_gaps_and_hard_source_rejections(self):
+        from infrastructure.marine_reserve import _native_wind_components
+        speed=[[[2.,2.,2.,2.,0.,float('nan')]]]
+        direction=[[[0.,90.,180.,270.,359.,45.]]]
+        values=_native_wind_components(speed,direction,(1,1,6))
+        np.testing.assert_allclose(values[0,0,:4],[(0,-2),(-2,0),(0,2),(2,0)],atol=1e-15)
+        self.assertEqual(tuple(values[0,0,4]),(0.,0.))
+        self.assertTrue(np.isnan(values[0,0,5]).all())
+        self.assertFalse(values.flags.writeable)
+        # Preserve the complete previous array arithmetic bit for bit.
+        a,b=np.array(speed),np.array(direction)
+        previous=np.stack((-a*np.sin(np.deg2rad(b)),-a*np.cos(np.deg2rad(b))),axis=-1)
+        self.assertEqual(values.tobytes(),previous.tobytes())
+        for speeds,directions,shape in (([[[-1.]]],[[[float('nan')]]],(1,1,1)),
+                ([[[1.]]],[[[361.]]],(1,1,1)),([[[float('inf')]]],[[[0.]]],(1,1,1)),
+                (speed,direction,(1,1,7)),(speed,[],(1,1,6))):
+            with self.subTest(shape=shape),self.assertRaises(ValueError):_native_wind_components(speeds,directions,shape)
+
     def test_compact_wind_rows_convert_exactly_and_reject_ragged_source_shapes(self):
         from decimal import Decimal
         from infrastructure.native_wind import DecimalRow

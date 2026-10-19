@@ -3409,3 +3409,35 @@ review the larger motion frame, source-bound scenario configuration and search
 grid budget; measure combined land/weather memory and a real full/partial
 voyage. Public PoC API still returns 503 with existing unit inactive; no
 publication or service operation performed. Deadline remains 16:32:08 UTC.
+
+## 2026-10-19 13:05 UTC — bounded shared marine decoding and weather normalization
+
+Split the existing marine input cache into exact outer-plane chunks with the
+same aggregate 128 MiB decoded payload budget. Preserve JSON values, missing
+cells, fields and source metadata; reject bad framing, changed field sets and
+size mismatches. Normalize coastal marine nodes and wind components rowwise,
+then release raw marine payload before wind while retaining source hashes.
+No new adapter, dependency, download, service change or weather/land concession.
+The real decoded marine payload remains byte-identical: 73,513,511 bytes,
+SHA-256 59a6497cf5e3d24c5b660ee0fd4b4f9db819d82b36456932041c9fa28d785b89.
+
+A single real process loaded land and all normalized weather in 60.18 s with
+830.8 MiB peak RSS. Its bounds were 900 MiB RSS / 1500 MiB virtual AS / 180 s;
+the service's existing 1 GiB cgroup limit is unchanged. The former experimental
+1100 MiB AS cap still produced allocation errors and is not being reported as
+passed. Initial old wind and marine normalization runs hit the RSS stop; row
+allocation removes the measured peaks. Full search/voyage/API remains unmeasured.
+
+Synthetic tests exercise exact aggregate budget boundaries, signed zero/null,
+framing/corruption, known wind vectors and gaps, late CF errors, readonly arrays
+and unchanged legacy/coastal normalization values. Next: source-bound larger
+motion/scenario composition and actual full or explicitly partial voyage in the
+same PoC. API remains inactive/503; no new public scenario or data job.
+
+All 588 Python tests and locked syntax/architecture checks passed. Frontend
+static checks and 36 tests passed, with one optional public test skipped.
+Complete real wind component arrays also match previous whole-array arithmetic
+bit for bit in both bundles: Vinga–Uddevalla 31×138×83×2 and Trelleborg
+50×455×208×2; zero differing float bits. Logs:
+compact-weather-full-check-20261019.log, compact-weather-frontend-tests-20261019.log,
+wind-component-bit-equivalence-20261019.log and marine-cache-byte-equivalence-20261019.log.

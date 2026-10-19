@@ -48,6 +48,8 @@ def load_coastal_weather(directory,*,policy=None,margin_m=10,cache_directory=Non
         for margin in sorted(margins):attach_grid(water,cache_directory,margin_m=margin,diagnostics=diagnostics)
     sample,payload,audit=coastal_inputs(directory,request,cache_directory=cache_directory,diagnostics=diagnostics)
     current,waves=CopernicusMarineAdapter().normalize_coastal(payload,water,policies,bounds=config['source_bounds'])
+    marine_source_hashes={k:v['source_sha256'] for k,v in payload['products'].items()}
+    del payload # normalized products own their immutable numeric arrays
     wind=NativeWindWithReserve(sample,water,policies['wind'])
     issued=datetime.fromisoformat(config['assumed_issued_at'].replace('Z','+00:00'))
     wm=ProductMetadata('wind','MET-Nordic-coastal-frozen','20261018','MET Nordic original native wind',None,
@@ -59,7 +61,7 @@ def load_coastal_weather(directory,*,policy=None,margin_m=10,cache_directory=Non
     selected=policy or WeatherPolicy(config['max_wind_m_s'],config['max_wave_height_m'])
     environment=CoastalForecast(wind,current,waves,metadata,water,selected,margin_m=margin_m,radius_m=config['motion_radius_m'])
     evidence={'source_metadata':[asdict(m) for m in raw],'wind_source_hashes':dict(sample.source_hashes),
-        'marine_source_hashes':{k:v['source_sha256'] for k,v in payload['products'].items()},
+        'marine_source_hashes':marine_source_hashes,
         'source_qualification':'unverified','source_assumptions':config['source_assumptions'],
         'model_assumptions':config['model_assumptions'],'assumed_issued_at':config['assumed_issued_at'],
         'reserve_policies':reserve_config,'water':land,'data_audit':audit}

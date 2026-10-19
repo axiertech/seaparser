@@ -491,3 +491,14 @@ Topologi, erosion och slutkontroll kan köras sekventiellt med hashbundna
 mellanresultat och processavslut mellan faserna. Detta frigör GEOS toppminne
 utan att ändra tjänstens budget eller hoppa över en slutkontroll. Stora
 kantindex läser varje koordinatarray en gång, inte en gång per kantdel.
+
+## 2026-10-19: Begränsad marin cacheuppackning och normalisering
+
+En enda stor zlib/JSON-buffert och samtidiga fulla normaliseringskopior gav
+konkreta minnesfel med det större landunderlaget. Dela befintliga marina
+cachefält per tidsplan/statisk rad med oförändrad total 128 MiB-gräns.
+Behåll exakta värden/framing och samma CF-normalisering; fyll slutliga
+kustarrayer radvis och släpp rå payload före vind. Vindens temporära arrayer
+begränsas också till en rad. Ruttmotor, land-/väder-/reservkontroller och
+API-budgetar ändras inte. Mät faktiskt RSS separat från virtuell adressrymd;
+se materialized-cache.md för provgränser och byteidentitet.

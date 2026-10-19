@@ -28,6 +28,31 @@ class CopernicusAdapterTests(unittest.TestCase):
         self.payload = copy.deepcopy(FIXTURE)
         self.snapshot = CopernicusMarineAdapter().normalize(self.payload)
 
+    def test_coastal_rows_preserve_known_vectors_masks_and_late_invalid_nodes(self):
+        import numpy as np
+        from shapely import box,to_wkb
+        from infrastructure.coastal_water import CoastalWater
+        from infrastructure.marine_reserve import ReservePolicy
+        adapter=CopernicusMarineAdapter();water=CoastalWater(to_wkb(box(-10000,-10000,10000,10000)),'synthetic')
+        policies={p:{v:ReservePolicy() for v in variables} for p,variables in (
+            ('current',('current_east_m_s','current_north_m_s')),
+            ('waves',('wave_height_m','wave_period_seconds','wave_direction_from_degrees')))}
+        payload=copy.deepcopy(FIXTURE);payload['products']['static']['data']['mask'][0][0]=0
+        reference=adapter.normalize(payload)
+        products=adapter.normalize_coastal(payload,water,policies,bounds=(11.58,57.62,11.63,57.65))
+        for expected,actual in zip(reference.products,products):
+            count=len(expected.metadata.units)
+            values=np.array([n if n is not None else (np.nan,)*count for plane in expected.values for row in plane for n in row]).reshape(actual.values.shape)
+            np.testing.assert_array_equal(actual.values,values)
+            self.assertFalse(actual.values.flags.writeable)
+            self.assertEqual(actual.metadata.source_sha256,expected.metadata.source_sha256)
+            self.assertIsNone(actual.metadata.issued_at)
+        self.assertTrue(np.isnan(products[1].values[0,0,0]).all())
+        for product,field,value in (('waves','VTM02',0),('current','uo',float('inf'))):
+            changed=copy.deepcopy(payload);changed['products'][product]['data'][field][-1][-1][-1]=value
+            with self.subTest(product=product),self.assertRaises(ValueError):
+                adapter.normalize_coastal(changed,water,policies,bounds=(11.58,57.62,11.63,57.65))
+
     def test_raw_netcdf_hashes_and_retrieval_times_are_frozen(self):
         by_name = {entry['product']: entry for entry in MANIFEST['files']}
         for metadata in self.snapshot.product_metadata:

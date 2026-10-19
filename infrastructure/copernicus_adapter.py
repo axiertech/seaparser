@@ -124,7 +124,7 @@ class CopernicusMarineAdapter:
                               for plane in raw['data'][name]) for name in WAVE_FIELDS}
         if any(len(planes) != len(times) for planes in fields.values()):
             raise ValueError('Wave time axis and samples disagree')
-        values = tuple(tuple(tuple(wave_node(fields['VHM0'][k][j][i],
+        values = (tuple(tuple(wave_node(fields['VHM0'][k][j][i],
                                               fields['VTM02'][k][j][i],
                                               fields['VMDR'][k][j][i], mask[j][i])
                                    for i in range(len(longitude)))
@@ -132,6 +132,7 @@ class CopernicusMarineAdapter:
         if coastal:
             return self._coastal_product(raw,'waves',latitude,longitude,times,values,coastal,
                 ('m','s','1','1'),'ground-from-true-east-north-tm02')
+        values=tuple(values)
         if native_radius_m is not None:
             return self._native_product(raw,'waves',latitude,longitude,times,values,native_radius_m,
                 ('m','s','1','1'),'ground-from-true-east-north-tm02')
@@ -159,12 +160,13 @@ class CopernicusMarineAdapter:
             # NetCDF depth has already been selected to one near-surface layer.
             fields[name] = tuple(_matrix(plane, len(latitude), len(longitude), name)
                                  for plane in planes)
-        values = tuple(tuple(tuple(current_node(fields['uo'][k][j][i], fields['vo'][k][j][i])
+        values = (tuple(tuple(current_node(fields['uo'][k][j][i], fields['vo'][k][j][i])
                                    for i in range(len(longitude)))
                              for j in range(len(latitude))) for k in range(len(times)))
         if coastal:
             return self._coastal_product(raw,'current',latitude,longitude,times,values,coastal,
                 ('m/s','m/s'),'ground-to-true-east-north')
+        values=tuple(values)
         if native_radius_m is not None:
             return self._native_product(raw,'current',latitude,longitude,times,values,native_radius_m,
                 ('m/s','m/s'),'ground-to-true-east-north')
@@ -218,6 +220,14 @@ class CopernicusMarineAdapter:
         if name=='current':blockers+=('current_native_wet_mask_unverified',)
         metadata=replace(metadata,planning_blockers=blockers)
         components=4 if name=='waves' else 2
-        nodes=np.array([node if node is not None else (np.nan,)*components for plane in values for row in plane for node in row])
-        nodes=nodes.reshape(len(times),len(latitude),len(longitude),components)
+        # Consume the same validated nodes a row at a time. Keeping every
+        # normalized Python tuple beside both numeric arrays multiplies peak RSS.
+        nodes=np.empty((len(times),len(latitude),len(longitude),components),dtype=float)
+        k=-1
+        for k,plane in enumerate(values):
+            if k>=len(times) or len(plane)!=len(latitude):raise ValueError('Exact coastal marine shape required')
+            for j,row in enumerate(plane):
+                if len(row)!=len(longitude):raise ValueError('Exact coastal marine shape required')
+                nodes[k,j]=[node if node is not None else (np.nan,)*components for node in row]
+        if k+1!=len(times):raise ValueError('Exact coastal marine shape required')
         return MarineReserve(name,longitude,latitude,times,nodes,water,policies[name],metadata=metadata)

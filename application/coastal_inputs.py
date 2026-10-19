@@ -32,12 +32,62 @@ def _compress_json(value,limit):
     return base64.b64encode(zlib.compress(data)).decode('ascii')
 
 
-def _expand_json(value,limit):
+def _expand_json(value,limit,*,with_size=False):
     decoder=zlib.decompressobj()
     data=decoder.decompress(base64.b64decode(value,validate=True),limit+1)
     if len(data)>limit or not decoder.eof or decoder.unused_data:
         raise ValueError('Compact field decoded byte budget or framing exceeded')
-    return json.loads(data)
+    result=json.loads(data)
+    return (result,len(data)) if with_size else result
+
+
+def _packed_marine(payload):
+    """Bound total decoded JSON while compressing one outer plane at a time."""
+    metadata={**payload,'products':{name:dict(product) for name,product in payload['products'].items()}}
+    fields={}
+    for name,product in metadata['products'].items():
+        if 'data' in product:
+            fields[name]={key:[] for key in product['data']}
+            product['data']={key:[] for key in product['data']}
+    raw=json.dumps(metadata,separators=(',',':'),allow_nan=False).encode()
+    total=len(raw)
+    if total>MAX_MARINE_PAYLOAD_BYTES:raise ValueError('Marine decoded byte budget exceeded')
+    packed={'metadata':base64.b64encode(zlib.compress(raw)).decode('ascii'),'fields':fields}
+    for name,variables in fields.items():
+        for variable,chunks in variables.items():
+            values=payload['products'][name]['data'][variable]
+            if not isinstance(values,(list,tuple)):raise ValueError('Marine source array required')
+            total+=max(0,len(values)-1) # array brackets already occur in metadata
+            for plane in values:
+                raw=json.dumps(plane,separators=(',',':'),allow_nan=False).encode()
+                total+=len(raw)
+                if total>MAX_MARINE_PAYLOAD_BYTES:raise ValueError('Marine decoded byte budget exceeded')
+                chunks.append(base64.b64encode(zlib.compress(raw)).decode('ascii'))
+    packed['decoded_bytes']=total
+    return packed
+
+
+def _unpacked_marine(packed):
+    if (not isinstance(packed,dict) or set(packed)!={'metadata','fields','decoded_bytes'}
+            or type(packed['decoded_bytes']) is not int or not 0<packed['decoded_bytes']<=MAX_MARINE_PAYLOAD_BYTES):
+        raise ValueError('Marine decoded byte budget or framing exceeded')
+    payload,total=_expand_json(packed['metadata'],MAX_MARINE_PAYLOAD_BYTES,with_size=True)
+    fields=packed['fields']
+    expected={name:set(product['data']) for name,product in payload['products'].items() if 'data' in product}
+    if (not isinstance(fields,dict) or set(fields)!=set(expected)
+            or any(not isinstance(fields[name],dict) or set(fields[name])!=variables for name,variables in expected.items())):
+        raise ValueError('Marine field framing differs from metadata')
+    for name,variables in fields.items():
+        for variable,chunks in variables.items():
+            values=payload['products'][name]['data'][variable]
+            if values!=[] or not isinstance(chunks,list):raise ValueError('Marine field framing differs from metadata')
+            total+=max(0,len(chunks)-1)
+            for chunk in chunks:
+                if total>=MAX_MARINE_PAYLOAD_BYTES:raise ValueError('Marine decoded byte budget exceeded')
+                plane,size=_expand_json(chunk,MAX_MARINE_PAYLOAD_BYTES-total,with_size=True)
+                total+=size;values.append(plane)
+    if total!=packed['decoded_bytes']:raise ValueError('Marine decoded byte budget or framing exceeded')
+    return payload
 
 
 def _packed_decimals(value):
@@ -81,7 +131,7 @@ def coastal_inputs(directory, request, *, cache_directory=None, diagnostics=None
                  'scripts/fetch_uddevalla.py', 'scripts/audit_copernicus.py',
                  'scripts/copernicus_budget.py', 'scripts/manifest_json.py'):
         files['reader/' + name] = ROOT / name
-    identity = {'schema': 3, 'sources': fingerprint(files), 'request': request}
+    identity = {'schema': 4, 'sources': fingerprint(files), 'request': request}
     built_inputs=[]
 
     def build():
@@ -90,7 +140,7 @@ def coastal_inputs(directory, request, *, cache_directory=None, diagnostics=None
         result = {'projection': sample.projection, 'times': [t.isoformat() for t in sample.times],
                   'model_reference_time': sample.model_reference_time.isoformat(),
                   'source_hashes': sample.source_hashes,
-                  'payload': _compress_json(payload,MAX_MARINE_PAYLOAD_BYTES), 'audit': audit}
+                  'payload': _packed_marine(payload), 'audit': audit}
         for name in ('x_m', 'y_m', 'land_fraction'):
             result[name] = _tokens(getattr(sample, name))
         for name in ('speed_m_s','direction_from_degrees'):
@@ -107,4 +157,4 @@ def coastal_inputs(directory, request, *, cache_directory=None, diagnostics=None
         tuple(datetime.fromisoformat(t) for t in data['times']),
         *(_unpacked_decimals(data[n]) for n in ('speed_m_s', 'direction_from_degrees')), _decimals(data['land_fraction']),
         datetime.fromisoformat(data['model_reference_time']), tuple(tuple(p) for p in data['source_hashes']))
-    return sample, _expand_json(data['payload'],MAX_MARINE_PAYLOAD_BYTES), data['audit']
+    return sample, _unpacked_marine(data['payload']), data['audit']

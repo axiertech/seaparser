@@ -7,12 +7,41 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from application.coastal_inputs import coastal_inputs, _packed_decimals, _unpacked_decimals
+from application.coastal_inputs import coastal_inputs, _packed_decimals, _unpacked_decimals, _packed_marine, _unpacked_marine
 from infrastructure.materialized_cache import MaterializedCache, fingerprint
 from infrastructure.native_wind import NativeWindSample
 
 
 class MaterializedCacheTests(unittest.TestCase):
+    def test_plane_cache_preserves_full_payload_and_exact_total_decoded_budget(self):
+        import base64,zlib,copy
+        payload={'schema':1,'products':{
+            'waves':{'issued_at':None,'times':['historical'],'data':{'VHM0':[[[None,-0.0],[1.25,3.5]],[[7.,8.],[9.,10.]]]}},
+            'static':{'depth_units':'m','data':{'mask':[[1,0],[None,1]]}}}}
+        original=json.dumps(payload,separators=(',',':'),allow_nan=False)
+        packed=_packed_marine(payload)
+        self.assertEqual(packed['decoded_bytes'],len(original.encode()))
+        self.assertEqual(json.dumps(_unpacked_marine(packed),separators=(',',':'),allow_nan=False),original)
+        self.assertEqual(json.dumps(payload,separators=(',',':')),original) # packing never mutates the source
+        self.assertEqual(len(packed['fields']['waves']['VHM0']),2)
+        with patch('application.coastal_inputs.MAX_MARINE_PAYLOAD_BYTES',len(original.encode())):
+            self.assertEqual(_unpacked_marine(_packed_marine(payload)),payload)
+        with patch('application.coastal_inputs.MAX_MARINE_PAYLOAD_BYTES',len(original.encode())-1):
+            with self.assertRaisesRegex(ValueError,'byte budget'):_packed_marine(payload)
+            with self.assertRaisesRegex(ValueError,'byte budget'):_unpacked_marine(packed)
+        for kind in ('truncated','trailing','missing','bytes','placeholder'):
+            changed=copy.deepcopy(packed)
+            if kind in ('truncated','trailing'):
+                raw=base64.b64decode(changed['fields']['waves']['VHM0'][0])
+                changed['fields']['waves']['VHM0'][0]=base64.b64encode(raw[:-1] if kind=='truncated' else raw+b'trailing').decode()
+            elif kind=='missing':del changed['fields']['waves']['VHM0']
+            elif kind=='bytes':changed['decoded_bytes']-=1
+            else:
+                metadata=json.loads(zlib.decompress(base64.b64decode(changed['metadata'])))
+                metadata['products']['waves']['data']['VHM0']=[0]
+                changed['metadata']=base64.b64encode(zlib.compress(json.dumps(metadata).encode())).decode()
+            with self.subTest(kind=kind),self.assertRaises(ValueError):_unpacked_marine(changed)
+
     def test_compact_rows_preserve_scale_sign_exponent_and_numeric_array_values(self):
         import numpy as np
         values=tuple(Decimal(v) for v in ('1.0000','1','-0.00','0.00','1E+2','1.0000'))
