@@ -7,7 +7,16 @@ from infrastructure.land import INVERSE
 from application.planning import canonical
 
 
-def coastal_view(result):
+def full_result_digest(result):
+    # Same canonical bytes, hashed incrementally instead of a full string plus
+    # its UTF-8 copy while the complete route/evidence tree is still resident.
+    digest=sha256()
+    encoder=json.JSONEncoder(sort_keys=True,separators=(',',':'),ensure_ascii=False,allow_nan=False)
+    for chunk in encoder.iterencode(result):digest.update(chunk.encode('utf-8'))
+    return digest.hexdigest()
+
+
+def coastal_view(result,*,allow_empty=False):
     if (result['profile'] != 'vinga-uddevalla' or result['result_qualification'] != 'estimated_high_uncertainty'
             or result['weather_limits_verified'] is not False):
         raise ValueError('Explicit coastal estimate required')
@@ -18,12 +27,16 @@ def coastal_view(result):
         return index[key]
     source_fields=('variable','source_longitude','source_latitude','source_time','source_value','uncertainty')
     connection_fields=('method','connection_waypoints','connection_expansions','connection_spacing_m','source_search_truncated')
-    segments=deepcopy(result['estimated_segments'])
-    for segment in segments:
-        for sample in segment['samples']:
+    segments=[]
+    for original_segment in result['estimated_segments']:
+        segment={k:v for k,v in original_segment.items() if k!='samples'}
+        segment['samples']=[];segments.append(segment)
+        for original_sample in original_segment['samples']:
+            sample={k:v for k,v in original_sample.items() if k!='estimates'}
+            segment['samples'].append(sample)
             sample['longitude'],sample['latitude']=INVERSE.transform(sample['position']['east'],sample['position']['north'])
             refs=[]
-            for original in sample.pop('estimates'):
+            for original in original_sample['estimates']:
                 record=dict(original)
                 source={k:record.pop(k) for k in source_fields}
                 connection={k:record.pop(k) for k in connection_fields}
@@ -45,14 +58,19 @@ def coastal_view(result):
             'departure_time','arrival_time','travel_seconds','distance_m','comfort_exposure','weather_summary')},
             'id':candidate['candidate']['name'],'path':path,'waypoints':waypoints,'segment_count':len(own),
             'result_qualification':'estimated_high_uncertainty','weather_limits_verified':False})
-    if not routes:raise ValueError('No arrived coastal estimate to present')
+    if not routes and not allow_empty:raise ValueError('No arrived coastal estimate to present')
     return {'schema':1,'profile':result['profile'],'input_sha256':result['input_sha256'],
-        'full_result_sha256':sha256(canonical(result).encode()).hexdigest(),
+        'full_result_sha256':full_result_digest(result),
         'full_result_hash_format':'application.planning.canonical UTF-8, no newline',
         'result_qualification':'estimated_high_uncertainty','weather_limits_verified':False,
         'routes':routes,'provenance':deepcopy(result['provenance']),'configuration':deepcopy(result['configuration']),
         'land_margin_m':result['land_margin_m'],'source_value_bounds':result['source_value_bounds'],
-        'reserve_evidence':{'sources':sources,'connections':connections,'records':records,'segments':segments}}
+        'reserve_evidence':{'sources':sources,'connections':connections,'records':records,'segments':segments},
+        'comparison':{k:result['comparison'].get(k) for k in ('status','scope','fastest_candidate',
+            'comfortable_candidate','max_comfort_extra_seconds','comfort_model')},
+        'failures':[{k:r.get(k) for k in ('candidate','status','reason','arrival_weather_status')}
+                    for r in result['comparison']['candidates'] if r['status']!='arrived'],
+        'geometry_search':result.get('geometry_search'),'search_budget':result.get('search_budget')}
 
 
 def restore_estimates(view,sample):
@@ -61,3 +79,15 @@ def restore_estimates(view,sample):
         record=dict(evidence['records'][ref]);source=record.pop('source');connection=record.pop('connection')
         result.append({**record,**evidence['sources'][source],**evidence['connections'][connection]})
     return result
+
+
+from functools import lru_cache
+from pathlib import Path
+
+
+@lru_cache(maxsize=1)
+def coastal_coverage():
+    """Small frozen coverage metadata; never load forecast arrays on HTTP calls."""
+    path=Path(__file__).resolve().parents[1]/'fixtures/vinga-uddevalla-preflight.json'
+    data=json.loads(path.read_text())
+    return {k:data[k] for k in ('bbox','valid_times','reference_time')}

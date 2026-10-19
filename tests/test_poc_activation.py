@@ -8,13 +8,14 @@ class PocActivationTests(unittest.TestCase):
     def test_existing_confinement_is_retained_in_isolated_service(self):
         before=(Path(__file__).resolve().parents[1]/'deployment/seaparser-api.service').read_text()
         result=p.unit_for_release(before,Path('/home/web/seaparser/releases/poc-'+'a'*40))
-        filtered=[line for line in result.splitlines() if not line.startswith('Environment=')]
+        filtered=[line for line in result.splitlines() if not line.startswith(('Environment=','ReadWritePaths='))]
         changed=[(a,b) for a,b in zip(before.splitlines(),filtered) if a!=b]
-        self.assertEqual(len(changed),3)
-        self.assertEqual({b.split('=')[0] for _,b in changed},{'Description','WorkingDirectory','ExecStart'})
+        self.assertEqual(len(changed),4)
+        self.assertEqual({b.split('=')[0] for _,b in changed},{'Description','WorkingDirectory','ExecStart','MemoryMax'})
         self.assertIn(str(p.RUNTIME/'bin/python'),result);self.assertIn('--port 8766',result)
-        for key in ('User=seaparser','ProtectSystem=strict','InaccessiblePaths=/home/web/seaparser/config','MemoryMax=512M','CPUQuota=200%','TasksMax=32'):
+        for key in ('User=seaparser','ProtectSystem=strict','InaccessiblePaths=/home/web/seaparser/config','MemoryMax=1024M','CPUQuota=200%','TasksMax=32'):
             self.assertIn(key,result)
+        self.assertIn('ReadWritePaths=/home/web/seaparser/autonomy/cache/coastal-inputs-v1',result)
         with self.assertRaises(ValueError):p.unit_for_release('ExecStart=/unknown/python\n',Path('/reviewed'))
 
     def test_proxy_addition_precedes_and_retains_legacy_rules(self):

@@ -18,6 +18,15 @@ from presentation.gpx import export_estimated_coastal_gpx
 from deployment.prepare_vinga import PUBLIC_ASSETS
 
 ROOT=Path(__file__).resolve().parents[1]
+BRAND_ASSETS=('assets/logos/seaparser-logo.svg','assets/logos/favicon.ico','assets/logos/favicon-256.png')
+
+
+def brand_assets(output):
+    """Copy only the selected public artwork, preserving its original bytes."""
+    for name in BRAND_ASSETS:
+        target=output/name;target.parent.mkdir(parents=True,exist_ok=True)
+        shutil.copyfile(ROOT/'frontend'/name,target)
+    return set(BRAND_ASSETS)
 
 
 def coastal_assets(output):
@@ -46,6 +55,7 @@ def refresh_presentation(output):
     for name in ('index.html','poc.css','poc-main.mjs','poc-transport.mjs','uddevalla-main.mjs','coastal-view.mjs'):
         shutil.copyfile(ROOT/'frontend/poc'/name,output/name);generated.add(name)
     generated.update(coastal_assets(output))
+    generated.update(brand_assets(output))
     (output/'build-receipt.json').write_text(canonical({'schema':1,'files':{n:sha256((output/n).read_bytes()).hexdigest() for n in sorted(generated)},'published':False})+'\n')
 
 
@@ -71,6 +81,7 @@ def build(output):
         shutil.copyfile(ROOT/'frontend/poc'/name,output/name);generated.add(name)
     shutil.copyfile(ROOT/'fixtures/vinga-uddevalla-preflight.json',output/'vinga-uddevalla.json');generated.add('vinga-uddevalla.json')
     generated.update(coastal_assets(output))
+    generated.update(brand_assets(output))
     model=scene('vinga-poc');(output/'scene.json').write_text(canonical(model)+'\n');generated.add('scene.json')
     (output/'bank').mkdir(exist_ok=True);(output/'gpx').mkdir(exist_ok=True)
     catalog={'schema':1,'source':'Existing real-data calculation engine; frozen results, not new calculations in the browser',

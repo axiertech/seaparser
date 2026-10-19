@@ -11,18 +11,30 @@ export async function loadScene(fetcher = fetch, profile = 'vinga') {
   if (!['synthetic', 'vinga', 'vinga-native', 'vinga-poc'].includes(profile)) throw new Error('Okänd region');
   return json(await fetcher('/api/scene?profile=' + profile));
 }
-export async function plan(payload, { fetcher = fetch, pause = ms => new Promise(resolve => setTimeout(resolve, ms)), signal } = {}) {
-  const created = await json(await fetcher('/api/plans', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal }));
-  if (!/^[a-f0-9]{32}$/.test(created.id)) throw new Error('Ogiltigt jobb-id');
+async function runPlan(path,payload,{fetcher=fetch,pause=ms=>new Promise(resolve=>setTimeout(resolve,ms)),signal,onStatus=()=>{},interval=250}={}) {
+  const created=await json(await fetcher(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal}));
+  if(!/^[a-f0-9]{32}$/.test(created.id))throw new Error('Ogiltigt jobb-id');
   const seconds=created.poll_timeout_seconds??30;
   if(typeof seconds!=='number'||!Number.isFinite(seconds)||seconds<=0||seconds>3600)throw new Error('Ogiltig beräkningstidsbudget');
-  for (let index = 0; index < Math.ceil(seconds*4); index++) {
-    if (signal?.aborted) throw new Error('Avbrutet');
-    const state = await json(await fetcher(`/api/plans/${created.id}`, { signal }));
-    if (state.status === 'completed') return { id: created.id, result: state.result };
-    if (state.status === 'failed') throw new Error(state.reason || 'Beräkningen misslyckades');
-    await pause(250);
+  onStatus({status:'queued',elapsed_seconds:0,server_timeout_seconds:created.server_timeout_seconds});
+  const deadline=Date.now()+seconds*1000;
+  for(let index=0;index<Math.ceil(seconds*1000/interval)&&Date.now()<deadline;index++){
+    if(signal?.aborted)throw new Error('Avbrutet');
+    const state=await json(await fetcher(`${path}/${created.id}`,{signal}));onStatus(state);
+    if(state.status==='completed')return {id:created.id,result:state.result};
+    if(state.status==='failed')throw new Error(state.reason||'Beräkningen misslyckades');
+    await pause(interval);
   }
   throw new Error('Svarstiden överskreds');
+}
+export function plan(payload,options){return runPlan('/api/plans',payload,options);}
+export function planCoastal(payload,{fetcher=fetch,...options}={}){
+  const bounded=async(path,request={})=>{
+    const timeout=AbortSignal.timeout(25000),signal=request.signal?AbortSignal.any([request.signal,timeout]):timeout;
+    const response=await fetcher(path,{...request,signal});
+    if(response.status===404)throw new Error(request.method==='POST'?'Det regionala API:t är ännu inte aktiverat. Ingen beräkning eller ny GPX har skapats.':'Jobbet saknas eller har gått ut. Beräkna på nytt.');
+    return response;
+  };
+  return runPlan('/api/poc/coastal/plans',payload,{interval:1000,...options,fetcher:bounded});
 }
 export function gpxUrl(job, route) { return `/api/plans/${encodeURIComponent(job)}/routes/${encodeURIComponent(route)}/gpx`; }

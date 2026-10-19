@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 206 78" width="206" height="78">
+  <text x="0" y="30" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="40" font-weight="700" fill="#0f1c2b" textLength="196" lengthAdjust="spacingAndGlyphs">Sea<tspan fill="#1f7fd6">Parser</tspan></text>
+  <path d="M0 46 q14 -12 28 0 t28 0 t28 0 t28 0 t28 0 t28 0 t28 0" fill="none" stroke="#1f7fd6" stroke-width="3.5" stroke-linecap="round" opacity="0.4"/>
+  <path d="M0 58 q14 -12 28 0 t28 0 t28 0 t28 0 t28 0 t28 0 t28 0" fill="none" stroke="#1f7fd6" stroke-width="4.5" stroke-dasharray="8.4 6" stroke-linecap="round"/>
+  <path d="M204 58 l-17 -7.5 v15 z" fill="#C8102E"/>
+  <path d="M0 70 q14 -12 28 0 t28 0 t28 0 t28 0 t28 0 t28 0 t28 0" fill="none" stroke="#1f7fd6" stroke-width="5.5" stroke-linecap="round"/>
+</svg>

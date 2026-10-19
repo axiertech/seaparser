@@ -41,3 +41,17 @@ def validate_budget(profile, candidate_limit, offsets, *, offline=False):
     if not offline and limit * len(offsets) > MAX_EVALUATIONS:
         raise ValueError('Högst 16 rutt-/avgångskombinationer; välj färre kandidater eller avgångar')
     return limit
+
+
+def coastal_api_budget():
+    """Wall-time/process policy, separate from deterministic voyage settings."""
+    import json
+    from pathlib import Path
+    p=Path(__file__).resolve().parents[1]/'settings/coastal-api.json'
+    policy=json.loads(p.read_text())
+    names={'performance_target_seconds','job_seconds','max_active','max_jobs','ttl_seconds','result_bytes','service_memory_mib'}
+    if set(policy)!=names or any(type(v) is not int or v<=0 for v in policy.values()):
+        raise ValueError('Explicit positive regional API resource limits required')
+    if policy['job_seconds']<policy['performance_target_seconds'] or policy['max_jobs']<policy['max_active']:
+        raise ValueError('Regional API resource limits are inconsistent')
+    return policy

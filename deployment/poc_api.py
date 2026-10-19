@@ -9,18 +9,21 @@ import subprocess
 import tarfile
 from deployment.prepare_vinga import ROOT,PUBLIC,SYSTEM_FILES,digest
 from deployment.vinga_upgrade import tree_hashes,check_system
+from application.geographic_budget import coastal_api_budget
 
 CHECKOUT=Path('/tmp/seaparser-real-map-data')
-RUNTIME=Path('/home/web/seaparser/venvs/poc-f46c6e9056cf')
+RUNTIME=Path('/home/web/seaparser/venvs/poc-'+digest(ROOT/'requirements.lock')[:12])
 UNIT=Path('/etc/systemd/system/seaparser-poc-api.service')
 PROXY=Path(SYSTEM_FILES['proxy'])
 PREPARED=('unit-ready.service','proxy-before.conf','proxy-ready.conf','activate.sh')
 
 
 def unit_for_release(before,release):
-    ready='\n'.join('Description=SeaParser real-data PoC API' if line.startswith('Description=') else 'WorkingDirectory='+str(release) if line.startswith('WorkingDirectory=') else line.replace('/home/web/seaparser/app/.venv/bin/python',str(RUNTIME/'bin/python')).replace('--port 8765','--port 8766') if line.startswith('ExecStart=') else line for line in before.splitlines())+'\n'
+    ready='\n'.join('Description=SeaParser real-data PoC API' if line.startswith('Description=') else 'WorkingDirectory='+str(release) if line.startswith('WorkingDirectory=') else line.replace('/home/web/seaparser/app/.venv/bin/python',str(RUNTIME/'bin/python')).replace('--port 8765','--port 8766').replace('api.main:app','api.main:poc_app --factory') if line.startswith('ExecStart=') else line for line in before.splitlines())+'\n'
     if str(RUNTIME/'bin/python') not in ready or '--port 8766' not in ready or str(release) not in ready:raise ValueError('Unexpected installed service command')
-    return ready.replace('[Install]', 'Environment=OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1\n[Install]')
+    policy=coastal_api_budget()
+    ready=ready.replace('MemoryMax=512M','MemoryMax='+str(policy['service_memory_mib'])+'M')
+    return ready.replace('[Install]', 'Environment=OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1\nReadWritePaths=/home/web/seaparser/autonomy/cache/coastal-inputs-v1\n[Install]')
 
 
 def proxy_for_poc(before):

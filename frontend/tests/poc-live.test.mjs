@@ -58,3 +58,43 @@ test('free map clicks → live real-data API → comparison → GPX; coverage/ti
   assert.equal(document.querySelectorAll('.route a').length,0);assert.match(document.getElementById('status').textContent,/Ingen GPX/);
  }finally{view?.dispose();dom?.window.close();await api.close();}
 });
+
+test('published regional clicks → asynchronous real-data job → comparison → estimated GPX',{
+ skip:!process.env.SEAPARSER_COASTAL_PUBLIC_TEST,timeout:300000
+},async()=>{
+ const api=await server();assert.equal(api.public,true,'Regional public verification requires the activated deployment');let view,dom;
+ try{
+  const response=await fetch(api.url+'/poc/index.html?example=vinga-uddevalla');assert.equal(response.status,200);
+  const html=await response.text();assert.equal(html,readFileSync(new URL('../../artifacts/poc-site/index.html',import.meta.url),'utf8'));
+  dom=new JSDOM(html,{url:api.url+'/poc/'});globalThis.window=dom.window;globalThis.document=dom.window.document;
+  dom.window.SVGSVGElement.prototype.createSVGRect=()=>({});const element=document.getElementById('map');
+  for(const [k,v] of [['clientWidth',1000],['clientHeight',610]])Object.defineProperty(element,k,{value:v});
+  const require=createRequire(import.meta.url);delete require.cache[require.resolve('leaflet')];const L=require('leaflet');
+  const source=readFileSync(new URL('../poc/uddevalla-main.mjs',import.meta.url),'utf8')
+   .replace("'./map-component.mjs'",JSON.stringify(new URL('../map/map-component.mjs',import.meta.url).href))
+   .replace("'./client.mjs'",JSON.stringify(new URL('../map/client.mjs',import.meta.url).href))
+   .replace("'./coastal-view.mjs'",JSON.stringify(new URL('../poc/coastal-view.mjs',import.meta.url).href));
+  const {mountRegional}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+  const fetcher=(path,options)=>fetch(api.url+(path.startsWith('/')?path:'/poc/'+path),options);
+  view=await mountRegional(document,L,fetcher);assert.ok(view);
+  const coastal=JSON.parse(readFileSync(new URL('../../fixtures/coastal-voyage.json',import.meta.url),'utf8'));
+  const a=coastal.routes[0].path[20],b=coastal.routes[0].path.at(-20);
+  view.map.fire('click',{latlng:L.latLng(a[1],a[0])});view.map.fire('click',{latlng:L.latLng(b[1],b[0])});
+  assert.equal(document.getElementById('start-place').value,'custom');assert.equal(document.getElementById('target-place').value,'custom');
+  document.getElementById('departure-choice').value='0';
+  document.getElementById('plan-form').dispatchEvent(new dom.window.Event('submit',{cancelable:true}));
+  assert.equal(document.getElementById('calculate').disabled,true);
+  await until(()=>!document.getElementById('calculate').disabled,275000);
+  assert.match(document.getElementById('status').textContent,/Beräkning klar för dina val/);
+  assert.ok(document.querySelectorAll('#results .route').length>=1);
+  assert.match(document.getElementById('results').textContent,/kortast restid.*HÖG OSÄKERHET/);
+  assert.equal(document.querySelectorAll('path[stroke="#718795"]').length,0);
+  const link=document.querySelector('#results a');assert.match(link.getAttribute('href'),/^\/api\/poc\/coastal\/plans\/[a-f0-9]{32}\/routes\//);
+  const exported=await fetch(link.href);assert.equal(exported.status,200);const xml=new dom.window.DOMParser().parseFromString(await exported.text(),'application/xml');
+  assert.equal(xml.querySelectorAll('parsererror').length,0);assert.ok(xml.querySelectorAll('rtept').length>=2);
+  assert.ok(Math.abs(Number(xml.querySelector('rtept').getAttribute('lat'))-a[1])<1e-8);
+  assert.match(xml.querySelector('metadata desc').textContent,/Vädergränser EJ verifierade/);
+  document.querySelector('#results button').click();assert.ok(document.querySelector('.route.picked'));
+  view.map.fire('click',{latlng:L.latLng(0,0)});assert.equal(document.querySelectorAll('#results a').length,0);
+ }finally{view?.dispose();dom?.window.close();await api.close();}
+});

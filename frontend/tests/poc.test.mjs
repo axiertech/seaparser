@@ -15,6 +15,12 @@ test('published PoC: endpoints, departure, boat, limits, comparison, map selecti
   const dom=new JSDOM(readFileSync(new URL('index.html',site),'utf8'));const d=dom.window.document;
   const calls=[];const view={show:(r,id)=>calls.push({r,id}),endpoints(){},background(){}};
   try{
+    assert.equal(d.querySelector('h1').textContent,'SeaParser, ruttplanering för OffShore');
+    const logo=d.querySelector('.brand img');assert.equal(logo.alt,'SeaParser');
+    assert.equal(logo.getAttribute('src'),'assets/logos/seaparser-logo.svg');
+    assert.equal(logo.width/logo.height,206/78);
+    for(const link of d.querySelectorAll('link[rel="icon"]'))assert.ok(existsSync(new URL(link.getAttribute('href'),site)));
+    assert.equal(d.querySelectorAll('link[rel="icon"]').length,2);
     await mount(d,()=>view,createPocTransport(fetcher));
     assert.equal(d.getElementById('start-place').options.length,3);
     assert.equal(d.getElementById('boat-profile').value,'constant-5kn');

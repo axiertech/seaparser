@@ -77,8 +77,8 @@ land, hårda vädergränser och beräkningsbudgetar är oförändrade.
 Den installerade systemd-tjänsten kör en äldre release och annan låsfil.
 `deployment.poc_api` förbereder en separat arkiverad commit i `releases/poc-SHA`,
 bevarar den befintliga tjänsten och använder en separat beständig miljö i
-`venvs/poc-f46c6e9056cf` med verifierade låsta versioner. Miljön återanvänds från
-den redan installerade CI-miljön, inte från den äldre API-miljön. Vetenskapliga
+`venvs/poc-0928bea0ada2` med verifierade låsta versioner. Miljön återanvänds från
+den redan verifierade arbetsmiljön med samma låsfil. Den äldre API-miljön bevaras. Vetenskapliga
 bibliotek begränsas till en intern tråd så tjänstens befintliga processgräns
 behålls. Inga paket installeras globalt. Befintlig API-tjänst, TLS, DocumentRoot, databas och tidigare publika filer
 ändras inte. Två proxyregler för `/api/poc/` läggs före befintliga `/api/`-regler;
@@ -108,3 +108,14 @@ Förberedd release är inte en aktiverad tjänst. Manuell API-återställning:
 ```sh
 /bin/bash /home/web/seaparser/backups/poc-live-api-20261017/activate.sh --rollback
 ```
+
+
+Regionala fria punkter använder samma isolerade PoC-API efter aktivering.
+Se `coastal-free-planning.md` för uppmätta resurser och `settings/coastal-api.json`:
+60 s är ett mål, 240 s är processgräns, statuspollning får 255 s och proxyns
+25 s gäller varje kort HTTP-anrop. En regional beräkning åt gången och 1 GiB
+för API + barnprocess + resultat. Endast den gemensamma befintliga cachen är
+skrivbar utanför tjänstens privata temporärkatalog. Aktiveringens HTTPS-prov
+kontrollerar både befintliga Vinga-flödet och regionala fria kartpunkter/GPX.
+Exakt förberedd release och root-kommando redovisas i aktuell överlämning;
+återanvänd inte äldre aktiveringspaket med inaktuell commit/låsfil.

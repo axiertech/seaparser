@@ -17,7 +17,7 @@ from prototype.forecast import ForecastPolicy,FixedClock,utc_time
 from prototype.model import Vector,ConstantBoat
 from prototype.routes import RouteCandidate,compare_routes
 from prototype.weather import WeatherPolicy
-from prototype.presentation import export_route_comparison
+from prototype.presentation import route_comparison_data
 from application.coastal_inputs import coastal_inputs
 from application.development_weather import REQUIRED
 from application.planning import canonical,digest
@@ -90,7 +90,7 @@ def _simulate(environment,config,evidence,request,start,target,candidates,when,s
         max_seconds=available_voyage_seconds(resources,when,(0,),environment.end),step_seconds=resources['step_seconds'],
         max_steps=resources['max_steps'],max_waypoints=resources['max_waypoints'],max_candidates=8) if candidates else None
     if timings is not None:timings['engine_seconds']=monotonic()-mark
-    mark=monotonic();report=json.loads(export_route_comparison(result)) if result else {
+    mark=monotonic();report=route_comparison_data(result) if result else {
         'status':'not_simulated','candidates':[],'fastest_candidate':None,'comfortable_candidate':None,
         'reason':'No complete geometric candidate found within the bounded search'}
     segments=[]

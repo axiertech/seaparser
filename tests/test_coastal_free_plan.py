@@ -55,6 +55,26 @@ class CoastalFreePlanTests(unittest.TestCase):
         self.assertTrue(all(isinstance(r['source_time'],str) and isinstance(r['connection_waypoints'],list) for r in records))
         self.assertEqual(result,json.loads(json.dumps(result,allow_nan=False)))
 
+    def test_compact_view_restores_all_original_reserve_evidence_without_mutating_result(self):
+        from application.coastal_presentation import coastal_view,restore_estimates
+        env,config,payload=self.setup_plan(wall=True)
+        result=self.calculate(env,config,payload);before=deepcopy(result)
+        view=coastal_view(result)
+        restored=[]
+        for segment in view['reserve_evidence']['segments']:
+            row={k:v for k,v in segment.items() if k!='samples'};row['samples']=[]
+            for sample in segment['samples']:
+                row['samples'].append({k:v for k,v in sample.items() if k not in ('longitude','latitude','estimate_refs')}
+                                     |{'estimates':restore_estimates(view,sample)})
+            restored.append(row)
+        self.assertEqual(restored,result['estimated_segments'])
+        self.assertEqual(before,result)
+        from hashlib import sha256
+        from application.planning import canonical
+        self.assertEqual(view['full_result_sha256'],sha256(canonical(result).encode()).hexdigest())
+        self.assertEqual([r['distance_m'] for r in view['routes']],
+                         [r['distance_m'] for r in result['comparison']['candidates'] if r['status']=='arrived'])
+
     def test_blocked_endpoint_reports_search_failure_without_simulating(self):
         env,config,payload=self.setup_plan()
         env.margin_m=10

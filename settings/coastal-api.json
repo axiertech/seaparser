@@ -1,0 +1,9 @@
+{
+  "performance_target_seconds": 60,
+  "job_seconds": 240,
+  "max_active": 1,
+  "max_jobs": 2,
+  "ttl_seconds": 900,
+  "result_bytes": 67108864,
+  "service_memory_mib": 1024
+}

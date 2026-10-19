@@ -35,3 +35,30 @@ class PlanInput(BaseModel):
             local(p.latitude,p.longitude)
         validate_budget(self.profile,self.candidate_limit,self.departure_offsets_seconds)
         return self
+
+
+class CoastalPlanInput(BaseModel):
+    """Server-owned regional bounds; clients cannot change search budgets."""
+    model_config=ConfigDict(extra='forbid',strict=True,allow_inf_nan=False)
+    start: Position
+    target: Position
+    departure: str
+    boat_profile: Literal['constant-5kn']='constant-5kn'
+    candidate_limit: int=Field(default=2,ge=1,le=2)
+    max_wind_m_s: float=Field(default=18,ge=0,le=100)
+    max_wave_height_m: float=Field(default=3,ge=0,le=30)
+
+    @model_validator(mode='after')
+    def regional_support(self):
+        from application.coastal_presentation import coastal_coverage
+        from datetime import datetime
+        data=coastal_coverage();w,s,e,n=data['bbox']
+        for p in (self.start,self.target):
+            if not w<=p.longitude<=e or not s<=p.latitude<=n:
+                raise ValueError('Start eller mål ligger utanför det markerade regionala prognosområdet')
+        if self.start==self.target:raise ValueError('Välj olika start- och målpunkter')
+        when=datetime.fromisoformat(self.departure.replace('Z','+00:00'))
+        if when.tzinfo is None:raise ValueError('Avgången måste ha uttrycklig tidszon')
+        first,last=(datetime.fromisoformat(data['valid_times'][i]) for i in (0,-1))
+        if not first<=when<last:raise ValueError('Avgången ligger utanför gemensam giltighet för de frysta prognoserna')
+        return self

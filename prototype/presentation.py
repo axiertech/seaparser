@@ -1,52 +1,64 @@
 """JSON-export med uppslagspositioner, giltighetstider och antaganden."""
 import json
-from dataclasses import asdict
+from dataclasses import asdict,fields,is_dataclass
+from datetime import datetime
+
+
+def json_value(value):
+    """Build one JSON-native tree; immutable engine objects stay untouched."""
+    if is_dataclass(value):return {f.name:json_value(getattr(value,f.name)) for f in fields(value)}
+    if isinstance(value,datetime):return value.isoformat()
+    if isinstance(value,dict):return {k:json_value(v) for k,v in value.items()}
+    if isinstance(value,(tuple,list)):return [json_value(v) for v in value]
+    return value
+
+
+def step_data(steps):
+    missing=[e.current_status=='assumed_zero' for s in steps for e in (s.start,s.midpoint)]
+    coverage=('ej utvärderad' if not missing else 'saknas helt' if all(missing)
+              else 'delvis' if any(missing) else 'full vid uppslag')
+    rows=[]
+    for step in steps:
+        row=json_value(step)
+        row.update(sog_m_s=step.midpoint.ground.speed,cog_degrees=step.midpoint.ground.course,
+                   steering_degrees=step.midpoint.water.course)
+        rows.append(row)
+    return {'current_coverage':coverage,'steps':rows}
+
+
+def voyage_data(voyage):
+    row={f.name:json_value(getattr(voyage,f.name)) for f in fields(voyage) if f.name!='steps'}
+    row.update(step_data(voyage.steps))
+    return row
+
+
+def route_comparison_data(comparison):
+    """Lossless comparison without repeated asdict and JSON round trips."""
+    rows=[]
+    for route in comparison.candidates:
+        row={f.name:json_value(getattr(route,f.name)) for f in fields(route) if f.name!='legs'}
+        row['legs']=[voyage_data(leg) for leg in route.legs];rows.append(row)
+    return {'status':comparison.status,'scope':comparison.scope,
+        'fastest_candidate':comparison.fastest.candidate.name if comparison.fastest else None,
+        'comfortable_candidate':comparison.comfortable.candidate.name if comparison.comfortable else None,
+        'weather_policy':json_value(comparison.weather_policy),
+        'max_comfort_extra_seconds':comparison.max_comfort_extra_seconds,'comfort_model':comparison.comfort_model,
+        'forecast_policy':json_value(comparison.forecast_policy),'planning_time':json_value(comparison.planning_time),
+        'dataset_id':comparison.dataset_id,'dataset_version':comparison.dataset_version,
+        'forecast_products':json_value(comparison.forecast_products),
+        'weather_verification_scope':comparison.weather_verification_scope,'candidates':rows}
 
 
 def export(steps):
-    missing = [e.current_status == "assumed_zero"
-               for s in steps for e in (s.start, s.midpoint)]
-    coverage = ("ej utvärderad" if not missing else "saknas helt" if all(missing)
-                else "delvis" if any(missing) else "full vid uppslag")
-    rows = []
-    for step in steps:
-        row = asdict(step)
-        row["sog_m_s"] = step.midpoint.ground.speed
-        row["cog_degrees"] = step.midpoint.ground.course
-        row["steering_degrees"] = step.midpoint.water.course
-        rows.append(row)
-    return json.dumps({"current_coverage": coverage, "steps": rows},
-                      default=lambda value: value.isoformat(), ensure_ascii=False, indent=2)
+    return json.dumps(step_data(steps),ensure_ascii=False,indent=2)
 
 
 def export_voyage(voyage):
-    data = asdict(voyage)
-    data.update(json.loads(export(voyage.steps)))
-    return json.dumps(data, default=lambda value: value.isoformat(),
-                      ensure_ascii=False, indent=2)
+    return json.dumps(voyage_data(voyage),ensure_ascii=False,indent=2)
 
 
 def export_route_comparison(comparison):
-    """Present every candidate and its scope, including failed partial voyages."""
-    rows = []
-    for route in comparison.candidates:
-        row = asdict(route)
-        row['legs'] = [json.loads(export_voyage(leg)) for leg in route.legs]
-        rows.append(row)
-    return json.dumps({'status': comparison.status, 'scope': comparison.scope,
-                       'fastest_candidate': (comparison.fastest.candidate.name
-                                             if comparison.fastest else None),
-                       'comfortable_candidate': (comparison.comfortable.candidate.name
-                                                 if comparison.comfortable else None),
-                       'weather_policy': asdict(comparison.weather_policy) if comparison.weather_policy else None,
-                       'max_comfort_extra_seconds': comparison.max_comfort_extra_seconds,
-                       'comfort_model': comparison.comfort_model,
-                       'forecast_policy': asdict(comparison.forecast_policy) if comparison.forecast_policy else None,
-                       'planning_time': comparison.planning_time,
-                       'dataset_id': comparison.dataset_id, 'dataset_version': comparison.dataset_version,
-                       'forecast_products': [asdict(m) for m in comparison.forecast_products],
-                       'weather_verification_scope': comparison.weather_verification_scope, 'candidates': rows}, default=lambda value: value.isoformat(),
-                      ensure_ascii=False, indent=2)
+    return json.dumps(route_comparison_data(comparison),ensure_ascii=False,indent=2)
 
 
 def export_departure_comparison(comparison):

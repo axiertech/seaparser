@@ -1,5 +1,7 @@
 // Regional source preflight in the same PoC. Never substitutes for route planning.
 import {createMap} from './map-component.mjs';
+import {planCoastal} from './client.mjs';
+import {renderCoastalView} from './coastal-view.mjs';
 
 export function missingCell(product,point) {
   const find=(axis,value)=>{if(!Number.isFinite(value)||value<axis[0]||value>axis.at(-1))return -1;let i=0;while(i<axis.length-2&&axis[i+1]<=value)i++;return i;};
@@ -15,27 +17,27 @@ export async function mountRegional(document,L,fetcher=fetch,mapFactory=createMa
     const data=await response.json();if(data.schema!==1||data.route_status!=='blocked_at_data_preflight'||data.routing_performed||data.gpx_available)throw new Error('Avvikande regional förkontroll');
     get('regional-summary').hidden=false;get('planning-title').textContent='Vinga–Uddevalla';
     document.querySelector('.snapshot').textContent='Frysta prognoser · 18–19 oktober 2026';
-    get('mode-notice').textContent='Verkliga regionala prognosdata. Ruttberäkning stoppas före sökning när nödvändigt stöd saknas. Kartpunkter kan väljas fritt för kontroll av datatäckning.';
+    get('mode-notice').textContent='Fria regionala kartpunkter med verkliga frysta prognoser och uttryckliga landmedvetna reservdata. Ny beräkning sker som bakgrundsjobb med synlig status. Resultaten är uppskattningar med hög osäkerhet; vädergränser är inte verifierat klarade.';
     document.querySelector('.map-heading span').textContent='Vinga–Uddevalla · uttagsområde och dataluckor';
     document.querySelector('.map-note').textContent='Ramen visar uttaget, inte godkänd routing. Fryst OSM-kustunderlag visas med Visa beräkningsunderlag och är förenklat enbart för visning. Baskartans kustlinjer påverkas inte. OSM-kartbakgrund är inget officiellt sjökort; djup och landfullständighet är okända.';
     document.querySelector('.legend').textContent='Gråblå streckade konturer: valbart beräkningsunderlag · rött/orange: saknade marina interpolationshörn nära Uddevalla. Inga linjer visas som beräknade rutter.';
     const [w,s,e,n]=data.bbox,ring=[[w,s],[e,s],[e,n],[w,n],[w,s]],empty={type:'FeatureCollection',features:[]};
     const scene={profile:'vinga-uddevalla',map_min_zoom:7,coverage:{type:'FeatureCollection',features:[{type:'Feature',properties:{kind:'source_extract_extent'},geometry:{type:'Polygon',coordinates:[ring]}}]},obstacles:empty,land_display:data.coastline_display};
-    let selected='start',view;
+    let selected='start',view,revision=0;
     const setPoint=(name,p)=>{get(name+'-lat').value=p.latitude;get(name+'-lon').value=p.longitude;};
     const point=name=>({latitude:Number(get(name+'-lat').value),longitude:Number(get(name+'-lon').value)});
     const mark=()=>view.endpoints(point('start'),point('target'));
     function check() {
+      revision++;document.dispatchEvent(new document.defaultView.Event('seaparser:regional-change'));
       const points=[point('start'),point('target')];
       const issues=[];
       for(let k=0;k<points.length;k++)for(const product of ['waves','current']){
         const support=missingCell(data.products[product],points[k]);
         if(support!=='present')issues.push(`${k===0?'Start':'Mål'}: ${product==='waves'?'vågor':'ström'} ${support==='outside'?'utanför källans native-grid':'saknar nödvändiga interpolationshörn under perioden'}`);
       }
-      status.textContent=issues.length?issues.join('. ')+'. Ingen ruttberäkning eller GPX.':'Marina gridhörn finns under perioden. Regional vind-, land-, segment- och källkvalificering är inte genomförd för dessa egna punkter. Ingen rutt eller GPX skapas.';
-      get('comparison').textContent='Ingen kvalificerbar ruttjämförelse för detta regionala underlag. Färdsimuleringen har inte startats; restid och komfort är inte beräknade.';
+      status.textContent=issues.length?issues.join('. ')+'. Vid beräkning används bara uttryckliga landmedvetna reservdata där sådana finns. Hög osäkerhet.':'Punkterna har marina gridhörn. Beräkna för att kontrollera hela färden, land och valda vädergränser.';
+      get('comparison').textContent='Valen har ändrats. Beräkna nya ruttalternativ; tidigare rutter och GPX gäller inte dessa val.';
       get('results').replaceChildren();view.show({obstacles:empty,routes:empty});mark();
-      document.dispatchEvent(new document.defaultView.Event('seaparser:regional-change'));
     }
     for(const name of ['start','target']){
       const select=get(name+'-place');select.replaceChildren();
@@ -48,11 +50,29 @@ export async function mountRegional(document,L,fetcher=fetch,mapFactory=createMa
     view=mapFactory(L,get('map'),scene,p=>{setPoint(selected,p);get(selected+'-place').value='custom';check();selected=selected==='start'?'target':'start';});
     view.background();get('background').disabled=true;
     const boat=document.createElement('option');boat.value='constant-5kn';boat.textContent='Konstantfart 5 kn · uppskattad båtmodell';get('boat-profile').replaceChildren(boat);
-    const weather=document.createElement('option');weather.textContent='Vind ≤18 m/s · vågor ≤3 m · behålls vid framtida beräkning';get('weather-preset').replaceChildren(weather);
-    const departure=get('departure-choice');departure.previousSibling.textContent='Provtid · UTC (inte beräknad avgång)';departure.replaceChildren();
+    const presets={normal:{wind:18,waves:3},wind:{wind:8,waves:3},waves:{wind:18,waves:.5}};
+    get('weather-preset').replaceChildren();
+    for(const [id,p] of Object.entries(presets)){const option=document.createElement('option');option.value=id;option.textContent=`Vind ≤${p.wind} m/s · vågor ≤${p.waves} m · valda modellgränser`;get('weather-preset').append(option);}
+    get('weather-preset').addEventListener('change',check);
+    for(const id of ['start-lat','start-lon','target-lat','target-lon'])get(id).addEventListener('input',check);
+    const departure=get('departure-choice');departure.previousSibling.textContent='Avgång / provtid · UTC';departure.replaceChildren();
     for(let i=0;i<data.valid_times.length;i++){const option=document.createElement('option');option.value=String(i);option.textContent=new Date(data.valid_times[i]).toISOString().slice(0,16).replace('T',' ')+' UTC';departure.append(option);}
-    get('calculate').textContent='Kontrollera datastöd';get('show-all').disabled=true;
-    get('plan-form').addEventListener('submit',event=>{event.preventDefault();check();});
+    get('calculate').textContent='Beräkna regionala rutter';get('show-all').disabled=true;
+    get('plan-form').addEventListener('submit',async event=>{
+      event.preventDefault();check();const expected=revision;
+      const departureTime=data.valid_times[Number(departure.value)],start=point('start'),target=point('target');
+      if([start,target].some(p=>!Number.isFinite(p.latitude)||!Number.isFinite(p.longitude)||p.longitude<w||p.longitude>e||p.latitude<s||p.latitude>n)){status.textContent='Start eller mål ligger utanför det markerade regionala prognosområdet. Ingen beräkning startas.';return;}
+      if(!departureTime||departureTime===data.valid_times.at(-1)){status.textContent='Avgången saknar tillräcklig gemensam prognostid. Välj en tidigare tid.';return;}
+      const preset=presets[get('weather-preset').value];if(!preset){status.textContent='Välj befintliga vädergränser.';return;}
+      get('calculate').disabled=true;status.textContent='Startar regional beräkning…';
+      try{
+        const job=await planCoastal({start,target,departure:departureTime,boat_profile:'constant-5kn',candidate_limit:2,max_wind_m_s:preset.wind,max_wave_height_m:preset.waves},{fetcher,
+          onStatus:state=>{if(revision===expected&&state.status!=='completed')status.textContent=`${state.status==='queued'?'Köad':'Beräknar'} · ${Math.round(state.elapsed_seconds||0)} s. Måltid 60 s; jobbet får ta högst ${state.server_timeout_seconds||240} s. Behåll sidan öppen.`;}});
+        if(revision!==expected)return;
+        renderCoastalView(document,view,job.result,{live:true,gpx:id=>`/api/poc/coastal/plans/${job.id}/routes/${encodeURIComponent(id)}/gpx`,evidenceUrl:`/api/poc/coastal/plans/${job.id}`});
+      }catch(error){if(revision===expected){status.textContent=error.message.includes('404')?'Det regionala API:t är ännu inte aktiverat. Ingen beräkning eller ny GPX har skapats.':error.message;get('results').replaceChildren();}}
+      finally{get('calculate').disabled=false;}
+    });
     function samples(){
       const i=Number(departure.value),host=get('regional-samples');host.replaceChildren();
       for(const [name,probe] of Object.entries(data.probes)){
@@ -65,7 +85,7 @@ export async function mountRegional(document,L,fetcher=fetch,mapFactory=createMa
     const ended=Date.now()>Date.parse(data.valid_times.at(-1));
     get('regional-validity').textContent=`${ended?'Historiskt underlag':'Fryst prognosuttag; inte en löpande uppdaterad prognos'}. Gemensamma giltigheter: ${data.valid_times[0]} – ${data.valid_times.at(-1)} (${data.valid_times.length} timsteg, 30 timmar). Modellreferens MET: ${data.reference_time}; utfärdande och körförenlighet ej verifierade.`;
     get('regional-distance').textContent=`Fågelvägsavstånd ${(data.straight_line_distance_m/1000).toFixed(1)} km. Detta är inte en beräknad eller verifierat farbar rutt. Restid och komfort: ej beräknade. GPX: ej tillgänglig.`;
-    get('regional-blocker').textContent='Målet saknar ett av fyra egna gridhörn för både vågor och ström vid samtliga 31 timsteg. Samma problem finns i omgivande Uddevalla-celler. Närmaste gridvärde eller noll får inte ersätta luckan; större sökbudget löser inte detta datastödshinder.';
+    get('regional-blocker').textContent='Proven saknar egna marina gridhörn nära Uddevalla. Beräkningen använder uttryckligt konfigurerade reservdata med kontrollerad vattenförbindelse, avstånd och tidsavvikelse. Otillräckligt underlag eller blockerad landpassage ger ingen genomförbar rutt eller GPX. Vädergränser redovisas inte som verifierat klarade.';
     get('assumptions').textContent=data.assumptions.join('\n\n');get('provenance').textContent=JSON.stringify({source_sha256:data.source_sha256,land:data.land_inventory,blockers:data.blockers},null,2);
     const explanation=document.querySelector('.explanation');for(const p of explanation.querySelectorAll(':scope > p'))p.hidden=true;
     const gaps=L.layerGroup();

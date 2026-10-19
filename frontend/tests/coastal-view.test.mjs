@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {JSDOM} from 'jsdom';
 import {attachCoastalView} from '../poc/coastal-view.mjs';
-const source=readFileSync(new URL('../poc/uddevalla-main.mjs',import.meta.url),'utf8').replace("'./map-component.mjs'",JSON.stringify(new URL('../map/map-component.mjs',import.meta.url).href));
+const source=readFileSync(new URL('../poc/uddevalla-main.mjs',import.meta.url),'utf8').replace("'./map-component.mjs'",JSON.stringify(new URL('../map/map-component.mjs',import.meta.url).href)).replace("'./client.mjs'",JSON.stringify(new URL('../map/client.mjs',import.meta.url).href)).replace("'./coastal-view.mjs'",JSON.stringify(new URL('../poc/coastal-view.mjs',import.meta.url).href));
 const {mountRegional}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 const raw=JSON.parse(readFileSync(new URL('../../fixtures/vinga-uddevalla-preflight.json',import.meta.url),'utf8'));
 const voyage=JSON.parse(readFileSync(new URL('../../fixtures/coastal-voyage.json',import.meta.url),'utf8'));

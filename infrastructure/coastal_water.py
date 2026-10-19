@@ -54,7 +54,7 @@ class CoastalWater:
         if not all(isfinite(v) for v in values):raise ValueError('Finite coastal coordinates required')
         return values
 
-    @lru_cache(maxsize=65536)
+    @lru_cache(maxsize=65536,typed=True)
     def clear(self,start,end,margin_m=0):
         """Whole affine segment, including endpoints, excludes closed land/margin."""
         if type(margin_m) not in (int,float) or not isfinite(margin_m) or margin_m<0:raise ValueError('Finite nonnegative margin required')
@@ -107,7 +107,10 @@ class CoastalWater:
         same=np.all(b==a,axis=1)
         if np.any(same):shapes[same]=shapely.points(b[same])
         allowed=np.ones(len(b),dtype=bool)
-        hits=self.edge_index.query(shapes,predicate='dwithin',distance=margin_m+GUARD_M)
+        # Only existence matters. A single nearest boundary within the same
+        # closed margin avoids collecting every coast crossing of a long line.
+        # Which equidistant boundary is returned never affects the boolean.
+        hits=self.edge_index.query_nearest(shapes,max_distance=margin_m+GUARD_M,all_matches=False)
         if hits.size:allowed[hits[0]]=False
         return tuple(bool(v) for v in allowed)
 
