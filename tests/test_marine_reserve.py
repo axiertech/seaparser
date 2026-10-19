@@ -79,6 +79,18 @@ class MarineReserveTests(unittest.TestCase):
         self.assertEqual(records[0].source_time,sample.times[-1])
         self.assertEqual(records[0].time_offset_seconds,-3600)
 
+    def test_compact_wind_rows_convert_exactly_and_reject_ragged_source_shapes(self):
+        from decimal import Decimal
+        from infrastructure.native_wind import DecimalRow
+        from infrastructure.marine_reserve import _native_wind_array
+        values=(((Decimal('1.00000000000001'),Decimal('-0.0')),
+                 (Decimal('2E-5'),Decimal('3.125'))),)
+        compact=tuple(tuple(DecimalRow.from_values(row) for row in plane) for plane in values)
+        np.testing.assert_array_equal(_native_wind_array(compact,(1,2,2)),np.array(values,dtype=float))
+        for shape in ((2,2,2),(1,1,2),(1,2,3)):
+            with self.subTest(shape=shape),self.assertRaisesRegex(ValueError,'shape'):
+                _native_wind_array(compact,shape)
+
     def test_explicit_water_path_reserve_records_a_checked_connection_around_land(self):
         water=CoastalWater(to_wkb(box(-10000,-10000,10000,10000).difference(box(500,-10000,800,1200))),'test')
         base=self.make(water);values=base.values.copy();values[:,:,0,:]=np.nan

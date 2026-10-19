@@ -3342,3 +3342,44 @@ files passed when local HTTP sockets were permitted (7 tests passed, 1 optional
 public test skipped). No new dependencies were installed. Final logs:
 scenario-capture-final-check-20261019.log and
 scenario-capture-socket-tests-20261019.log under autonomy/logs/.
+
+## 2026-10-19: Compact Trelleborg source loading
+
+Reused the existing 50-hour Trelleborg–Strömstad raw bundle without any new
+extraction. Native wind retains validated exact decimal row tokens, with a
+bounded expansion cache; NumPy conversion now proceeds row by row so it cannot
+retain millions of temporary Decimal objects. Persistent materialization uses
+lossless bounded compressed JSON and avoids a second cold deserialization.
+Existing 64 MiB entry / 256 MiB total cache and 1 GiB service limits remain.
+
+Actual full-source preflight (not a route/API qualification), one library thread,
+1100 MiB address-space cap: cold 45.52 s / 789.2 MiB peak RSS; warm new process
+8.62 s / 614.2 MiB. Both loaded 50×455×208 wind nodes, all three marine products
+and finite wind components. Cache entry 61,470,327 bytes. Earlier failed
+intermediate entries from this pass were preserved with verified hashes under
+`/home/web/seaparser/data/materialization-preflight-preserved-20261019T1146/`;
+pre-existing cache and all raw sources were retained.
+
+OSM admission and the water builder release processed XML elements instead of
+retaining the complete tree. Missing references, Overpass remarks and incomplete
+XML remain failures. A 240-second profile of the original full water build
+localized the remaining runtime blocker to union and negative buffering; no
+water geometry or route is claimed. All original topology and land guards remain.
+
+579 Python tests pass, including exact precision/scale/signed-zero roundtrips,
+compression framing and decoded budgets, ragged-grid rejection and incomplete
+coastline admission. No dependency installation, service change or publication.
+At the live check, the static PoC and legacy API returned HTTP 200; the PoC API
+returned 503 and its existing 31ba37d5 unit was inactive. Admin must restart the
+existing unit (not rerun its installer). Next: finish land materialization, then
+qualify the larger motion/search frame and full or explicitly partial route in
+the same PoC before proceeding to either offshore scenario.
+
+Real streamed XML inventory: 14.70 s / 262.6 MiB peak RSS under a 700 MiB
+address-space cap, 1,030,000 nodes / 19,848 ways / 14,125 closed ways; counts
+matched the preserved inventory and source hash was unchanged. This verifies
+admission memory, not completed polygonization or navigability.
+
+Frontend static check and all 37 frontend tests completed: 36 passed, zero
+failed, one optional public test skipped. Local real-worker map/API/GPX tests
+passed; this does not imply that the inactive public PoC API was activated.

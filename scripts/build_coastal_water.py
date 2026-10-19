@@ -64,12 +64,16 @@ def build(directory):
     border=[(w+(e-w)*i/64,s) for i in range(64)]+[(e,s+(n-s)*i/64) for i in range(64)]+[(e-(e-w)*i/64,n) for i in range(64)]+[(w,n-(n-s)*i/64) for i in range(64)]
     domain=Polygon([FORWARD.transform(x,y,errcheck=True) for x,y in border])
     nodes={};ways=[]
-    for _,element in ET.iterparse(source,events=('end',)):
-        if element.tag=='node':nodes[element.attrib['id']]=(float(element.attrib['lon']),float(element.attrib['lat']));element.clear()
+    parser=ET.iterparse(source,events=('start','end'));_,root=next(parser)
+    if root.tag!='osm':raise ValueError('Unexpected coastline XML root')
+    for event,element in parser:
+        if event!='end':continue
+        if element.tag=='remark':raise ValueError('Incomplete coastline source')
+        if element.tag=='node':nodes[element.attrib['id']]=(float(element.attrib['lon']),float(element.attrib['lat']));root.clear()
         elif element.tag=='way':
             refs=[node.attrib['ref'] for node in element.findall('nd')]
             if len(refs)<2 or any(node not in nodes for node in refs):raise ValueError('Missing coastline nodes')
-            ways.append(refs);element.clear()
+            ways.append(refs);root.clear()
     print('COASTLINE_NODES',len(nodes),'WAYS',len(ways),flush=True)
     lines=[]
     for refs in ways:

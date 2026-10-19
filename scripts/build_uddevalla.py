@@ -18,7 +18,7 @@ from pyproj import Geod
 
 from scripts.audit_met_metadata import axis,matrix,numbers,PROJ4,field_metadata,geometry_metadata,time_metadata
 from scripts.fetch_uddevalla import inspect_marine,utc,requested_times
-from infrastructure.native_wind import NativeWindSample
+from infrastructure.native_wind import NativeWindSample,DecimalRow
 from infrastructure.met_wind_segments import NativeMetWind
 from infrastructure.copernicus_fields import wave_node,current_node
 from prototype.forecast_data import axis_cell
@@ -56,7 +56,7 @@ def wind_sample(directory,request):
                 if not separator or label!=f'[{i//ny}][{i%ny}]':raise ValueError('Native wind row order changed')
                 values=numbers(row,nx)
                 if min(values)<0 or (name=='wind_direction_10m' and max(values)>360):raise ValueError('Invalid physical wind')
-                rows.append(values)
+                rows.append(DecimalRow.from_values(values))
             planes[name].extend(tuple(rows[t*ny:(t+1)*ny]) for t in range(nt))
             if axis(text,name+'.time',nt)!=tuple(Decimal(int(utc(t).timestamp())) for t in chunk['times']):raise ValueError('Wind validity changed')
             for dim,count,first,last in (('x',1796,bounds['x_first'],bounds['x_last']),('y',2321,bounds['y_first'],bounds['y_last'])):

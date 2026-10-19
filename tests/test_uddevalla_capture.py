@@ -8,6 +8,16 @@ from scripts import fetch_uddevalla as f
 from scripts.share_public_capture import bundle
 
 class CorridorCaptureTests(unittest.TestCase):
+    def test_streamed_land_checks_forward_references_closed_ways_and_rejects_incomplete_xml(self):
+        raw=b'<osm><way><nd ref="1"/><nd ref="2"/><nd ref="1"/></way><node id="1"/><node id="2"/></osm>'
+        result=f.coastline_inventory(BytesIO(raw))
+        self.assertEqual((result['node_count'],result['way_count'],result['closed_individual_ways']),(2,1,1))
+        self.assertFalse(result['routing_enabled'])
+        for raw in (b'<html/>',b'<osm><remark>query timeout</remark></osm>',
+                    b'<osm><way><nd ref="1"/></way></osm>',b'<osm><way/></osm>',b'<osm><node id="1"/></osm>'):
+            with self.subTest(raw=raw),self.assertRaises(ValueError):f.coastline_inventory(BytesIO(raw))
+        with self.assertRaises(f.ET.ParseError):f.coastline_inventory(BytesIO(b'<osm><node id="1"/>'))
+
     def test_time_window_and_detour_extent(self):
         p=f.plan(now=datetime(2026,10,18,7,15,tzinfo=timezone.utc))
         self.assertEqual(p['departure'],'2026-10-18T09:00:00+00:00')

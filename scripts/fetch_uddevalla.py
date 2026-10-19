@@ -8,6 +8,7 @@ from datetime import datetime,timedelta,timezone
 from decimal import Decimal
 from hashlib import sha256
 import json
+from io import BytesIO
 import os
 from pathlib import Path
 import re
@@ -171,19 +172,35 @@ def capture_land(output,request,limit,endpoint=LAND_ENDPOINTS[0]):
     # Overpass maxsize limits SERVER working memory, not downloaded bytes.
     # Keep the response budget separate from the normal 512 MiB query memory.
     w,s,e,n=request['bbox'];query=f'[out:xml][timeout:180][maxsize:536870912];way["natural"="coastline"]({s},{w},{n},{e});(._;>;);out body;'
+    reports=[]
     def envelope(body):
-        root=ET.fromstring(body)
-        if root.tag!='osm':raise ValueError('Unexpected Overpass XML root')
-        if root.find('remark') is not None:raise ValueError('Overpass rejected query: '+(root.findtext('remark') or '')[:400])
+        reports.append(coastline_inventory(BytesIO(body)))
     body=cached_fetch(Path(output)/'land','coastline.osm',endpoint,limit=limit,data=urlencode({'data':query}).encode(),timeout=210,validator=envelope)
-    root=ET.fromstring(body)
-    if root.tag!='osm' or root.find('remark') is not None:raise ValueError('Incomplete Overpass response')
-    nodes={node.attrib['id'] for node in root.findall('node')};ways=root.findall('way')
-    if not ways or any(not way.findall('nd') or any(ref.attrib['ref'] not in nodes for ref in way.findall('nd')) for way in ways):raise ValueError('Missing complete coastline source nodes')
-    report=dict(source='OpenStreetMap contributors',license='ODbL-1.0',node_count=len(nodes),way_count=len(ways),
-        closed_individual_ways=sum(way.findall('nd')[0].attrib['ref']==way.findall('nd')[-1].attrib['ref'] for way in ways),
-        completeness='unknown',polygonization_required=True,notice='Mainland open chains must be assembled/clipped with verified land topology, never dropped or closed by an invented straight line.',routing_enabled=False)
+    # cached_fetch validates both cache hits and fresh responses. Test doubles
+    # may return bytes directly; still apply the same complete-source checks.
+    report=reports[0] if reports else coastline_inventory(BytesIO(body))
     (Path(output)/'land/inventory.json').write_text(json.dumps(report,indent=2)+'\n');return report
+
+
+def coastline_inventory(source):
+    """Stream OSM XML, retaining IDs/references but no million-element tree."""
+    parser=ET.iterparse(source,events=('start','end'))
+    _,root=next(parser)
+    if root.tag!='osm':raise ValueError('Unexpected Overpass XML root')
+    nodes=set();references=set();ways=closed=0
+    for event,element in parser:
+        if event!='end':continue
+        if element.tag=='remark':raise ValueError('Overpass rejected query: '+(element.text or '')[:400])
+        if element.tag=='node':
+            nodes.add(element.attrib['id']);root.clear()
+        elif element.tag=='way':
+            refs=[ref.attrib['ref'] for ref in element.findall('nd')]
+            if not refs:raise ValueError('Missing complete coastline source nodes')
+            references.update(refs);ways+=1;closed+=refs[0]==refs[-1];root.clear()
+    if not ways or not references<=nodes:raise ValueError('Missing complete coastline source nodes')
+    return dict(source='OpenStreetMap contributors',license='ODbL-1.0',node_count=len(nodes),way_count=ways,
+        closed_individual_ways=closed,
+        completeness='unknown',polygonization_required=True,notice='Mainland open chains must be assembled/clipped with verified land topology, never dropped or closed by an invented straight line.',routing_enabled=False)
 
 
 def capture_marine(output,request,args):

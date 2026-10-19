@@ -156,6 +156,18 @@ class MarineReserve:
         return value,records
 
 
+def _native_wind_array(values,shape):
+    """Convert one validated row at a time, without NumPy retaining Decimals."""
+    if len(values)!=shape[0]:raise ValueError('Exact native wind source shape required')
+    result=np.empty(shape,dtype=float)
+    for k,plane in enumerate(values):
+        if len(plane)!=shape[1]:raise ValueError('Exact native wind source shape required')
+        for j,row in enumerate(plane):
+            if len(row)!=shape[2]:raise ValueError('Exact native wind source shape required')
+            result[k,j]=np.fromiter(row,dtype=float,count=shape[2])
+    return result
+
+
 class NativeWindWithReserve(MarineReserve):
     """Keep NativeMetWind's native LCC interpolation; share only reserve policy."""
     def __init__(self,sample,water,policies):
@@ -170,8 +182,8 @@ class NativeWindWithReserve(MarineReserve):
         # accepting a second detached coordinate matrix could misattribute them.
         native_x,native_y=np.meshgrid(np.array(sample.x_m,dtype=float),np.array(sample.y_m,dtype=float))
         self.grid_longitude,self.grid_latitude=MET_FORWARD.transform(native_x,native_y,direction='INVERSE',errcheck=True)
-        speed=np.array(sample.speed_m_s,dtype=float);direction=np.array(sample.direction_from_degrees,dtype=float)
         expected=(len(self.times),len(sample.y_m),len(sample.x_m))
+        speed=_native_wind_array(sample.speed_m_s,expected);direction=_native_wind_array(sample.direction_from_degrees,expected)
         if speed.shape!=expected or direction.shape!=expected:raise ValueError('Exact native wind source shape required')
         if np.isinf(speed).any() or np.isinf(direction).any() or np.any(speed[np.isfinite(speed)]<0) or np.any((direction[np.isfinite(direction)]<0)|(direction[np.isfinite(direction)]>360)):raise ValueError('Invalid source wind')
         self.values=np.stack((-speed*np.sin(np.deg2rad(direction)),-speed*np.cos(np.deg2rad(direction))),axis=-1);self.values.flags.writeable=False

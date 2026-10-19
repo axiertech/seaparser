@@ -36,7 +36,7 @@ class MaterializedCache:
             fcntl.flock(lock, fcntl.LOCK_EX)
             yield
 
-    def get_or_create(self, identity, build):
+    def get_or_create(self, identity, build, *, reuse_built=False):
         """One writer, atomic admission, checked digest; corruption fails closed."""
         key = sha256(json.dumps(identity, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()).hexdigest()
         with self._locked():
@@ -45,9 +45,10 @@ class MaterializedCache:
                 if path.is_symlink() or path.stat().st_size > self.entry_budget:
                     raise ValueError('Invalid materialized cache entry')
                 envelope = json.loads(path.read_bytes())
-                encoded = envelope['data'].encode()
-                if envelope['key'] != key or sha256(encoded).hexdigest() != envelope['sha256']:
+                encoded = envelope['data']
+                if envelope['key'] != key or sha256(encoded.encode()).hexdigest() != envelope['sha256']:
                     raise ValueError('Materialized cache integrity check failed')
+                del envelope
                 return json.loads(encoded), 'hit'
             # Refuse before expensive materialization if even the configured maximum cannot fit.
             if shutil.disk_usage(self.directory).free < self.reserve + self.entry_budget:
@@ -69,4 +70,10 @@ class MaterializedCache:
                 os.replace(temporary, path)
             finally:
                 if temporary is not None and temporary.exists(): temporary.unlink()
+            # Release the builder tree and on-disk envelope before allocating
+            # the admitted JSON tree. Keeping all three copies scales poorly
+            # for larger, still byte-budgeted regional fields.
+            del envelope
+            if reuse_built:return data, 'miss'
+            del data
             return json.loads(encoded), 'miss'

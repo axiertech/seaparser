@@ -7,12 +7,33 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from application.coastal_inputs import coastal_inputs
+from application.coastal_inputs import coastal_inputs, _packed_decimals, _unpacked_decimals
 from infrastructure.materialized_cache import MaterializedCache, fingerprint
 from infrastructure.native_wind import NativeWindSample
 
 
 class MaterializedCacheTests(unittest.TestCase):
+    def test_compact_rows_preserve_scale_sign_exponent_and_numeric_array_values(self):
+        import numpy as np
+        values=tuple(Decimal(v) for v in ('1.0000','1','-0.00','0.00','1E+2','1.0000'))
+        packed=_packed_decimals(((values,values),))
+        result=_unpacked_decimals(json.loads(json.dumps(packed)))
+        self.assertEqual([[str(v) for v in row] for row in result[0]],[[str(v) for v in values]]*2)
+        np.testing.assert_array_equal(np.array(result,dtype=float),np.array(((values,values),),dtype=float))
+        self.assertEqual(result,((values,values),))
+        self.assertEqual(result[0][0][-2:],values[-2:])
+
+    def test_compact_fields_reject_truncation_trailing_data_and_decoded_budget_overrun(self):
+        import base64,zlib
+        packed=_packed_decimals((((Decimal('1.000'),)*10,),))
+        raw=base64.b64decode(packed)
+        for bad in (raw[:-1],raw+b'trailing'):
+            with self.subTest(bad=bad),self.assertRaisesRegex(ValueError,'framing'):
+                _unpacked_decimals(base64.b64encode(bad).decode())
+        with patch('application.coastal_inputs.MAX_WIND_FIELD_BYTES',10):
+            with self.assertRaisesRegex(ValueError,'byte budget'):_unpacked_decimals(packed)
+            with self.assertRaisesRegex(ValueError,'byte budget'):_packed_decimals((((Decimal('1.000'),)*10,),))
+
     def test_hit_skips_builder_and_corruption_never_silently_rebuilds(self):
         with tempfile.TemporaryDirectory() as tmp:
             cache = MaterializedCache(tmp)

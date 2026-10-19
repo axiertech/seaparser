@@ -99,3 +99,45 @@ reservförbindelser, segment, värden och källposter. Motorvariation mellan
 processerna kvarstår; detta är ingen garanterad latens eller kvalificering av
 hela fria-punkt-flödet. Ny geometrisökning och flera alternativ ingår inte.
 Inga nya rådatauttag eller publik API-aktivering genomfördes.
+
+## Kompakt större källmaterialisering 2026-10-19
+
+Det utökade Trelleborg-uttaget har 50×455×208 noder per vindfält.
+`DecimalRow` behåller varje validerat Decimal-värdes exakta strängform i
+oföränderliga rader; högst 128 rader expanderas till Decimal-objekt samtidigt.
+Sekvensåtkomst och NumPy-konvertering ger samma numeriska värden, inklusive
+skala, exponent och tecknet på noll. Alla källans form-, tids-, enhets-, hash-
+och fysikgränskontroller körs före materialisering. Inget nytt vindgrid införs.
+
+Cacheidentitetens schema 3 lagrar decimalrader och den befintliga marina
+payloaden som förlustfritt zlib-komprimerad JSON i base64. Den befintliga
+postgränsen 64 MiB och totala 256 MiB-gränsen är oförändrade. Dekodning är
+begränsad till 64 MiB per vindfält och 128 MiB marin JSON; avklippta eller
+påbyggda kompressionsströmmar avvisas. Dessa är bytebudgetar för materialiserade
+indata, inte utökad vädertäckning eller ändrade vädergränser.
+
+Vid kall cache återanvänds de redan validerade indataobjekten efter atomisk
+cacheupptagning, utan att först serialisera upp dem en andra gång. Vid träff
+körs samma källfingeravtryck och innehållsintegritetskontroll som tidigare.
+Äldre cacheposter och rådata bevaras. Nytt schema ändrar endast lagring och
+minnesanvändning; routing, reservmetoder och vädercertifiering är oförändrade.
+
+Verkligt Trelleborg-prov 19 oktober, separata processer och samma färdiga råfiler:
+
+| Indataläge | Laddning | Inklusive vindnormalisering | Topp-RSS |
+|---|---:|---:|---:|
+| Kall, cachemiss | 40,33 s | 45,52 s | 789,2 MiB |
+| Ny process, cacheträff | 3,47 s | 8,62 s | 614,2 MiB |
+
+Båda kördes med 1100 MiB adressrymdsgräns, en bibliotekstråd och 180 s timeout.
+De materialiserade samtliga 50×455×208 noder, tre marina produkter och
+75 712 000 byte finita vindkomponenter. Ny cachepost: 61 470 327 byte
+(58,62 MiB). Detta är ett mätt indataprov; full ruttberäkning, landgeometri,
+API-processens samlade minne och nya områdets rörelseram är ännu inte
+kvalificerade. Ingen ökning av PoC-tjänstens 1 GiB-gräns görs.
+
+Den stora OSM-filens separata strömmande inventering tar 14,70 s med
+262,6 MiB topp-RSS under 700 MiB adressrymdsgräns. Samtliga 1 030 000 noder,
+19 848 ways och 14 125 individuellt slutna ways matchar bevarad inventering;
+källhashen är oförändrad. Detta är inte färdig polygonisering eller bevis på
+navigerbarhet. Den negativa landmarginalbuffringen kvarstår som nästa hinder.
