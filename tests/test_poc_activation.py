@@ -10,7 +10,7 @@ class PocActivationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             stage=Path(tmp);unit=stage/'absent.service';manifest={'commit':'a'*40}
             state='LoadState=not-found\nActiveState=inactive\nMainPID=0\nControlGroup=\n'
-            with patch.object(p,'UNIT',unit),patch.object(p,'check_system'),patch.object(p.subprocess,'run') as manager,patch.object(p.subprocess,'check_output',return_value='') as port:
+            with patch.object(p,'UNIT',unit),patch.object(p,'check_system'),patch.object(p.subprocess,'run') as manager,patch.object(p.subprocess,'check_output',return_value='') as port,patch.object(p.Path,'rglob',return_value=()) as cgroups:
                 for invalid in (state.replace('not-found','loaded'),state.replace('MainPID=0','MainPID=123'),state.replace('inactive','active')):
                     manager.return_value=SimpleNamespace(returncode=0,stdout=invalid)
                     with self.assertRaises(ValueError):p.restored_state(stage,manifest)
@@ -18,6 +18,8 @@ class PocActivationTests(unittest.TestCase):
                 manager.return_value=SimpleNamespace(returncode=0,stdout=state);port.return_value='LISTEN 8766'
                 with self.assertRaises(ValueError):p.restored_state(stage,manifest)
                 port.return_value='';self.assertTrue(p.restored_state(stage,manifest)['verified'])
+                processes=stage/'cgroup.procs';processes.write_text('123\n');cgroups.return_value=(processes,)
+                with self.assertRaisesRegex(ValueError,'cgroup still contains processes'):p.restored_state(stage,manifest)
 
     def test_failed_sequential_public_flow_stops_before_removing_unit_and_reloads(self):
         # Exercise the actual shell's ERR path with simulated system commands only.

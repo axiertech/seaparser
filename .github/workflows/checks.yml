@@ -49,7 +49,7 @@ jobs:
         run: SEAPARSER_POC_URL=https://seaparser.com SEAPARSER_COASTAL_PUBLIC_TEST=1 node --test frontend/tests/poc-live.test.mjs
 
   capture-uddevalla:
-    if: contains(github.event.head_commit.message, '[capture-uddevalla]') || contains(github.event.head_commit.message, '[capture-uddevalla-land]')
+    if: contains(github.event.head_commit.message, '[capture-uddevalla]') || contains(github.event.head_commit.message, '[capture-uddevalla-land]') || contains(github.event.head_commit.message, '[capture-trelleborg-land]')
     needs: offline
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -67,11 +67,14 @@ jobs:
           --require-hashes --only-binary=:all: -r requirements.lock
       - name: Capture public native MET and OSM data only
         env:
-          LAND_ONLY: ${{ contains(github.event.head_commit.message, '[capture-uddevalla-land]') }}
+          LAND_ONLY: ${{ contains(github.event.head_commit.message, '[capture-uddevalla-land]') || contains(github.event.head_commit.message, '[capture-trelleborg-land]') }}
+          TRELLEBORG: ${{ contains(github.event.head_commit.message, '[capture-trelleborg-land]') }}
         run: |
           args=()
           if [[ "$LAND_ONLY" == true ]]; then args+=(--land-only); fi
-          python -B -m scripts.fetch_uddevalla --output data/uddevalla --request-file settings/vinga-uddevalla-request.json --public-only "${args[@]}"
+          request=settings/vinga-uddevalla-request.json
+          if [[ "$TRELLEBORG" == true ]]; then request=settings/trelleborg-stromstad-capture.json; fi
+          python -B -m scripts.fetch_uddevalla --output data/uddevalla --request-file "$request" --public-only "${args[@]}"
       - name: Return public capture through repository blobs
         if: always()
         env:

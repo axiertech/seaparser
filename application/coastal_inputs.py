@@ -30,9 +30,13 @@ def coastal_inputs(directory, request, *, cache_directory=None, diagnostics=None
         if diagnostics is not None: diagnostics['materialization_cache'] = 'disabled'
         return sample, payload, audit
     names = ('request.json', 'met/inventory.json', 'met/sources.json', 'met/forecast.dds',
-             'met/forecast.das', 'met/times.txt', 'met/axes.txt', 'met/coordinates.txt', 'met/wind.txt',
+             'met/forecast.das', 'met/times.txt', 'met/axes.txt', 'met/coordinates.txt',
              'marine/manifest.json')
     files = {name: directory / name for name in names}
+    index = json.loads((directory / 'met/sources.json').read_text())
+    for name in index:
+        if not isinstance(name,str) or Path(name).name!=name:raise ValueError('Local MET source filename required')
+        files['met/' + name] = directory / 'met' / name
     manifest = json.loads((directory / 'marine/manifest.json').read_text())
     for entry in manifest['files']:
         name = entry['filename']

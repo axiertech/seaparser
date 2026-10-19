@@ -17,7 +17,7 @@ import xarray as xr
 from pyproj import Geod
 
 from scripts.audit_met_metadata import axis,matrix,numbers,PROJ4,field_metadata,geometry_metadata,time_metadata
-from scripts.fetch_uddevalla import inspect_marine,utc
+from scripts.fetch_uddevalla import inspect_marine,utc,requested_times
 from infrastructure.native_wind import NativeWindSample
 from infrastructure.met_wind_segments import NativeMetWind
 from infrastructure.copernicus_fields import wave_node,current_node
@@ -29,29 +29,39 @@ ROOT=Path(__file__).resolve().parents[1]
 def wind_sample(directory,request):
     # Runtime callers must only read frozen local data, never initiate transport.
     inventory=json.loads((directory/'inventory.json').read_text());index=json.loads((directory/'sources.json').read_text())
-    if set(index)!={'forecast.dds','forecast.das','times.txt','axes.txt','coordinates.txt','wind.txt'}:raise ValueError('Complete frozen MET source index required')
+    chunks=inventory.get('wind_files',[{'filename':'wind.txt','times':inventory.get('times',[])}])
+    filenames=[chunk['filename'] for chunk in chunks]
+    if len(filenames)!=len(set(filenames)) or any(Path(name).name!=name for name in filenames):raise ValueError('Unique local wind chunks required')
+    if set(index)!={'forecast.dds','forecast.das','times.txt','axes.txt','coordinates.txt',*filenames}:raise ValueError('Complete frozen MET source index required')
     for name,entry in index.items():
         path=directory/name
         if path.is_symlink() or path.stat().st_size!=entry['bytes'] or sha256(path.read_bytes()).hexdigest()!=entry['sha256']:raise ValueError('Frozen MET source bytes changed')
     dds=(directory/'forecast.dds').read_text();das=(directory/'forecast.das').read_text();times_text=(directory/'times.txt').read_text()
     field_metadata(das);geometry_metadata(das);time_metadata(dds,das,times_text,expected_reference=Decimal(int(utc(request['reference_time']).timestamp())))
     bounds=inventory['native_subset'];nx=bounds['x_last']-bounds['x_first']+1;ny=bounds['y_last']-bounds['y_first']+1
-    text=(directory/'wind.txt').read_text();coords=(directory/'coordinates.txt').read_text();axes=(directory/'axes.txt').read_text();planes={}
+    coords=(directory/'coordinates.txt').read_text();axes=(directory/'axes.txt').read_text()
     times=tuple(utc(t) for t in inventory['times'])
-    for name in ('wind_speed_10m','wind_direction_10m'):
-        blocks=re.findall(r'^'+name+r'\.'+name+rf'\[31\]\[{ny}\]\[{nx}\]\n(.*?)\n\n',text,re.M|re.S)
-        if len(blocks)!=1 or len(blocks[0].splitlines())!=31*ny:raise ValueError('Exact native wind shape required')
-        rows=[]
-        for i,line in enumerate(blocks[0].splitlines()):
-            label,separator,row=line.partition(',')
-            if not separator or label!=f'[{i//ny}][{i%ny}]':raise ValueError('Native wind row order changed')
-            values=numbers(row,nx)
-            if min(values)<0 or (name=='wind_direction_10m' and max(values)>360):raise ValueError('Invalid physical wind')
-            rows.append(values)
-        planes[name]=tuple(tuple(rows[t*ny:(t+1)*ny]) for t in range(31))
-        if axis(text,name+'.time',31)!=tuple(Decimal(int(t.timestamp())) for t in times):raise ValueError('Wind validity changed')
-        for dim,count,first,last in (('x',1796,bounds['x_first'],bounds['x_last']),('y',2321,bounds['y_first'],bounds['y_last'])):
-            if axis(text,name+'.'+dim,last-first+1)!=axis(axes,dim,count)[first:last+1]:raise ValueError('Wind axis mismatch')
+    if times!=requested_times(request) or tuple(utc(t) for chunk in chunks for t in chunk['times'])!=times:
+        raise ValueError('Wind chunks must exactly partition the requested hourly window')
+    planes={name:[] for name in ('wind_speed_10m','wind_direction_10m')}
+    for chunk in chunks:
+        text=(directory/chunk['filename']).read_text();nt=len(chunk['times'])
+        if not nt:raise ValueError('Empty wind chunk')
+        for name in planes:
+            blocks=re.findall(r'^'+name+r'\.'+name+rf'\[{nt}\]\[{ny}\]\[{nx}\]\n(.*?)\n\n',text,re.M|re.S)
+            if len(blocks)!=1 or len(blocks[0].splitlines())!=nt*ny:raise ValueError('Exact native wind shape required')
+            rows=[]
+            for i,line in enumerate(blocks[0].splitlines()):
+                label,separator,row=line.partition(',')
+                if not separator or label!=f'[{i//ny}][{i%ny}]':raise ValueError('Native wind row order changed')
+                values=numbers(row,nx)
+                if min(values)<0 or (name=='wind_direction_10m' and max(values)>360):raise ValueError('Invalid physical wind')
+                rows.append(values)
+            planes[name].extend(tuple(rows[t*ny:(t+1)*ny]) for t in range(nt))
+            if axis(text,name+'.time',nt)!=tuple(Decimal(int(utc(t).timestamp())) for t in chunk['times']):raise ValueError('Wind validity changed')
+            for dim,count,first,last in (('x',1796,bounds['x_first'],bounds['x_last']),('y',2321,bounds['y_first'],bounds['y_last'])):
+                if axis(text,name+'.'+dim,last-first+1)!=axis(axes,dim,count)[first:last+1]:raise ValueError('Wind axis mismatch')
+    planes={name:tuple(values) for name,values in planes.items()}
     hashes=json.loads((directory/'sources.json').read_text())
     return NativeWindSample(PROJ4,axis(axes,'x',1796)[bounds['x_first']:bounds['x_last']+1],
         axis(axes,'y',2321)[bounds['y_first']:bounds['y_last']+1],times,planes['wind_speed_10m'],planes['wind_direction_10m'],

@@ -1,5 +1,5 @@
 """Acquisition must be reproducible, preserve failures and never imply routing."""
-from datetime import datetime,timezone
+from datetime import datetime,timezone,timedelta
 from io import BytesIO
 import json,tempfile,unittest
 from pathlib import Path
@@ -48,3 +48,32 @@ class CorridorCaptureTests(unittest.TestCase):
             f.capture_land(tmp,f.plan(),1000)
             self.assertEqual(fetch.call_args.kwargs['limit'],1000)
             self.assertIn('[maxsize:536870912]',parse_qs(fetch.call_args.kwargs['data'].decode())['data'][0])
+
+    def test_extended_window_keeps_exact_hours_and_rejects_truncation(self):
+        request=json.loads(Path('settings/trelleborg-stromstad-capture.json').read_text())
+        self.assertEqual(len(f.requested_times(request)),50)
+        self.assertEqual(f.requested_times(request)[-1],datetime(2026,10,21,10,tzinfo=timezone.utc))
+        self.assertIs(f.validate_request(request),request)
+        for end in ('2026-10-21T11:00:00Z','2026-10-19T08:00:00Z','2026-10-19T10:30:00Z'):
+            with self.subTest(end=end),self.assertRaises(ValueError):f.requested_times({**request,'end':end})
+        for key,value in (('bbox',[float('nan'),55.2,13.5,59.15]),('planning_area',[8,55.3,13.4,59.05]),('routing_enabled',True)):
+            with self.subTest(key=key),self.assertRaises(ValueError):f.validate_request({**request,key:value})
+
+    def test_long_wind_capture_chunks_partition_requested_times(self):
+        request=json.loads(Path('settings/trelleborg-stromstad-capture.json').read_text())
+        reference=f.utc(request['reference_time'])
+        all_times=tuple(int((reference+timedelta(hours=i)).timestamp()) for i in range(59))
+        def fetch(directory,name,url,**kwargs):
+            Path(directory).mkdir(parents=True,exist_ok=True)
+            return ('Dataset {\nforecast_reference_time, '+str(int(reference.timestamp()))+'\n').encode()
+        def axis(text,name,count):return all_times if name=='time' else (0,1000)
+        with tempfile.TemporaryDirectory() as tmp,patch.object(f,'cached_fetch',side_effect=fetch) as fetched, \
+             patch.object(f,'axis',side_effect=axis),patch.object(f,'native_window',return_value=(0,1,0,1)), \
+             patch.object(f,'field_metadata'),patch.object(f,'geometry_metadata'),patch.object(f,'time_metadata'):
+            result=f.capture_met(tmp,request,64000000)
+            self.assertEqual(len(result['wind_files']),9)
+            self.assertEqual([t for chunk in result['wind_files'] for t in chunk['times']],result['times'])
+            self.assertEqual(result['wind_files'][0]['filename'],'wind-09-14.txt')
+            self.assertEqual(result['wind_files'][-1]['filename'],'wind-57-58.txt')
+            self.assertEqual(len(result['wind_files'][-1]['times']),2)
+            self.assertTrue(all(call.kwargs['limit']<=64000000 for call in fetched.call_args_list))

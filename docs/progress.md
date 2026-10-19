@@ -3287,3 +3287,58 @@ Riktade krav-/referensprov passerar. Samlade lokala kontroller passerar:
 562 Python-tester, frontendkontroll och 30 frontendtester med låsta beroenden.
 Exakt CI redovisas i sessionens överlämning. Den separat publicerade grafiken bevaras och dess
 källpatch ska integreras före nästa publika presentationsbygge.
+
+## 2026-10-19: bounded Trelleborg–Strömstad source acquisition
+
+New active pass: 07:54:32–12:54:32 UTC, unchanged absolute deadline; no subagents.
+The existing capture/reader accepts exact hourly windows up to the native MET
+59-step horizon. Longer requests are split into six-step hash-indexed files;
+interrupted chunks are reused, and the reader rejects gaps, overlap, altered
+bytes, shape/axis/unit changes and invalid values. Existing 31-step bundles
+retain their single-file format. Cache identity covers every indexed chunk.
+The capture wrapper records command/PID and obeys the earlier of one hour or
+session deadline minus shutdown allowance. Public responses require disk reserve.
+
+Pinned request: settings/trelleborg-stromstad-capture.json, bbox
+10.5,55.2–13.5,59.15; 2026-10-19 09Z through 2026-10-21 10Z (50 steps).
+New run/region are absent from the old Vinga bundle, which is preserved.
+Actual wind and Baltic WAV/PHY/static data were acquired under the shared data
+root; marine estimated transfer 832,446,400 bytes, output about 26 MB. The
+50-step MET capture is about 83 MB. Both public Overpass instances failed
+locally (alternative HTTP 500); no land is inferred or bypassed. The existing
+CI public-source capture path now accepts [capture-trelleborg-land], uses the
+same immutable request and returns only public source blobs. No marine
+authentication or new account is supplied to CI.
+
+Official coverage checked 2026-10-19:
+https://data.marine.copernicus.eu/product/BALTICSEA_ANALYSISFORECAST_PHY_003_006/description
+https://data.marine.copernicus.eu/product/BALTICSEA_ANALYSISFORECAST_WAV_003_010/description
+Both include Danish Belts, Kattegat and Skagerrak; this does not qualify local
+wet support, metadata or navigability. Offshore coverage is not assumed.
+Alternative Overpass endpoint is listed by
+https://wiki.openstreetmap.org/wiki/Overpass_API .
+
+17 focused tests pass, including chunk partition, physical values, exact time
+window, gap rejection and cache identity; the real legacy 31-step reader also
+passes. Full offline checks and exact commit CI are recorded in autonomy logs.
+Current public health is ok, zero local/regional jobs; regional scene still
+exposes only the old Vinga–Uddevalla bundle. systemd WorkingDirectory is the
+31ba37d5 release. No new scenario or new API release is published by this step.
+Next: obtain/polygonize coastline, measure expanded materialization and frame/
+search budgets, then simulate and expose full or explicitly partial routes in
+the same PoC. Data-only capture is not a functioning scenario.
+
+The initial full offline run exposed an existing test isolation defect: the
+rollback unit test inspected the now-active host PoC cgroup despite mocked
+systemd state. Its cgroup fixture is now isolated and explicitly checks both
+empty and populated process lists; production rollback checks are unchanged.
+The corrected five-test activation suite passes. A complete final rerun follows
+this correction, including the existing frontend checks/tests.
+
+Final local validation: 167 domain + 408 application/infrastructure tests pass;
+syntax, architecture, pinned dependency and frontend static checks pass. Nine
+frontend test files passed in the restricted environment; the two socket-based
+files passed when local HTTP sockets were permitted (7 tests passed, 1 optional
+public test skipped). No new dependencies were installed. Final logs:
+scenario-capture-final-check-20261019.log and
+scenario-capture-socket-tests-20261019.log under autonomy/logs/.

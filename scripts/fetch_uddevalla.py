@@ -11,7 +11,9 @@ import json
 import os
 from pathlib import Path
 import re
+from math import isfinite
 import subprocess
+import shutil
 import sys
 import tempfile
 from urllib.parse import quote,urlencode
@@ -26,6 +28,7 @@ from infrastructure.copernicus_fields import CURRENT_FIELDS,WAVE_FIELDS,BATHY_FI
 ROOT=Path(__file__).resolve().parents[1]
 BBOX=(11.0,57.45,12.2,58.6)
 INNER=(11.10,57.55,12.10,58.50)
+LAND_ENDPOINTS=('https://overpass-api.de/api/interpreter','https://overpass.private.coffee/api/interpreter')
 USER_AGENT='SeaParser-development/0.1 (+https://seaparser.com)'
 
 
@@ -52,6 +55,41 @@ def plan(departure=None,now=None):
             'Ingen utökning av nuvarande 900m-routing sker genom datahämtningen.'],routing_enabled=False)
 
 
+def requested_times(request):
+    """Explicit hourly native window; no silent truncation to 31 samples."""
+    start,end,reference=(utc(request[k]) for k in ('departure','end','reference_time'))
+    if any(t.minute or t.second or t.microsecond for t in (start,end,reference)):
+        raise ValueError('Whole-hour forecast window required')
+    hours=(end-start).total_seconds()/3600
+    if not 1<=hours<=58 or hours!=int(hours) or start<reference or end>reference+timedelta(hours=58):
+        raise ValueError('Requested window must fit the selected 59-step native forecast')
+    return tuple(start+timedelta(hours=i) for i in range(int(hours)+1))
+
+
+def validate_request(request):
+    if request.get('schema')!=1 or request.get('case') not in ('vinga-uddevalla','trelleborg-stromstad'):
+        raise ValueError('Unsupported source capture identity')
+    requested_times(request)
+    boxes=[]
+    for name in ('bbox','planning_area'):
+        values=request.get(name)
+        if (not isinstance(values,list) or len(values)!=4 or
+                any(type(v) not in (int,float) or not isfinite(v) for v in values)):
+            raise ValueError('Finite geographic capture bounds required')
+        w,s,e,n=values
+        if not 9.04<=w<e<=30.21 or not 53.01<=s<n<=65.89:
+            raise ValueError('Capture outside reviewed Baltic product envelope')
+        boxes.append(values)
+    w,s,e,n=boxes[0];iw,iss,ie,inn=boxes[1]
+    if not w<iw<ie<e or not s<iss<inn<n:raise ValueError('Planning area requires source padding')
+    for name in ('start','target'):
+        point=request[name]
+        if not iw<point['longitude']<ie or not iss<point['latitude']<inn:
+            raise ValueError('Endpoint outside declared planning area')
+    if request.get('routing_enabled') is not False:raise ValueError('Capture never enables routing')
+    return request
+
+
 def cached_fetch(base,name,url,*,limit,data=None,timeout=90,validator=None):
     """Hash-checked frozen responses; partial responses never become cache hits."""
     base=Path(base);base.mkdir(parents=True,exist_ok=True)
@@ -64,6 +102,7 @@ def cached_fetch(base,name,url,*,limit,data=None,timeout=90,validator=None):
         if validator:validator(body)
         print('SOURCE_CACHE_HIT',name,flush=True);return body
     if target.exists() or target.is_symlink():raise ValueError('Unindexed source exists; never overwrite it')
+    if shutil.disk_usage(base).free < 2*limit+1_000_000_000:raise ValueError('Insufficient free source disk space including reserve')
     request=Request(url,data=data,headers={'User-Agent':USER_AGENT,'Accept-Encoding':'identity'})
     with MET_OPENER.open(request,timeout=timeout) as response:body=response.read(limit+1)
     if len(body)>limit:raise ValueError('Source response exceeds configured byte budget')
@@ -105,20 +144,30 @@ def capture_met(output,request,limit):
     xf,xl,yf,yl=native_window(xs,ys,request['bbox'])
     native_times=[datetime.fromtimestamp(int(t),timezone.utc) for t in axis(times,'time',59)]
     selected=[i for i,t in enumerate(native_times) if utc(request['departure'])<=t<=utc(request['end'])]
-    if len(selected)!=31:raise ValueError('Exact 31-hour native forecast window missing')
-    coordinates=f'[{yf}:1:{yl}][{xf}:1:{xl}]';temporal=f'[{selected[0]}:1:{selected[-1]}]'
+    if tuple(native_times[i] for i in selected)!=requested_times(request):raise ValueError('Exact requested native forecast window missing')
+    coordinates=f'[{yf}:1:{yl}][{xf}:1:{xl}]'
     query=','.join(name+coordinates for name in ('latitude','longitude','land_area_fraction'))
     get('coordinates.txt','.ascii?'+quote(query,safe=','),limit)
-    query=','.join(name+temporal+coordinates for name in ('wind_speed_10m','wind_direction_10m'))+',forecast_reference_time'
-    body=get('wind.txt','.ascii?'+quote(query,safe=','),limit)
-    references=re.findall(r'^forecast_reference_time, ([^\n]+)$',body,re.M)
-    if len(references)!=1 or Decimal(references[0])!=Decimal(int(reference.timestamp())):raise ValueError('Frozen wind model reference changed')
+    # Independently indexed chunks survive interruption; old 31-step bundles
+    # retain their original single-file format and hash identity.
+    chunks=[selected] if len(selected)==31 else [selected[i:i+6] for i in range(0,len(selected),6)]
+    wind_files=[]
+    for chunk in chunks:
+        temporal=f'[{chunk[0]}:1:{chunk[-1]}]'
+        name='wind.txt' if len(chunks)==1 else f'wind-{chunk[0]:02d}-{chunk[-1]:02d}.txt'
+        query=','.join(field+temporal+coordinates for field in ('wind_speed_10m','wind_direction_10m'))+',forecast_reference_time'
+        body=get(name,'.ascii?'+quote(query,safe=','),limit)
+        references=re.findall(r'^forecast_reference_time, ([^\n]+)$',body,re.M)
+        if len(references)!=1 or Decimal(references[0])!=Decimal(int(reference.timestamp())):raise ValueError('Frozen wind model reference changed')
+        wind_files.append({'filename':name,'times':[native_times[i].isoformat() for i in chunk]})
     report=dict(native_subset=dict(x_first=xf,x_last=xl,y_first=yf,y_last=yl,time_first=selected[0],time_last=selected[-1]),
         times=[native_times[i].isoformat() for i in selected],issued_at=None,source_qualification='unverified',routing_enabled=False)
+    if len(chunks)>1:report['wind_files']=wind_files
     (directory/'inventory.json').write_text(json.dumps(report,indent=2)+'\n');return report
 
 
-def capture_land(output,request,limit):
+def capture_land(output,request,limit,endpoint=LAND_ENDPOINTS[0]):
+    if endpoint not in LAND_ENDPOINTS:raise ValueError('Unreviewed land source endpoint')
     # Overpass maxsize limits SERVER working memory, not downloaded bytes.
     # Keep the response budget separate from the normal 512 MiB query memory.
     w,s,e,n=request['bbox'];query=f'[out:xml][timeout:180][maxsize:536870912];way["natural"="coastline"]({s},{w},{n},{e});(._;>;);out body;'
@@ -126,7 +175,7 @@ def capture_land(output,request,limit):
         root=ET.fromstring(body)
         if root.tag!='osm':raise ValueError('Unexpected Overpass XML root')
         if root.find('remark') is not None:raise ValueError('Overpass rejected query: '+(root.findtext('remark') or '')[:400])
-    body=cached_fetch(Path(output)/'land','coastline.osm','https://overpass-api.de/api/interpreter',limit=limit,data=urlencode({'data':query}).encode(),timeout=210,validator=envelope)
+    body=cached_fetch(Path(output)/'land','coastline.osm',endpoint,limit=limit,data=urlencode({'data':query}).encode(),timeout=210,validator=envelope)
     root=ET.fromstring(body)
     if root.tag!='osm' or root.find('remark') is not None:raise ValueError('Incomplete Overpass response')
     nodes={node.attrib['id'] for node in root.findall('node')};ways=root.findall('way')
@@ -178,7 +227,7 @@ def inspect_marine(directory,request,*,max_decoded_chunk_bytes=64*1024*1024,writ
                 times=[str(t)+'+00:00' for t in ds[names[0]].values.astype('datetime64[s]')]
                 report['times']=times;common=set(times) if common is None else common&set(times)
             products[entry['product']]=report
-    needed={(utc(request['departure'])+timedelta(hours=i)).isoformat() for i in range(31)}
+    needed={t.isoformat() for t in requested_times(request)}
     if not needed<=common:raise ValueError('Marine products lack the entire requested common time window')
     result=dict(products=products,common_times=sorted(common),model_run_compatibility='unverified',routing_enabled=False)
     if write_inventory:(directory/'inventory.json').write_text(json.dumps(result,indent=2)+'\n')
@@ -187,7 +236,7 @@ def inspect_marine(directory,request,*,max_decoded_chunk_bytes=64*1024*1024,writ
 
 def main(argv=None):
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--output',type=Path,required=True);p.add_argument('--departure');p.add_argument('--public-only',action='store_true');p.add_argument('--request-file',type=Path)
-    p.add_argument('--cache',type=Path,default=Path('/tmp/seaparser-copernicus-cache'));p.add_argument('--file-budget-gb',type=float,default=2);p.add_argument('--transfer-budget-gb',type=float,default=10);p.add_argument('--total-transfer-budget-gb',type=float,default=20)
+    p.add_argument('--land-endpoint',choices=LAND_ENDPOINTS,default=LAND_ENDPOINTS[0]);p.add_argument('--cache',type=Path,default=Path('/tmp/seaparser-copernicus-cache'));p.add_argument('--file-budget-gb',type=float,default=2);p.add_argument('--transfer-budget-gb',type=float,default=10);p.add_argument('--total-transfer-budget-gb',type=float,default=20)
     p.add_argument('--met-response-mb',type=int,default=32);p.add_argument('--land-response-mb',type=int,default=512);p.add_argument('--decode-chunk-mb',type=int,default=64);p.add_argument('--land-only',action='store_true',help='Retry land without repeating wind or marine downloads');a=p.parse_args(argv)
     if a.met_response_mb<=0 or a.land_response_mb<=0 or a.decode_chunk_mb<=0:raise ValueError('Positive configurable response budgets required')
     os.umask(0o077);a.output.mkdir(parents=True,exist_ok=True)
@@ -195,23 +244,26 @@ def main(argv=None):
     request=json.loads(filename.read_text()) if filename.exists() else json.loads(a.request_file.read_text()) if a.request_file else plan(a.departure)
     if a.request_file and json.loads(a.request_file.read_text())!=request:raise ValueError('Configured request differs from existing frozen request')
     if a.departure and utc(a.departure)!=utc(request['departure']):raise ValueError('Existing frozen request has another departure; use a new output directory')
-    if request.get('case')!='vinga-uddevalla' or request.get('bbox')!=list(BBOX):raise ValueError('Existing request identity differs')
+    validate_request(request)
     if not filename.exists():filename.write_text(json.dumps(request,indent=2)+'\n')
     status={'request':request,'started_at':datetime.now(timezone.utc).isoformat(),'phases':{},'routing_enabled':False}
-    tasks=[('met',lambda:capture_met(a.output,request,a.met_response_mb*1_000_000)),('land',lambda:capture_land(a.output,request,a.land_response_mb*1_000_000))]
+    tasks=[('met',lambda:capture_met(a.output,request,a.met_response_mb*1_000_000)),('land',lambda:capture_land(a.output,request,a.land_response_mb*1_000_000,a.land_endpoint))]
     if not a.public_only:tasks.append(('marine',lambda:capture_marine(a.output,request,a)))
     if a.land_only:tasks=[task for task in tasks if task[0]=='land']
     for label,task in tasks:
+        status['phases'][label]={'status':'running'}
+        (a.output/'status.json').write_text(json.dumps(status,indent=2)+'\n')
         try:status['phases'][label]={'status':'captured','inventory':task()}
         except Exception as error:
             status['phases'][label]={'status':'blocked','error_type':type(error).__name__}
+            if hasattr(error,'code') and type(error.code) is int:status['phases'][label]['http_status']=error.code
             if label=='land' and isinstance(error,ValueError):status['phases'][label]['reason']=str(error)[:500]
             print('CAPTURE_BLOCKED',label,type(error).__name__,status['phases'][label].get('reason',''),flush=True)
         (a.output/'status.json').write_text(json.dumps(status,indent=2)+'\n')
     status['ended_at']=datetime.now(timezone.utc).isoformat();status['exit_code']=0 if all(v['status']=='captured' for v in status['phases'].values()) else 1
     if not status['exit_code'] and not a.public_only and not a.land_only:
         met=set(status['phases']['met']['inventory']['times']);marine=set(status['phases']['marine']['inventory']['common_times']);status['common_times']=sorted(met&marine)
-        if len(status['common_times'])!=31:status['exit_code']=1;status['common_time_blocker']='Exact shared forecast window missing'
+        if set(status['common_times'])!={t.isoformat() for t in requested_times(request)}:status['exit_code']=1;status['common_time_blocker']='Exact shared forecast window missing'
     (a.output/'status.json').write_text(json.dumps(status,indent=2)+'\n');print('CAPTURE_FINISHED',status['exit_code'],str(a.output/'status.json'),'SOURCE_CAPTURE_ONLY; ROUTING_NOT_QUALIFIED',flush=True)
     return status['exit_code']
 

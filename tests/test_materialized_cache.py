@@ -60,6 +60,7 @@ class MaterializedCacheTests(unittest.TestCase):
                          'met/forecast.das', 'met/times.txt', 'met/axes.txt', 'met/coordinates.txt', 'met/wind.txt',
                          'marine/manifest.json', 'marine/waves.nc', 'marine/current.nc', 'marine/wave-mask.nc'):
                 path = root / name; path.parent.mkdir(parents=True, exist_ok=True); path.write_text('frozen')
+            (root/'met/sources.json').write_text(json.dumps({'wind.txt':{}}))
             manifest = {'files': [{'filename': name} for name in ('waves.nc', 'current.nc', 'wave-mask.nc')]}
             (root/'marine/manifest.json').write_text(json.dumps(manifest))
             with patch('application.coastal_inputs.wind_sample', return_value=sample) as wind, \

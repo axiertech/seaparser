@@ -49,4 +49,48 @@ class UddevallaPreflightTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError,'Frozen MET source bytes changed'):
                     wind_sample(directory,{})
 
+
+class ChunkedWindReaderTests(unittest.TestCase):
+    def test_native_chunks_preserve_values_and_reject_time_gap(self):
+        from datetime import datetime,timedelta,timezone
+        from decimal import Decimal
+        from scripts import build_uddevalla as reader
+        reference=datetime(2026,10,19,tzinfo=timezone.utc)
+        times=[reference+timedelta(hours=i) for i in (9,10,11)]
+        request={'reference_time':reference.isoformat(),'departure':times[0].isoformat(),'end':times[-1].isoformat()}
+        chunks=[{'filename':'wind-09-10.txt','times':[t.isoformat() for t in times[:2]]},
+                {'filename':'wind-11-11.txt','times':[times[2].isoformat()]}]
+        with TemporaryDirectory() as tmp:
+            root=Path(tmp);index={}
+            files={name:'metadata' for name in ('forecast.dds','forecast.das','times.txt','axes.txt','coordinates.txt')}
+            for chunk in chunks:
+                content=chunk['filename']+'\n';nt=len(chunk['times'])
+                for name in ('wind_speed_10m','wind_direction_10m'):
+                    content+=f'{name}.{name}[{nt}][2][2]\n'
+                    for t in range(nt):
+                        content+=f'[{t}][0], 1.0000, 2\n[{t}][1], 3, 4\n'
+                    content+='\n'
+                files[chunk['filename']]=content
+            for name,content in files.items():
+                data=content.encode();(root/name).write_bytes(data)
+                index[name]={'bytes':len(data),'sha256':sha256(data).hexdigest()}
+            (root/'sources.json').write_text(json.dumps(index))
+            inventory={'times':[t.isoformat() for t in times],'wind_files':chunks,
+                       'native_subset':{'x_first':0,'x_last':1,'y_first':0,'y_last':1}}
+            (root/'inventory.json').write_text(json.dumps(inventory))
+            def axis(text,name,count):
+                if name.endswith('.time'):
+                    selected=times[:2] if text.startswith('wind-09') else times[2:]
+                    return tuple(Decimal(int(t.timestamp())) for t in selected)
+                return (Decimal(0),Decimal(1000))
+            with patch.object(reader,'axis',side_effect=axis),patch.object(reader,'matrix',return_value=((0,0),(0,0))), \
+                 patch.object(reader,'field_metadata'),patch.object(reader,'geometry_metadata'),patch.object(reader,'time_metadata'):
+                sample=wind_sample(root,request)
+                self.assertEqual(sample.times,tuple(times))
+                self.assertEqual(len(sample.speed_m_s),3)
+                self.assertEqual(str(sample.speed_m_s[2][0][0]),'1.0000')
+                inventory['wind_files'][1]['times']=[times[1].isoformat()]
+                (root/'inventory.json').write_text(json.dumps(inventory))
+                with self.assertRaisesRegex(ValueError,'exactly partition'):wind_sample(root,request)
+
 if __name__=='__main__':unittest.main()

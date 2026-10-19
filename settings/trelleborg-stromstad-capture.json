@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "case": "trelleborg-stromstad",
+  "bbox": [10.5, 55.2, 13.5, 59.15],
+  "planning_area": [10.6, 55.3, 13.4, 59.05],
+  "reference_time": "2026-10-19T00:00:00+00:00",
+  "departure": "2026-10-19T09:00:00+00:00",
+  "end": "2026-10-21T10:00:00+00:00",
+  "boat_profile": "constant-5kn",
+  "estimated_boat": true,
+  "start": {"longitude": 13.15, "latitude": 55.36, "label": "Trelleborg, preliminär vattenpunkt"},
+  "target": {"longitude": 11.15, "latitude": 58.93, "label": "Strömstad, preliminär vattenpunkt"},
+  "assumptions": [
+    "Uttaget är källunderlag, inte ett beräknat eller verifierat scenario.",
+    "Ny MET-referens och utvidgat område/tidsfönster saknas i befintlig Vinga-bunt; gamla filer bevaras.",
+    "Baltic WAV/PHY omfattar enligt officiell produktinformation Kattegatt och Skagerrak; varje lokalt interpolationsstöd måste ändå kontrolleras.",
+    "Start och mål måste kontrolleras mot materialiserat landunderlag före routing.",
+    "49 timmars fönster är inte ett löfte att hela färden ryms. Endast faktiskt simulerad del får redovisas."
+  ],
+  "routing_enabled": false
+}

@@ -16,4 +16,13 @@ trap finish EXIT
 printf 'START=%s CWD=%s\n' "$(date -u +%FT%TZ)" "$worktree"
 cd "$worktree"
 unset COPERNICUSMARINE_SERVICE_USERNAME COPERNICUSMARINE_SERVICE_PASSWORD
-timeout --signal=TERM --kill-after=10s 3600 "$worktree/.venv/bin/python" -B -m scripts.fetch_uddevalla --output "$base" "$@" </dev/null
+capture_seconds=3600
+if [[ -n "${SEAPARSER_CAPTURE_DEADLINE:-}" ]]; then
+  deadline_epoch=$(date -u -d "$SEAPARSER_CAPTURE_DEADLINE" +%s)
+  remaining=$(( deadline_epoch - $(date -u +%s) - 15 ))
+  (( remaining > 0 )) || exit 124
+  if (( remaining < capture_seconds )); then capture_seconds=$remaining; fi
+fi
+printf 'PID=%s DEADLINE=%s TIMEOUT_SECONDS=%s\n' "$$" "${SEAPARSER_CAPTURE_DEADLINE:-one-hour-limit}" "$capture_seconds"
+printf 'COMMAND='; printf '%q ' "$worktree/.venv/bin/python" -B -m scripts.fetch_uddevalla --output "$base" "$@"; printf '\n'
+timeout --signal=TERM --kill-after=10s "$capture_seconds" "$worktree/.venv/bin/python" -B -m scripts.fetch_uddevalla --output "$base" "$@" </dev/null
