@@ -474,3 +474,20 @@ Två verkliga Vinga–Uddevalla-färder når mål, men detta kvalificerar inte
 regional interaktiv drift. Behåll 60 s/64 MiB och befintlig tjänsts 512 MiB;
 redovisa faktisk processuppstart och toppminne separat. Ingen API-aktivering
 eller publik ändring ingår innan dessa leveranshinder är lösta.
+
+## 2026-10-19: Konservativ uppdelning av stor vattenmaterialisering
+
+Det större Trelleborg-uttagets fulla union/erosion nådde timeout och ett första
+fastprecisionsförsök överskred 1100 MiB adressrymd. Materialiserare v2 använder
+nodad polygonpartition samt överlappande delområden för stora geometrier.
+Den lokala erosionen är 6 mm, följd av exakt delmängds-/sluten 5 mm-kantkontroll;
+detta behåller minst den tidigare 1 mm-mitre-guardens konservatism. Källa,
+full topologi och alla routingmarginaler består. V1-filer återanvänds vid samma
+hashar; inga gamla landdata skrivs över. Se coastal-reserve.md för metod och
+syntetiska referensfall. Större beräkningsområde aktiveras först efter separat
+rörelse-/data-/färdprov; en färdig landfil är inte ett fungerande scenario.
+
+Topologi, erosion och slutkontroll kan köras sekventiellt med hashbundna
+mellanresultat och processavslut mellan faserna. Detta frigör GEOS toppminne
+utan att ändra tjänstens budget eller hoppa över en slutkontroll. Stora
+kantindex läser varje koordinatarray en gång, inte en gång per kantdel.

@@ -3383,3 +3383,29 @@ admission memory, not completed polygonization or navigability.
 Frontend static check and all 37 frontend tests completed: 36 passed, zero
 failed, one optional public test skipped. Local real-worker map/API/GPX tests
 passed; this does not imply that the inactive public PoC API was activated.
+
+## 2026-10-19 12:37 UTC — larger coastal water materialized
+
+Built the preserved Trelleborg–Strömstad coastline into validated water without
+raising service limits or fetching data. Compact OSM indexes, noded coverage
+union and conservative tiled erosion retain directed coast/topology checks.
+Separate sequential topology/erosion/validation processes release GEOS memory;
+hash-bound stage files are not admitted as routing water before final checks.
+Tests cover islands, nested lakes, thin channels, sharp peninsulas, seams,
+whole-boundary clearance, filled-hole rejection and corrupt intermediate files.
+
+Real source: 1,030,000 nodes, 19,848 ways; 13 water faces and 14,658 land faces,
+zero cuts/dangles. Final WKB SHA-256:
+`09caa41846468cdc6717a2fa363ad6ef31d31796fb6e03e5d36e8bfd0b11432a`
+(45,800,574 bytes). Topology 57.24 s / 494.0 MiB RSS, erosion 87.46 s /
+731.5 MiB, validation 49.06 s / 643.2 MiB, each under 1100 MiB address-space
+and 240 s limits. Full source-subset topology proof and closed >5 mm boundary
+clearance passed; configured routing margins remain unchanged. V1 data are
+preserved. Prior experimental stage files are separately preserved, not reused
+under a changed builder fingerprint. No data/background jobs remain.
+
+This delivers the land prerequisite, not a functioning new scenario. Next:
+review the larger motion frame, source-bound scenario configuration and search
+grid budget; measure combined land/weather memory and a real full/partial
+voyage. Public PoC API still returns 503 with existing unit inactive; no
+publication or service operation performed. Deadline remains 16:32:08 UTC.

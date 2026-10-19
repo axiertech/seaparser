@@ -141,3 +141,56 @@ ingen generell latensgaranti. Källor och data återanvändes helt. Underlaget
 fortsätter att vara ett stödprov vid idealiserad tid, utan färd-, ankomst-,
 vädergräns- eller GPX-kvalificering. Den integrerade färdens faktiskt uppslagna
 tider, landmarginaler och segment måste kontrolleras i nästa komposition.
+
+## Större källområden: begränsad konservativ erosion
+
+Materialiserare v2 återanvänder v1-filer vid verifierad käll-/WKB-hash, utan
+omskrivning av Vinga-underlaget. Den riktade kustens klippning, noding,
+polygonisering, avvisning av inre lösa ändar och kompletta areapartition består.
+De redan nodade, icke överlappande vattenytorna förenas med
+[Shapely coverage_union_all](https://shapely.readthedocs.io/en/stable/reference/shapely.coverage_union_all.html).
+
+Över 100 000 koordinater görs erosionen i högst 512 världsförankrade 20 km-rutor,
+med 1 m överlappning. Den första lokala klippningen görs utan ytterligare
+snap-rounding så kustsegmentens lutning behålls vid gemensamma kanter. Varje
+ruta eroderas 6 mm med runda hörn och klipps sedan till sin kärna på den
+befintliga 0,1 mm-topologigridden. Kärnorna har åtskilda inre ytor. Resultatet
+måste vara giltigt, täckas av ursprungligt vatten och ha mer än 5 mm avstånd
+från samtliga ursprungliga vattenkanter, kontrollerat som slutna hela kantsegment.
+Fel i sömmar, topologi eller guard stoppar upptagningen; ingen reservgeometri används.
+
+Den tidigare 1 mm-erosionens mitre-hörn har
+[gränsen fem gånger bufferavståndet](https://shapely.readthedocs.io/en/stable/reference/shapely.buffer.html).
+6 mm ger även efter cirkelapproximation och 0,1 mm avrundning marginal över
+5 mm. Den slutliga slutna 5 mm-kontrollen gör att ett lokalt klippfel inte kan
+släppa igenom en tunnare guard. Små geometrier behåller tidigare 1 mm-metod.
+Manifestet redovisar faktiskt metodval, rutor och guard. Detta är fortfarande
+ett uppskattat OSM-landhinder; djup och navigerbarhet är okända.
+
+OSM-noder och way-referenser lagras nu i kompakta heltals-/float64-arrayer.
+Ett sorterat ID-index ger exakt uppslag utan en Python-objektgraf per nod.
+Way-ordning och samma projektion behålls; saknade/duplicerade ID:n, icke-finita
+koordinater och självkorsande kuster avvisas innan polygonisering.
+
+Delmängdsbeviset använder giltiga polygoners sammanhängande inre och hela slutna
+kanter: varje resultatpolygon har ett vått inre vittne; varje källring har ett
+vittne utanför resultatet; samtliga käll-/resultatkanter måste samtidigt vara
+åtskilda med mer än 5 mm. Det utesluter både yttre felkomponenter, fyllda landhål
+och korsningar utan en global overlay av miljontals koordinater. Små punktprov
+ersätter alltså inte kantkontrollen.
+
+Stora offlinebyggen kan köras i tre **sekventiella, avslutade processer**:
+
+```sh
+.venv/bin/python -m scripts.build_coastal_water DATA --stage topology
+.venv/bin/python -m scripts.build_coastal_water DATA --stage erode
+.venv/bin/python -m scripts.build_coastal_water DATA --stage validate
+```
+
+`land/build-stages/` innehåller enbart mellanresultat, bundna till algoritm,
+byggarkod, projektion, bbox och verifierad råkälla. Varje WKB har separat storlek
+och SHA-256 i sitt kvitto. Erosionssteget återanvänder topologin; slutkontrollen
+återanvänder båda. Endast godkänd slutkontroll skriver `water.wkb`/`water.json`.
+En avbruten eller korrupt fas tas aldrig upp som färdigt routingunderlag.
+Befintliga mellanresultat skrivs inte över. Kör med yttre minnes-/tidsgräns;
+processavsluten frigör även GEOS allokeringar mellan faserna.
