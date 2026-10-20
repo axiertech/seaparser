@@ -34,7 +34,8 @@ class DeepSeekClient:
         return f"DeepSeekClient(model={self._settings.model!r}, base_url={self._settings.base_url!r})"
 
     def chat(self, messages: Sequence[Mapping[str, str]], *,
-             temperature: float = 0.2, max_tokens: int | None = None) -> str:
+             temperature: float = 0.2, max_tokens: int | None = None,
+             response_format: dict | None = None) -> str:
         """Returnerar assistentens svaretxt. Kastar DeepSeekError vid fel."""
         if not messages:
             raise DeepSeekError("messages får inte vara tomt")
@@ -45,6 +46,9 @@ class DeepSeekClient:
         }
         if max_tokens is not None:
             kwargs["max_tokens"] = max_tokens
+        if response_format is not None:
+            kwargs["response_format"] = response_format
+
         last_error: Exception | None = None
         for attempt in range(self._max_retries + 1):
             try:
@@ -55,9 +59,15 @@ class DeepSeekClient:
                     raise DeepSeekError("Tomt svar från DeepSeek")
                 return content
             except DeepSeekError:
+                last_error = DeepSeekError("Tomt svar från DeepSeek")
+                if attempt < self._max_retries:
+                    time.sleep(self._backoff * (2 ** attempt))
+                    continue
                 raise
-            except Exception as exc:  # leverantörsfel, timeout, nätverk
+            except Exception as exc:
                 last_error = exc
                 if attempt < self._max_retries:
                     time.sleep(self._backoff * (2 ** attempt))
-        raise DeepSeekError(f"DeepSeek-anrop misslyckades: {type(last_error).__name__}") from None
+        raise DeepSeekError(
+            f"DeepSeek-anrop misslyckades: {type(last_error).__name__}"
+        ) from None

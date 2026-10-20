@@ -8,12 +8,6 @@ verifierar med scripts.check (eller en snabb delmängd med --fast),
 granskar med application.deepseek_review och committar endast vid
 verdict=approve. Pushar aldrig, mergar aldrig till main och rör aldrig
 ~/app utanför AUTONOMOUS_TASK.md, RUN_HISTORY.json och RUN_REPORT_*.md.
-
-Modellval:
-- Om uppgiftsfilen innehåller raden "Modell: <namn>" används den.
-- Annars väljs deepseek-v4-pro om uppgiften matchar beräkningstunga ord
-  (beräkning, rutt, väder, geometri, polar, test_planning, test_weather,
-  test_forecast), annars deepseek-flash.
 """
 from __future__ import annotations
 
@@ -50,6 +44,7 @@ REPORT_TEMPLATE = "RUN_REPORT_{date}_{run}.md"
 
 MAX_ITERATIONS = 8
 MAX_API_CALLS = 30
+MAX_TOKENS = 8000
 ALLOWED_PREFIXES = ("application/", "tests/", "docs/", "scripts/", "infrastructure/")
 FORBIDDEN_FILES = {"pyproject.toml", "requirements.lock", "AGENTS.md"}
 
@@ -151,9 +146,10 @@ def _make_context(history: dict, task_text: str, force: bool) -> RunContext:
                 and r.get("status") == "completed"]
     if matching and not force:
         prev = matching[-1]
+        commit = (prev.get("commit") or "?")[:10]
         raise SystemExit(
             f"Uppgiften har redan körts som run-{prev['date']}_{prev['run']} "
-            f"(commit {(prev.get('commit') or '?')[:10]}).\n"
+            f"(commit {commit}).\n"
             f"Redigera AUTONOMOUS_TASK.md eller kör med --force."
         )
     run = _next_run(history, date)
@@ -259,26 +255,53 @@ def _commit_in_worktree(ctx: RunContext, message: str) -> str | None:
     return _run_git(["rev-parse", "HEAD"], cwd=ctx.worktree).stdout.strip()
 
 
-def _propose_changes(client: DeepSeekClient, counter: ApiCounter,
-                     task_text: str, rules_text: str,
-                     files: list[tuple[str, str]],
-                     feedback: str = "") -> dict[str, str]:
+def _build_user_prompt(task_text: str, rules_text: str,
+                       files: list[tuple[str, str]], feedback: str) -> str:
     files_block = "\n\n".join(
         f"=== {path} ===\n{content}" for path, content in files
     )
-    user_prompt = (
+    prompt = (
         f"Task:\n{task_text}\n\n"
         f"Project rules (AGENTS.md):\n{rules_text}\n\n"
         f"Current files:\n{files_block}\n"
     )
     if feedback:
-        user_prompt += f"\nReviewer feedback to address:\n{feedback}\n"
+        prompt += f"\nReviewer feedback to address:\n{feedback}\n"
+    return prompt
+
+
+def _request_changes(client: DeepSeekClient, counter: ApiCounter,
+                     prompt: str) -> str:
+    """Anropar DeepSeek med JSON-läge och en retry vid tomt svar."""
+    kwargs = dict(
+        temperature=0.2,
+        max_tokens=MAX_TOKENS,
+        response_format={"type": "json_object"},
+    )
     counter.tick()
     raw = client.chat(
         [{"role": "system", "content": EDIT_SYSTEM_PROMPT},
-         {"role": "user", "content": user_prompt}],
-        temperature=0.2, max_tokens=4000,
+         {"role": "user", "content": prompt}],
+        **kwargs,
     )
+    if not raw or not raw.strip():
+        counter.tick()
+        raw = client.chat(
+            [{"role": "system", "content": EDIT_SYSTEM_PROMPT},
+             {"role": "user", "content": prompt + "\n\nReturn ONLY the JSON object."}],
+            **kwargs,
+        )
+    if not raw or not raw.strip():
+        raise ValueError("DeepSeek returnerade tomt svar två gånger")
+    return raw
+
+
+def _propose_changes(client: DeepSeekClient, counter: ApiCounter,
+                     task_text: str, rules_text: str,
+                     files: list[tuple[str, str]],
+                     feedback: str = "") -> dict[str, str]:
+    prompt = _build_user_prompt(task_text, rules_text, files, feedback)
+    raw = _request_changes(client, counter, prompt)
     try:
         data = json.loads(raw)
     except json.JSONDecodeError as exc:
@@ -375,10 +398,7 @@ def main(argv=None) -> int:
                 self.calls = 0
             def chat(self, messages, **kwargs):
                 self.calls += 1
-                return json.dumps({
-                    "reasoning": "torrkörning",
-                    "changes": {}
-                })
+                return json.dumps({"reasoning": "torrkörning", "changes": {}})
         client = _DryRunClient()
     else:
         client = DeepSeekClient(load_deepseek(model_override=ctx.model), max_retries=0)
@@ -420,9 +440,10 @@ def main(argv=None) -> int:
                                        current_files, feedback)
             written = _apply_changes(ctx.worktree, changes)
             print(f"Skrev: {', '.join(written) if written else '(inga ändringar)'}")
-        except (ValueError, DeepSeekError) as exc:
+        except (ValueError, DeepSeekError, RuntimeError) as exc:
             last_check_tail = f"Ändringsförslag misslyckades: {exc}"
             print(last_check_tail)
+            status = "failed"
             break
 
         ok, tail = _check_in_worktree(ctx, fast=args.fast)
