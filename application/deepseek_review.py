@@ -153,7 +153,15 @@ def _parse_response(raw: str) -> ReviewResult:
 
 def review(request: ReviewRequest, *,
            client: DeepSeekClient | None = None) -> ReviewResult:
-    """Granskar en diff. Anropar inte DeepSeek om diffen är tom."""
+    """Granskar en diff och returnerar ett strukturerat ReviewResult.
+
+    Om ``request.diff`` är tom eller bara innehåller whitespace returneras
+    ``ReviewResult(verdict="approve", summary="Inga ändringar att granska.")``
+    direkt, utan att DeepSeek anropas. Detta besparar ett betalt API-anrop när
+    det inte finns något att granska. I alla andra fall anropas ``client``
+    (eller en klient som skapas från ``load_deepseek()``) och svaret tolkas av
+    ``_parse_response``.
+    """
     if not request.diff.strip():
         return ReviewResult(verdict="approve", summary="Inga ändringar att granska.")
 
