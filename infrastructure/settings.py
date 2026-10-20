@@ -50,7 +50,6 @@ def load_database(environment, *, variables=None, private_path=PRIVATE):
     if environment != "development":
         raise ValueError("Miljö måste väljas explicit")
     base = tomllib.loads((ROOT / "settings" / f"{environment}.toml").read_text())
-    # variables är en explicit inmatning, aldrig hela processmiljön som fallback.
     values = read_env(private_path) if variables is None else dict(variables)
     if values.get("APP_ENV", environment) != environment:
         raise ValueError("APP_ENV stämmer inte med vald miljö")
@@ -73,7 +72,6 @@ def load_database(environment, *, variables=None, private_path=PRIVATE):
     sslmode, sslrootcert = get("sslmode"), get("sslrootcert")
     if sslmode not in ("require", "verify-ca", "verify-full"):
         raise ValueError("TLS kräver require, verify-ca eller verify-full")
-    # libpq ignorerar sslmode för Unix-sockets; tillåt endast TCP-värdar.
     if host.startswith(("/", "@")) or "," in host:
         raise ValueError("Databasanslutningen kräver en TCP-värd för TLS")
     if sslrootcert and not Path(sslrootcert).is_absolute():
@@ -84,8 +82,9 @@ def load_database(environment, *, variables=None, private_path=PRIVATE):
                             sslmode, sslrootcert)
 
 
-DEEPSEEK_DEFAULT_MODEL = "deepseek-chat"
+DEEPSEEK_DEFAULT_MODEL = "deepseek-flash"
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
+DEEPSEEK_STRONG_MODEL = "deepseek-v4-pro"
 
 
 @dataclass(frozen=True)
@@ -95,7 +94,7 @@ class DeepSeekSettings:
     base_url: str = DEEPSEEK_BASE_URL
 
 
-def load_deepseek(*, variables=None, private_path=PRIVATE):
+def load_deepseek(*, variables=None, private_path=PRIVATE, model_override=None):
     """Läser DeepSeek-konfiguration utan att någonsin logga hemligheten."""
     values = read_env(private_path) if variables is None else dict(variables)
     api_key = values.get("DEEPSEEK_API_KEY", "").strip()
@@ -103,7 +102,10 @@ def load_deepseek(*, variables=None, private_path=PRIVATE):
         raise ValueError("DEEPSEEK_API_KEY saknas i konfigurationen")
     if any(c.isspace() for c in api_key):
         raise ValueError("DEEPSEEK_API_KEY innehåller ogiltiga tecken")
-    model = values.get("DEEPSEEK_MODEL", DEEPSEEK_DEFAULT_MODEL).strip() or DEEPSEEK_DEFAULT_MODEL
+    if model_override is not None:
+        model = model_override
+    else:
+        model = values.get("DEEPSEEK_MODEL", DEEPSEEK_DEFAULT_MODEL).strip() or DEEPSEEK_DEFAULT_MODEL
     if not re.fullmatch(r"[A-Za-z0-9._:-]+", model):
         raise ValueError("DEEPSEEK_MODEL har ogiltigt format")
     return DeepSeekSettings(api_key=api_key, model=model)

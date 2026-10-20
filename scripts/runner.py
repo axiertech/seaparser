@@ -1,13 +1,19 @@
 """Autonom körning av en avgränsad uppgift i en isolerad Git-worktree.
 
-Kör manuellt:  python -B -m scripts.runner [--force] [--max-iterations N]
+Kör manuellt:  python -B -m scripts.runner [--force] [--dry-run] [--fast]
 
 Läser ~/app/AUTONOMOUS_TASK.md. Skapar en worktree under
 ~/worktrees/run-<YYYY-MM-DD>_<run>/, låter DeepSeek föreslå ändringar,
-verifierar med scripts.check, granskar med application.deepseek_review
-och committar endast vid verdict=approve. Pushar aldrig, mergar aldrig
-till main och rör aldrig ~/app utanför AUTONOMOUS_TASK.md,
-RUN_HISTORY.json och RUN_REPORT_*.md.
+verifierar med scripts.check (eller en snabb delmängd med --fast),
+granskar med application.deepseek_review och committar endast vid
+verdict=approve. Pushar aldrig, mergar aldrig till main och rör aldrig
+~/app utanför AUTONOMOUS_TASK.md, RUN_HISTORY.json och RUN_REPORT_*.md.
+
+Modellval:
+- Om uppgiftsfilen innehåller raden "Modell: <namn>" används den.
+- Annars väljs deepseek-v4-pro om uppgiften matchar beräkningstunga ord
+  (beräkning, rutt, väder, geometri, polar, test_planning, test_weather,
+  test_forecast), annars deepseek-flash.
 """
 from __future__ import annotations
 
@@ -17,10 +23,8 @@ import hashlib
 import json
 import os
 import re
-import shutil
 import subprocess
 import sys
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -31,7 +35,11 @@ from application.deepseek_review import (
     review,
 )
 from infrastructure.deepseek import DeepSeekClient, DeepSeekError
-from infrastructure.settings import load_deepseek
+from infrastructure.settings import (
+    DEEPSEEK_DEFAULT_MODEL,
+    DEEPSEEK_STRONG_MODEL,
+    load_deepseek,
+)
 
 
 APP_ROOT = Path(__file__).resolve().parents[1]
@@ -45,7 +53,11 @@ MAX_API_CALLS = 30
 ALLOWED_PREFIXES = ("application/", "tests/", "docs/", "scripts/", "infrastructure/")
 FORBIDDEN_FILES = {"pyproject.toml", "requirements.lock", "AGENTS.md"}
 
-# Modellens systemprompt för att föreslå ändringar.
+STRONG_TASK_WORDS = (
+    "beräkning", "rutt", "väder", "geometri", "polar",
+    "test_planning", "test_weather", "test_forecast",
+)
+
 EDIT_SYSTEM_PROMPT = """You are an autonomous coding assistant for SeaParser.
 
 You receive:
@@ -80,6 +92,7 @@ class RunContext:
     report: Path
     started_at: str
     forced_rerun_of: int | None
+    model: str
 
 
 @dataclass
@@ -120,6 +133,16 @@ def _next_run(history: dict, date: str) -> int:
     return run
 
 
+def _select_model(task_text: str) -> str:
+    explicit = re.search(r"(?im)^\s*Modell:\s*([A-Za-z0-9._:-]+)\s*$", task_text)
+    if explicit:
+        return explicit.group(1)
+    lowered = task_text.lower()
+    if any(word in lowered for word in STRONG_TASK_WORDS):
+        return DEEPSEEK_STRONG_MODEL
+    return DEEPSEEK_DEFAULT_MODEL
+
+
 def _make_context(history: dict, task_text: str, force: bool) -> RunContext:
     date = dt.date.today().isoformat()
     sha = _task_sha256(task_text)
@@ -143,6 +166,7 @@ def _make_context(history: dict, task_text: str, force: bool) -> RunContext:
         report=APP_ROOT / REPORT_TEMPLATE.format(date=date, run=run),
         started_at=dt.datetime.now().astimezone().isoformat(timespec="seconds"),
         forced_rerun_of=(matching[-1]["run"] if matching else None),
+        model=_select_model(task_text),
     )
 
 
@@ -164,27 +188,30 @@ def _read_rules() -> str:
 
 
 def _select_candidate_files(task_text: str) -> list[Path]:
-    """Enkel heuristik: välj filer under tillåtna prefix vars innehåll
-    innehåller något ord ur uppgiften. Begränsas till 10 filer."""
     words = {w.lower() for w in re.findall(r"[A-Za-zÅÄÖåäö_]{4,}", task_text)}
+    explicit = set(re.findall(r"(?<![\w/])([A-Za-z0-9_/.-]+\.(?:py|md|toml))", task_text))
     candidates: list[tuple[int, Path]] = []
     for prefix in ALLOWED_PREFIXES:
         for path in (APP_ROOT / prefix).rglob("*"):
             if not path.is_file() or path.suffix not in (".py", ".md", ".toml"):
+                continue
+            rel = path.relative_to(APP_ROOT)
+            if rel.name in FORBIDDEN_FILES:
                 continue
             try:
                 text = path.read_text()
             except UnicodeDecodeError:
                 continue
             score = sum(1 for w in words if w in text.lower())
+            if str(rel) in explicit or rel.name in explicit:
+                score += 100
             if score:
-                candidates.append((score, path.relative_to(APP_ROOT)))
+                candidates.append((score, rel))
     candidates.sort(key=lambda x: (-x[0], str(x[1])))
-    return [p for _, p in candidates[:10]]
+    return [p for _, p in candidates[:5]]
 
 
 def _apply_changes(worktree: Path, changes: dict[str, str]) -> list[str]:
-    """Skriver ändringar i worktreen. Returnerar lista över skrivna filer."""
     written: list[str] = []
     for rel, content in changes.items():
         if not isinstance(rel, str) or not isinstance(content, str):
@@ -201,12 +228,18 @@ def _apply_changes(worktree: Path, changes: dict[str, str]) -> list[str]:
     return written
 
 
-def _check_in_worktree(ctx: RunContext) -> tuple[bool, str]:
-    """Kör scripts.check i worktreen. Returnerar (ok, utskrift)."""
-    proc = subprocess.run(
-        [sys.executable, "-B", "-m", "scripts.check"],
-        cwd=ctx.worktree, capture_output=True, text=True,
-    )
+def _check_in_worktree(ctx: RunContext, *, fast: bool) -> tuple[bool, str]:
+    if fast:
+        proc = subprocess.run(
+            [sys.executable, "-B", "-m", "unittest",
+             "tests.test_deepseek_review", "-v"],
+            cwd=ctx.worktree, capture_output=True, text=True,
+        )
+    else:
+        proc = subprocess.run(
+            [sys.executable, "-B", "-m", "scripts.check"],
+            cwd=ctx.worktree, capture_output=True, text=True,
+        )
     ok = proc.returncode == 0
     tail = "\n".join((proc.stdout + proc.stderr).splitlines()[-30:])
     return ok, tail
@@ -221,14 +254,15 @@ def _commit_in_worktree(ctx: RunContext, message: str) -> str | None:
     _run_git(["add", "-A"], cwd=ctx.worktree)
     proc = _run_git(["diff", "--cached", "--quiet"], cwd=ctx.worktree, check=False)
     if proc.returncode == 0:
-        return None  # inget att committa
+        return None
     _run_git(["commit", "-m", message], cwd=ctx.worktree)
     return _run_git(["rev-parse", "HEAD"], cwd=ctx.worktree).stdout.strip()
 
 
 def _propose_changes(client: DeepSeekClient, counter: ApiCounter,
                      task_text: str, rules_text: str,
-                     files: list[tuple[str, str]]) -> dict[str, str]:
+                     files: list[tuple[str, str]],
+                     feedback: str = "") -> dict[str, str]:
     files_block = "\n\n".join(
         f"=== {path} ===\n{content}" for path, content in files
     )
@@ -237,6 +271,8 @@ def _propose_changes(client: DeepSeekClient, counter: ApiCounter,
         f"Project rules (AGENTS.md):\n{rules_text}\n\n"
         f"Current files:\n{files_block}\n"
     )
+    if feedback:
+        user_prompt += f"\nReviewer feedback to address:\n{feedback}\n"
     counter.tick()
     raw = client.chat(
         [{"role": "system", "content": EDIT_SYSTEM_PROMPT},
@@ -273,6 +309,7 @@ def _write_report(ctx: RunContext, *, status: str, iterations: int,
         f"# Run {ctx.date}_{ctx.run}\n\n"
         f"- Startad: {ctx.started_at}\n"
         f"- Status: {status}\n"
+        f"- Modell: {ctx.model}\n"
         f"- Worktree: `{ctx.worktree}`\n"
         f"- Branch: `{ctx.branch}`\n"
         f"- Iterationer: {iterations} (max {MAX_ITERATIONS})\n"
@@ -281,7 +318,7 @@ def _write_report(ctx: RunContext, *, status: str, iterations: int,
         f"- Commit: {commit or '-'}\n"
         f"- Tvingad omkörning av run: {ctx.forced_rerun_of or '-'}\n\n"
         f"## Granskningsfynd\n\n{_format_findings(findings)}\n\n"
-        f"## Sista rader ur scripts.check\n\n```\n{check_tail}\n```\n\n"
+        f"## Sista rader ur verifieringen\n\n```\n{check_tail}\n```\n\n"
         f"## Anteckningar\n\n{notes}\n"
     )
 
@@ -298,6 +335,7 @@ def _record(history: dict, ctx: RunContext, *, status: str, iterations: int,
         "worktree": str(ctx.worktree),
         "branch": ctx.branch,
         "report": str(ctx.report),
+        "model": ctx.model,
         "iterations": iterations,
         "api_calls": api_calls,
         "final_verdict": verdict,
@@ -312,6 +350,10 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Autonom körning")
     parser.add_argument("--force", action="store_true",
                         help="Kör även om uppgiften redan slutförts")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Använd en fejkad klient (ingen API-kostnad)")
+    parser.add_argument("--fast", action="store_true",
+                        help="Kör bara tests.test_deepseek_review i verifieringen")
     args = parser.parse_args(argv)
 
     if not TASK_FILE.exists() or not TASK_FILE.read_text().strip():
@@ -322,11 +364,25 @@ def main(argv=None) -> int:
     ctx = _make_context(history, task_text, force=args.force)
 
     print(f"Run:       {ctx.date}_{ctx.run}")
+    print(f"Modell:    {ctx.model}")
     print(f"Branch:    {ctx.branch}")
     print(f"Worktree:  {ctx.worktree}")
     print(f"Rapport:   {ctx.report}")
 
-    client = DeepSeekClient(load_deepseek(), max_retries=0)
+    if args.dry_run:
+        class _DryRunClient:
+            def __init__(self):
+                self.calls = 0
+            def chat(self, messages, **kwargs):
+                self.calls += 1
+                return json.dumps({
+                    "reasoning": "torrkörning",
+                    "changes": {}
+                })
+        client = _DryRunClient()
+    else:
+        client = DeepSeekClient(load_deepseek(model_override=ctx.model), max_retries=0)
+
     counter = ApiCounter()
 
     try:
@@ -354,26 +410,27 @@ def main(argv=None) -> int:
     commit: str | None = None
     status = "failed"
     iterations_used = 0
+    feedback = ""
 
     for iteration in range(1, MAX_ITERATIONS + 1):
         iterations_used = iteration
         print(f"\n--- Iteration {iteration} ---")
         try:
             changes = _propose_changes(client, counter, task_text, rules,
-                                       current_files)
+                                       current_files, feedback)
             written = _apply_changes(ctx.worktree, changes)
-            print(f"Skrev: {', '.join(written)}")
+            print(f"Skrev: {', '.join(written) if written else '(inga ändringar)'}")
         except (ValueError, DeepSeekError) as exc:
             last_check_tail = f"Ändringsförslag misslyckades: {exc}"
             print(last_check_tail)
             break
 
-        ok, tail = _check_in_worktree(ctx)
+        ok, tail = _check_in_worktree(ctx, fast=args.fast)
         last_check_tail = tail
         if not ok:
-            print("scripts.check misslyckades. Skickar tillbaka till DeepSeek.")
-            current_files = [(p, (ctx.worktree / p).read_text())
-                             for p in written]
+            print("Verifieringen misslyckades. Skickar tillbaka till DeepSeek.")
+            feedback = f"Verifieringen misslyckades:\n{tail}"
+            current_files = [(p, (ctx.worktree / p).read_text()) for p in written]
             continue
 
         diff = _diff_in_worktree(ctx)
@@ -398,20 +455,13 @@ def main(argv=None) -> int:
         if verdict == "reject":
             status = "rejected"
             break
-        # request_changes → skicka findings tillbaka
         feedback = _format_findings(result.findings)
-        current_files = [
-            (p, (ctx.worktree / p).read_text()) for p in written
-        ] + [(str(p), f"Reviewer feedback:\n{feedback}")
-             for p in written[:1]]
-        # enklare: lägg feedback i task_text för nästa varv
-        task_text = (f"{TASK_FILE.read_text()}\n\n"
-                     f"Föregående granskning begärde ändringar:\n{feedback}\n")
+        current_files = [(p, (ctx.worktree / p).read_text()) for p in written]
 
     _write_report(ctx, status=status, iterations=iterations_used,
                   api_calls=counter.used, verdict=verdict, commit=commit,
                   findings=last_findings, check_tail=last_check_tail,
-                  notes=f"Worktree: {ctx.worktree}\n")
+                  notes=f"Worktree: {ctx.worktree}\nModell: {ctx.model}\n")
     _record(history, ctx, status=status, iterations=iterations_used,
             api_calls=counter.used, verdict=verdict, commit=commit)
     print(f"\nStatus: {status}")

@@ -11,7 +11,7 @@ class LoadDeepSeekTests(unittest.TestCase):
         variables = {"DEEPSEEK_API_KEY": "sk-test-123"}
         settings = load_deepseek(variables=variables)
         self.assertEqual(settings.api_key, "sk-test-123")
-        self.assertEqual(settings.model, "deepseek-chat")
+        self.assertEqual(settings.model, "deepseek-flash")
         self.assertEqual(settings.base_url, "https://api.deepseek.com")
 
     def test_missing_key_raises(self):
@@ -56,14 +56,14 @@ class _FakeClient:
 
 class DeepSeekClientTests(unittest.TestCase):
     def _settings(self):
-        return DeepSeekSettings(api_key="sk-test", model="deepseek-chat")
+        return DeepSeekSettings(api_key="sk-test", model="deepseek-flash")
 
     def test_chat_returns_content_and_does_not_leak_key(self):
         completions = _FakeCompletions(content="hej")
         client = DeepSeekClient(self._settings(), client=_FakeClient(completions))
         result = client.chat([{"role": "user", "content": "hej"}])
         self.assertEqual(result, "hej")
-        self.assertEqual(completions.calls[0]["model"], "deepseek-chat")
+        self.assertEqual(completions.calls[0]["model"], "deepseek-flash")
         self.assertNotIn("sk-test", repr(client))
 
     def test_empty_response_raises(self):
