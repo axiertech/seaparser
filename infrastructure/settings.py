@@ -7,7 +7,7 @@ import tomllib
 ROOT = Path(__file__).resolve().parents[1]
 PRIVATE = Path("/home/web/seaparser/config/app.env")
 KEYS = ("APP_ENV", "DB_HOST", "DB_PORT", "DB_NAME", "DB_USER", "DB_PASSWORD",
-        "DB_SSLMODE", "DB_SSLROOTCERT")
+        "DB_SSLMODE", "DB_SSLROOTCERT", "DEEPSEEK_API_KEY", "DEEPSEEK_MODEL")
 
 
 def read_env(path):
@@ -82,3 +82,28 @@ def load_database(environment, *, variables=None, private_path=PRIVATE):
         raise ValueError("Certifikatverifiering kräver en explicit betrodd CA-fil")
     return DatabaseSettings(environment, host, port, name, user, password,
                             sslmode, sslrootcert)
+
+
+DEEPSEEK_DEFAULT_MODEL = "deepseek-chat"
+DEEPSEEK_BASE_URL = "https://api.deepseek.com"
+
+
+@dataclass(frozen=True)
+class DeepSeekSettings:
+    api_key: str = field(repr=False)
+    model: str = DEEPSEEK_DEFAULT_MODEL
+    base_url: str = DEEPSEEK_BASE_URL
+
+
+def load_deepseek(*, variables=None, private_path=PRIVATE):
+    """Läser DeepSeek-konfiguration utan att någonsin logga hemligheten."""
+    values = read_env(private_path) if variables is None else dict(variables)
+    api_key = values.get("DEEPSEEK_API_KEY", "").strip()
+    if not api_key:
+        raise ValueError("DEEPSEEK_API_KEY saknas i konfigurationen")
+    if any(c.isspace() for c in api_key):
+        raise ValueError("DEEPSEEK_API_KEY innehåller ogiltiga tecken")
+    model = values.get("DEEPSEEK_MODEL", DEEPSEEK_DEFAULT_MODEL).strip() or DEEPSEEK_DEFAULT_MODEL
+    if not re.fullmatch(r"[A-Za-z0-9._:-]+", model):
+        raise ValueError("DEEPSEEK_MODEL har ogiltigt format")
+    return DeepSeekSettings(api_key=api_key, model=model)
