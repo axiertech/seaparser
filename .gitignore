@@ -26,3 +26,8 @@ coverage/
 *.log
 data/
 tmp/
+
+# Autonoma körningar (lokala arbetsfiler)
+AUTONOMOUS_TASK.md
+RUN_HISTORY.json
+RUN_REPORT_*.md
