@@ -276,3 +276,29 @@ GPX 1.1 exporterar planerade vägpunkter, inte GPS-spår.
 Isolerade PyPI/npm-beroenden låses exakt med hashar/integritet och CI installeras
 från låsfiler. Ingen editor vald. Apache/systemtjänst förbereds i deployment/
 och kräver samlat administratörs-/publiceringsgodkännande innan aktivering.
+
+## 2026-10-20: DeepSeek-klient i infrastrukturlagret
+
+- DeepSeek anropas uteslutande via `infrastructure/deepseek.py`
+  (DeepSeekClient). Klienten använder OpenAI-SDK:ns kompatibla gränssnitt
+  mot `https://api.deepseek.com` och har tidsgräns, begränsad retry och
+  ingen loggning av hemligheter eller payloads.
+- Ruttmotorn (domänen) anropar aldrig DeepSeek. Eventuella framtida
+  LLM-funktioner (t.ex. förslag på kandidatrutter eller sammanfattningar)
+  ska ligga i applikationslagret och mata in frysta data i den befintliga
+  deterministiska planeringen.
+- `infrastructure/settings.py` exponerar `DeepSeekSettings` (api_key med
+  `repr=False`) och `load_deepseek()`. Nycklar läses via samma begränsade
+  KEY=value-läsare som databaskonfigurationen; `DEEPSEEK_API_KEY` och
+  `DEEPSEEK_MODEL` är tillagda i `KEYS`.
+- `openai==3.35.1` är direktberoende i `pyproject.toml`. Transitiva
+  beroenden `httpx2`, `httpcore2` och `jiter` är hash-låsta i
+  `requirements.lock`. `scripts/check.py` verifierar att direkta pinnar
+  och låsta hashar stämmer med installerade versioner.
+- 8 databasfria tester i `tests/test_deepseek_client.py` verifierar
+  inläsning, att `repr()` inte läcker nyckeln, tomt svar och retry mot
+  en fejkad klient. Inga nätverksanrop i CI.
+- `scripts/deepseek_smoke.py` är ett manuellt rökprov utanför
+  `make check`. Varje anrop är betalt. 2026-10-20 saknades saldo, så ett
+  riktigt anrop gav `APIStatusError`; HTTP-lager, base_url och
+  autentiseringsformat är ändå verifierat.
