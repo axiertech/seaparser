@@ -87,6 +87,22 @@ class ReviewTests(unittest.TestCase):
         with self.assertRaises(DeepSeekError):
             review(self._request(), client=client)
 
+    def test_reject_with_blocker_finding_returned(self):
+        client, _ = _make_client(json.dumps({
+            "verdict": "reject",
+            "summary": "Diffen bryter mot en absolut regel.",
+            "findings": [{
+                "file": "x.py",
+                "line": 1,
+                "severity": "blocker",
+                "message": "Hemlighet i diffen.",
+                "suggestion": "Ta bort hemligheten.",
+            }],
+        }))
+        result = review(self._request(), client=client)
+        self.assertEqual(result.verdict, "reject")
+        self.assertTrue(any(f.severity == "blocker" for f in result.findings))
+
 
 if __name__ == "__main__":
     unittest.main()
