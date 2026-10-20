@@ -15,6 +15,8 @@ from infrastructure.deepseek import DeepSeekClient, DeepSeekError
 from infrastructure.settings import load_deepseek
 
 
+# Begränsar hur stor diff som skickas till DeepSeek. Större diffar trunkeras
+# och rapporteras som en warning-finding så att granskningen ses som ofullständig.
 MAX_DIFF_CHARS = 20_000
 MAX_RULES_CHARS = 20_000
 
