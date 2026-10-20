@@ -302,3 +302,24 @@ och kräver samlat administratörs-/publiceringsgodkännande innan aktivering.
   `make check`. Varje anrop är betalt. 2026-10-20 saknades saldo, så ett
   riktigt anrop gav `APIStatusError`; HTTP-lager, base_url och
   autentiseringsformat är ändå verifierat.
+
+
+## 2026-10-20: DeepSeek-granskning i applikationslagret
+
+- `application/deepseek_review.py` tar en fryst `ReviewRequest`
+  (diff, AGENTS.md-regler, filnamn, kontext) och returnerar en
+  strukturerad `ReviewResult` (verdict, summary, findings).
+- Modulen rör aldrig filer, kör aldrig kommandon och gör inga
+  antaganden om repo-state. Ruttmotorn anropar aldrig denna modul.
+- Prompten begär endast JSON; `_parse_response` validerar schema,
+  att blocker-findings inte kan ha verdict approve, och att
+  obligatoriska fält finns.
+- En enkel hemlighetsheuristik lägger till en `blocker`-finding om
+  diffen innehåller `sk-…`, `password=…` eller `BEGIN … PRIVATE KEY`.
+  Den blockerar inte anropet men tvingar verdict till minst
+  `request_changes`.
+- Diff och regler trunkeras till 20 000 tecken vardera; trunkering
+  läggs till som `warning`-finding.
+- Tom diff returnerar `approve` utan att anropa DeepSeek (sparar
+  API-kostnad).
+- 6 offline-tester med fejkad klient i `tests/test_deepseek_review.py`.
