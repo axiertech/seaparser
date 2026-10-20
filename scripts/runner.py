@@ -153,7 +153,7 @@ def _make_context(history: dict, task_text: str, force: bool) -> RunContext:
         prev = matching[-1]
         raise SystemExit(
             f"Uppgiften har redan körts som run-{prev['date']}_{prev['run']} "
-            f"(commit {prev.get('commit', '?')[:10]}).\n"
+            f"(commit {(prev.get('commit') or '?')[:10]}).\n"
             f"Redigera AUTONOMOUS_TASK.md eller kör med --force."
         )
     run = _next_run(history, date)
