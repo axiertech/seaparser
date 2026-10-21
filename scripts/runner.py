@@ -461,11 +461,12 @@ def _run_agent_loop(client: DeepSeekClient, ctx: RunContext, task_text: str,
 
                 if name == "read_file" and cached_path:
                     read_cache[cached_path] = (result, round_num + 1)
-                elif name == "write_file":
+                elif name in ("write_file", "edit_file"):
                     try:
                         wp = json.loads(args)["path"]
                         read_cache.pop(wp, None)
-                        written.append(wp)
+                        if wp not in written:
+                            written.append(wp)
                         commands_since_write = 0
                         files_written_so_far += 1
                     except Exception:
