@@ -85,6 +85,7 @@ ROOTS: dict[str, RootConfig] = {
         forbidden_files=frozenset({
             "handoff.session", "run.lock", "ssh-probe-launch.lock",
             "work-launch.lock", "tmux.sock", "runner.pid",
+            ".tmp_add_comment.py",
         }),
         verify_cmd=(
             "bash -n run.sh rotate-logs.sh update-status.sh start-probe.sh start-work.sh stop-work.sh"
