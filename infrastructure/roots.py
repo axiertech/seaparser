@@ -36,12 +36,15 @@ class RootConfig:
     max_tokens_pro: int
 
     def worktree_path(self, date: str, run: int) -> Path:
+        """Return the worktree path for the given date and run."""
         return self.worktrees_root / f"{self.worktree_prefix}-{date}_{run}"
 
     def branch_name(self, date: str, run: int) -> str:
+        """Return the branch name for the given date and run."""
         return f"{self.branch_prefix}-{date}_{run}"
 
     def report_path(self, date: str, run: int) -> Path:
+        """Return the report file path for the given date and run."""
         return self.root / self.report_pattern.format(date=date, run=run)
 
 
@@ -107,6 +110,7 @@ ROOTS: dict[str, RootConfig] = {
 
 
 def get_root_config(name: str) -> RootConfig:
+    """Return the RootConfig for name; raise SystemExit if the root is unknown."""
     if name not in ROOTS:
         raise SystemExit(f"Unknown root: {name!r}. Choose one of: {', '.join(ROOTS)}")
     return ROOTS[name]
