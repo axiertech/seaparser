@@ -1,4 +1,5 @@
 """Offline-tester för scripts/verify_run.py."""
+import datetime as dt
 import json
 import unittest
 from pathlib import Path
@@ -12,7 +13,6 @@ class ResolveRunTests(unittest.TestCase):
         return {"version": 1, "runs": runs}
 
     def test_resolve_by_run_number_today(self):
-        import datetime as dt
         today = dt.date.today().isoformat()
         history = self._history([
             {"run": 1, "date": today},
@@ -37,6 +37,37 @@ class ResolveRunTests(unittest.TestCase):
     def test_missing_run_raises(self):
         with self.assertRaises(SystemExit):
             vr._resolve_run({"version": 1, "runs": []}, "9")
+
+    def test_resolve_run_zero_raises(self):
+        """Run 0 ska avvisas med SystemExit."""
+        today = dt.date.today().isoformat()
+        history = self._history([{"run": 1, "date": today}])
+        with self.assertRaises(SystemExit):
+            vr._resolve_run(history, "0")
+
+    def test_resolve_negative_run_raises(self):
+        """Negativt runnummer ska avvisas med SystemExit."""
+        today = dt.date.today().isoformat()
+        history = self._history([{"run": 1, "date": today}])
+        with self.assertRaises(SystemExit):
+            vr._resolve_run(history, "-1")
+
+    def test_resolve_full_date_wrong_run_raises(self):
+        """Fullt datum med okänt runnummer ska avvisas med SystemExit."""
+        history = self._history([{"run": 3, "date": "2026-10-19"}])
+        with self.assertRaises(SystemExit):
+            vr._resolve_run(history, "2026-10-19_99")
+
+    def test_resolve_prefers_today_when_ambiguous(self):
+        """Vid samma runnummer väljs dagens post framför gårdagens."""
+        today = dt.date.today()
+        yesterday = today - dt.timedelta(days=1)
+        history = self._history([
+            {"run": 2, "date": yesterday.isoformat()},
+            {"run": 2, "date": today.isoformat()},
+        ])
+        entry = vr._resolve_run(history, "2")
+        self.assertEqual(entry["date"], today.isoformat())
 
 
 class CheckCompletedTests(unittest.TestCase):
