@@ -68,9 +68,13 @@ IMPORTANT - work efficiently:
 - If you cannot complete the full task in the remaining rounds, write
   the files you have figured out and stop cleanly. A partial change
   that compiles is better than no change at all.
-- Never create temporary helper files like .tmp_*.py, *.tmp or *.bak.
-  Use write_file with the final content directly, or run_command with
-  sed/python inline if you must patch an existing file.
+- Never create temporary helper files like .tmp_*.py, *.tmp, *.bak,
+  splice_*.py, patch_*.py or fix_*.py. These will be rejected.
+- For existing files larger than 100 lines, use edit_file (exact
+  substring replacement) instead of write_file. write_file requires the
+  full new content and is error-prone for large files.
+- Do NOT write helper scripts that modify other files. Use edit_file
+  directly on the target file.
 
 IMPORTANT - work efficiently:
 - Read at most 3 files before deciding what to change. Do not re-read

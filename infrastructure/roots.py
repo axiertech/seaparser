@@ -87,6 +87,7 @@ ROOTS: dict[str, RootConfig] = {
             "handoff.session", "run.lock", "ssh-probe-launch.lock",
             "work-launch.lock", "tmux.sock", "runner.pid",
             ".tmp_*", "*.tmp", "*.bak", "*~",
+            "splice_*.py", "patch_*.py", "fix_*.py",
         }),
         verify_cmd=(
             "bash -n run.sh rotate-logs.sh update-status.sh start-probe.sh start-work.sh stop-work.sh"
