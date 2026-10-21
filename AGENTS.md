@@ -84,3 +84,50 @@ Befintligt installations-/databasmandat gäller oförändrat; merge till main,
 force-push och branchradering kräver fortfarande uttryckligt godkännande.
 Bevara orelaterade lokala ändringar och undvik generell staging. Ingen
 fristående bakgrundsaktivitet följer av detta arbetssätt.
+
+## Usage-styrning
+
+Automatiska gränser vid 5 % och 1 % är **inte implementerade**. Använd i
+stället en uttrycklig tidsgräns och avgränsade arbetsuppgifter. Spara en kort
+överlämning efter varje sammanhängande leverans. Vid `usage_exhausted` ska inga
+nya modellanrop göras; skriv en lokal slutrapport med Git-status och senast
+verifierade kontroller utifrån redan tillgängligt resultat. Återställ inte kvot
+och byt inte modell automatiskt.
+
+Använd inte uppskattad tokenförbrukning som kontokvot. Den installerade Codex
+CLI:n exponerar via app-serverns JSON-RPC det dokumenterade
+`account/rateLimits/read`-anropet, inklusive `usedPercent` när tjänsten lämnar
+det. Detta innebär inte att 5/1-procentsautomation är implementerad eller att
+kontokvot är tillgänglig i varje körmiljö. JSON-utdata från andra kommandon är
+inte kvotdata utan dokumenterat stöd.
+
+## Code style (2026-10-21)
+
+Two rules apply to all new Python code in SeaParser and `~/autonomy`:
+
+### 1. Prefer module-level functions over nested closures
+
+PEP 8 and general Python practice favour module-level functions because
+they are testable in isolation, discoverable, and reusable. Use a nested
+function or closure only when:
+
+- the nested function captures loop variables that would otherwise be
+  rebound (late binding in `for` loops), or
+- it is a decorator, or
+- it is a one-line helper used at exactly one call site and the closure
+  genuinely improves readability.
+
+Never use a nested function to avoid thinking about module structure. If
+a helper is used in two places, or is longer than ~10 lines, move it to
+module level.
+
+### 2. Every function and method has a docstring
+
+Use a one-line docstring for simple functions and a multi-line docstring
+(Args / Returns / Raises) for anything non-obvious. Classes and modules
+get docstrings too. Inline comments are for "why"; docstrings are for
+"what".
+
+The reviewer (`application/deepseek_review.py`) treats a missing
+docstring on a new or changed function as a `warning` finding, and a
+nested function that could be moved to module level as a `nit`.

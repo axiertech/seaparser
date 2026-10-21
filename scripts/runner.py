@@ -56,6 +56,15 @@ Use them to complete the task. Follow the project rules provided in the
 user message. Never modify forbidden files listed there. Keep changes
 minimal and focused.
 
+Code style rules (from AGENTS.md):
+- Prefer module-level functions over nested functions or closures. Only
+  use a nested function for decorators, single-call-site helpers, or
+  closures that genuinely capture loop variables. If a helper is used
+  more than once, or is longer than ~10 lines, move it to module level.
+- Every function and method you write must have a docstring. One line
+  for simple functions, Args/Returns/Raises for non-obvious ones.
+  Classes and modules get docstrings too.
+
 When done, reply with a short summary and no more tool calls.
 """
 

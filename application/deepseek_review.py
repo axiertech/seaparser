@@ -41,6 +41,13 @@ Rules you must enforce (from AGENTS.md):
   implementation.
 - New functionality must be discussed with the user before being merged
   to main.
+- New or changed functions must be at module level, not nested closures
+  (except decorators, single-call-site helpers, or genuine loop-variable
+  capture). A nested function that could be moved to module level is a
+  `nit` finding.
+- New or changed functions and methods must have a docstring (one line
+  for simple functions, Args/Returns/Raises for non-obvious ones).
+  Missing docstring on a new or changed function is a `warning` finding.
 
 Return ONLY a JSON object with this exact shape:
 {
