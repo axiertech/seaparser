@@ -1,22 +1,21 @@
-"""Verifiera och merga en avslutad autonom körning.
+"""Verify and merge a completed autonomous run.
 
-Kör manuellt:
-  python -B -m scripts.verify_run <run> [--dry-run] [--no-cleanup] [--fast]
+Usage:  python -B -m scripts.verify_run [--root app|autonomy] <run> [--dry-run] [--no-cleanup] [--fast]
 
-<run> är antingen "3" (dagens run) eller "2026-10-20_3".
+<run> is either "3" (today's run number) or "2026-10-21_3".
 
-Flöde (stoppar vid första fel):
-  1. Slå upp run i RUN_HISTORY.json
-  2. Kontrollera att worktree finns
-  3. Kör tester i worktreen
-  4. Kör scripts.check i worktreen (eller --fast)
-  5. Kontrollera att worktreen är ren (git status)
-  6. Kontrollera att HEAD == commit i registret
-  7. Merga in i aktuell branch (om inte --dry-run)
-  8. Kör scripts.check i ~/app efter merge
-  9. Städa worktreen (om inte --dry-run/--no-cleanup)
+Steps (stops on first failure):
+  1. Look up run in <root>/RUN_HISTORY.json
+  2. Check that the worktree exists
+  3. Run the fast verify in the worktree
+  4. Run the full verify in the worktree (unless --fast)
+  5. Check that the worktree is clean (git status)
+  6. Check that HEAD matches the commit in the history
+  7. Merge into the current branch (unless --dry-run)
+  8. Run the full verify in <root> after merge
+  9. Clean up the worktree (unless --dry-run / --no-cleanup)
 
-Pushar aldrig. Mergar aldrig till main. Rör inte RUN_HISTORY.json.
+Never pushes. Never merges to main. Never mutates RUN_HISTORY.json.
 """
 from __future__ import annotations
 
@@ -28,10 +27,10 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from infrastructure.roots import RootConfig, get_root_config
 
-APP_ROOT = Path(__file__).resolve().parents[1]
-HISTORY_FILE = APP_ROOT / "RUN_HISTORY.json"
-REPORT_APPEND_MARKER = "\n\n## Verifiering\n"
+
+REPORT_APPEND_MARKER = "\n\n## Verification\n"
 
 
 @dataclass
@@ -41,13 +40,13 @@ class StepResult:
     detail: str = ""
 
 
-def _load_history() -> dict:
-    if not HISTORY_FILE.exists():
-        raise SystemExit(f"Saknar {HISTORY_FILE}")
+def _load_history(config: RootConfig) -> dict:
+    if not config.history_file.exists():
+        raise SystemExit(f"Missing {config.history_file}")
     try:
-        return json.loads(HISTORY_FILE.read_text())
+        return json.loads(config.history_file.read_text())
     except json.JSONDecodeError as exc:
-        raise SystemExit(f"Ogiltig RUN_HISTORY.json: {exc.msg}") from None
+        raise SystemExit(f"Invalid {config.history_file.name}: {exc.msg}") from None
 
 
 def _resolve_run(history: dict, run_arg: str) -> dict:
@@ -62,23 +61,25 @@ def _resolve_run(history: dict, run_arg: str) -> dict:
         if len(candidates) != 1:
             broader = [r for r in history["runs"]
                        if str(r.get("run")) == run_arg]
-            if len(broader) == 1:
-                candidates = broader
-            elif len(broader) > 1:
+            if broader:
                 candidates = broader
     if not candidates:
-        raise SystemExit(f"Hittar ingen run som matchar {run_arg!r}")
+        raise SystemExit(f"No run matches {run_arg!r}")
     if len(candidates) > 1:
         raise SystemExit(
-            f"Flera runs matchar {run_arg!r}: "
+            f"Multiple runs match {run_arg!r}: "
             + ", ".join(f"{r['date']}_{r['run']}" for r in candidates)
-            + ". Ange datum, t.ex. 2026-10-20_3."
+            + ". Specify the date, e.g. 2026-10-21_3."
         )
     return candidates[0]
 
 
 def _run(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+
+
+def _run_shell(cmd: str, cwd: Path) -> subprocess.CompletedProcess:
+    return subprocess.run(["bash", "-c", cmd], cwd=cwd, capture_output=True, text=True)
 
 
 def _tail(text: str, lines: int = 30) -> str:
@@ -88,48 +89,45 @@ def _tail(text: str, lines: int = 30) -> str:
 def _check_completed(entry: dict) -> StepResult:
     if entry.get("status") != "completed":
         return StepResult("status", False,
-                          f"status={entry.get('status')!r}, förväntade 'completed'")
+                          f"status={entry.get('status')!r}, expected 'completed'")
     if not entry.get("commit"):
         return StepResult("commit", False,
-                          "commit är null (torrkörning eller misslyckad)")
-    run_label = entry.get("run", "?")
+                          "commit is null (dry run or failed)")
     return StepResult("register", True,
-                      f"run={run_label} commit={entry['commit'][:10]}")
+                      f"run={entry.get('run', '?')} commit={entry['commit'][:10]}")
 
 
 def _check_worktree(entry: dict) -> StepResult:
     wt = Path(entry.get("worktree", ""))
     if not str(wt) or not wt.exists():
-        return StepResult("worktree", False, f"saknas: {wt}")
+        return StepResult("worktree", False, f"missing: {wt}")
     return StepResult("worktree", True, str(wt))
 
 
-def _run_deepseek_tests(worktree: Path) -> StepResult:
-    proc = _run([sys.executable, "-B", "-m", "unittest",
-                 "tests.test_deepseek_review", "-v"], cwd=worktree)
+def _run_fast_verify(config: RootConfig, worktree: Path) -> StepResult:
+    if not config.fast_verify_cmd:
+        return StepResult("fast verify", True, "no fast command, skipped")
+    proc = _run_shell(config.fast_verify_cmd, worktree)
     if proc.returncode != 0:
-        return StepResult("deepseek-tester", False, _tail(proc.stdout + proc.stderr))
-    return StepResult("deepseek-tester", True, "8 tester ok")
+        return StepResult("fast verify", False, _tail(proc.stdout + proc.stderr))
+    return StepResult("fast verify", True, "ok")
 
 
-def _run_full_check(worktree: Path, fast: bool) -> StepResult:
-    if fast:
-        return _run_deepseek_tests(worktree)
-    proc = _run([sys.executable, "-B", "-m", "scripts.check"], cwd=worktree)
+def _run_full_verify(config: RootConfig, worktree: Path) -> StepResult:
+    proc = _run_shell(config.verify_cmd, worktree)
     if proc.returncode != 0:
-        return StepResult("scripts.check (worktree)", False,
-                          _tail(proc.stdout + proc.stderr))
-    return StepResult("scripts.check (worktree)", True, "godkänd")
+        return StepResult("full verify", False, _tail(proc.stdout + proc.stderr))
+    return StepResult("full verify", True, "ok")
 
 
 def _check_clean(worktree: Path) -> StepResult:
     proc = _run(["git", "status", "--porcelain"], cwd=worktree)
     if proc.returncode != 0:
-        return StepResult("worktree ren", False, _tail(proc.stderr))
+        return StepResult("worktree clean", False, _tail(proc.stderr))
     if proc.stdout.strip():
-        return StepResult("worktree ren", False,
-                          "osparade ändringar:\n" + proc.stdout)
-    return StepResult("worktree ren", True, "inga osparade ändringar")
+        return StepResult("worktree clean", False,
+                          "uncommitted changes:\n" + proc.stdout)
+    return StepResult("worktree clean", True, "no uncommitted changes")
 
 
 def _check_head(worktree: Path, expected_commit: str) -> StepResult:
@@ -139,33 +137,32 @@ def _check_head(worktree: Path, expected_commit: str) -> StepResult:
     actual = proc.stdout.strip()
     if actual != expected_commit:
         return StepResult("HEAD", False,
-                          f"förväntade {expected_commit[:10]}, fick {actual[:10]}")
+                          f"expected {expected_commit[:10]}, got {actual[:10]}")
     return StepResult("HEAD", True, actual[:10])
 
 
-def _merge(branch: str, message: str) -> StepResult:
-    proc = _run(["git", "merge", "--no-ff", branch, "-m", message], cwd=APP_ROOT)
+def _merge(config: RootConfig, branch: str, message: str) -> StepResult:
+    proc = _run(["git", "merge", "--no-ff", branch, "-m", message], cwd=config.root)
     if proc.returncode != 0:
         return StepResult("merge", False, _tail(proc.stdout + proc.stderr))
-    return StepResult("merge", True, f"mergade {branch}")
+    return StepResult("merge", True, f"merged {branch}")
 
 
-def _check_after_merge() -> StepResult:
-    proc = _run([sys.executable, "-B", "-m", "scripts.check"], cwd=APP_ROOT)
+def _check_after_merge(config: RootConfig) -> StepResult:
+    proc = _run_shell(config.verify_cmd, config.root)
     if proc.returncode != 0:
-        return StepResult("scripts.check (efter merge)", False,
-                          _tail(proc.stdout + proc.stderr))
-    return StepResult("scripts.check (efter merge)", True, "godkänd")
+        return StepResult("verify after merge", False, _tail(proc.stdout + proc.stderr))
+    return StepResult("verify after merge", True, "ok")
 
 
-def _cleanup(worktree: Path, branch: str) -> StepResult:
-    proc = _run(["git", "worktree", "remove", str(worktree)], cwd=APP_ROOT)
+def _cleanup(config: RootConfig, worktree: Path, branch: str) -> StepResult:
+    proc = _run(["git", "worktree", "remove", str(worktree)], cwd=config.root)
     if proc.returncode != 0:
-        return StepResult("städning", False, _tail(proc.stderr))
-    proc = _run(["git", "branch", "-D", branch], cwd=APP_ROOT)
+        return StepResult("cleanup", False, _tail(proc.stderr))
+    proc = _run(["git", "branch", "-D", branch], cwd=config.root)
     if proc.returncode != 0:
-        return StepResult("städning", False, _tail(proc.stderr))
-    return StepResult("städning", True, f"tog bort {worktree} och {branch}")
+        return StepResult("cleanup", False, _tail(proc.stderr))
+    return StepResult("cleanup", True, f"removed {worktree} and {branch}")
 
 
 def _append_report(entry: dict, steps: list[StepResult], overall_ok: bool) -> None:
@@ -179,17 +176,17 @@ def _append_report(entry: dict, steps: list[StepResult], overall_ok: bool) -> No
     if REPORT_APPEND_MARKER in text:
         text = text.split(REPORT_APPEND_MARKER)[0]
     lines = [REPORT_APPEND_MARKER.rstrip(), ""]
-    lines.append(f"- Resultat: {'OK' if overall_ok else 'MISSLYCKADES'}")
-    lines.append(f"- Verifierad: {dt.datetime.now().astimezone().isoformat(timespec='seconds')}")
+    lines.append(f"- Result: {'OK' if overall_ok else 'FAILED'}")
+    lines.append(f"- Verified: {dt.datetime.now().astimezone().isoformat(timespec='seconds')}")
     for s in steps:
-        marker = "OK" if s.ok else "FEL"
+        marker = "OK" if s.ok else "FAIL"
         first = s.detail.splitlines()[0] if s.detail else ""
         lines.append(f"- [{marker}] {s.name}: {first}")
     report.write_text(text + "\n".join(lines) + "\n")
 
 
 def _print_step(step: StepResult) -> None:
-    marker = "OK" if step.ok else "FEL"
+    marker = "OK" if step.ok else "FAIL"
     first = step.detail.splitlines()[0] if step.detail else ""
     print(f"[{marker}] {step.name}: {first}")
     if not step.ok and step.detail:
@@ -198,18 +195,22 @@ def _print_step(step: StepResult) -> None:
 
 
 def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(description="Verifiera och merga en run")
-    parser.add_argument("run", help="t.ex. 3 eller 2026-10-20_3")
+    parser = argparse.ArgumentParser(description="Verify and merge a run")
+    parser.add_argument("run", help="e.g. 3 or 2026-10-21_3")
+    parser.add_argument("--root", default="app", choices=["app", "autonomy"],
+                        help="Which project root to verify against")
     parser.add_argument("--dry-run", action="store_true",
-                        help="Verifiera men merga/städa inte")
+                        help="Verify but do not merge or clean up")
     parser.add_argument("--no-cleanup", action="store_true",
-                        help="Behåll worktreen efter merge")
+                        help="Keep the worktree after merge")
     parser.add_argument("--fast", action="store_true",
-                        help="Använd bara deepseek-tester, inte hela scripts.check")
+                        help="Skip the full verify in the worktree")
     args = parser.parse_args(argv)
 
-    history = _load_history()
+    config = get_root_config(args.root)
+    history = _load_history(config)
     entry = _resolve_run(history, args.run)
+    print(f"Root:   {config.name} ({config.root})")
     print(f"Run:    {entry['date']}_{entry['run']}")
     print(f"Branch: {entry['branch']}")
     print(f"Commit: {entry.get('commit') or '-'}")
@@ -236,48 +237,49 @@ def main(argv=None) -> int:
 
     worktree = Path(entry["worktree"])
 
-    if not record(_run_deepseek_tests(worktree)):
+    if not record(_run_fast_verify(config, worktree)):
         _append_report(entry, steps, overall_ok)
-        print(f"\nWorktree behålls för inspektion: {worktree}")
+        print(f"\nWorktree kept for inspection: {worktree}")
         return 1
 
-    if not record(_run_full_check(worktree, fast=args.fast)):
-        _append_report(entry, steps, overall_ok)
-        print(f"\nWorktree behålls för inspektion: {worktree}")
-        return 1
+    if not args.fast:
+        if not record(_run_full_verify(config, worktree)):
+            _append_report(entry, steps, overall_ok)
+            print(f"\nWorktree kept for inspection: {worktree}")
+            return 1
 
     if not record(_check_clean(worktree)):
         _append_report(entry, steps, overall_ok)
-        print(f"\nWorktree behålls för inspektion: {worktree}")
+        print(f"\nWorktree kept for inspection: {worktree}")
         return 1
 
     if not record(_check_head(worktree, entry["commit"])):
         _append_report(entry, steps, overall_ok)
-        print(f"\nWorktree behålls för inspektion: {worktree}")
+        print(f"\nWorktree kept for inspection: {worktree}")
         return 1
 
     if args.dry_run:
-        print("\n--dry-run: hoppar över merge och städning.")
+        print("\n--dry-run: skipping merge and cleanup.")
         _append_report(entry, steps, overall_ok)
         return 0
 
-    merge_msg = (f"Merge autonomous run {entry['date']}_{entry['run']}: "
+    merge_msg = (f"Merge autonomous {config.name} run {entry['date']}_{entry['run']}: "
                  f"{entry.get('task_preview', '')[:60]}")
-    if not record(_merge(entry["branch"], merge_msg)):
+    if not record(_merge(config, entry["branch"], merge_msg)):
         _append_report(entry, steps, overall_ok)
-        print("\nMerge misslyckades. Worktree behålls.")
+        print("\nMerge failed. Worktree kept.")
         return 1
 
-    if not record(_check_after_merge()):
+    if not record(_check_after_merge(config)):
         _append_report(entry, steps, overall_ok)
-        print("\nOBS: merge är redan gjord. Backa med 'git reset --hard ORIG_HEAD'.")
+        print("\nWARNING: merge already applied. Back out with 'git reset --hard ORIG_HEAD'.")
         return 1
 
     if not args.no_cleanup:
-        record(_cleanup(worktree, entry["branch"]))
+        record(_cleanup(config, worktree, entry["branch"]))
 
     _append_report(entry, steps, overall_ok)
-    print(f"\nSammanfattning: {'OK' if overall_ok else 'MISSLYCKADES'}")
+    print(f"\nSummary: {'OK' if overall_ok else 'FAILED'}")
     return 0 if overall_ok else 1
 
 

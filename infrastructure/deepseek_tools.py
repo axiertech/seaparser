@@ -1,16 +1,16 @@
-"""Verktygsdefinitioner för DeepSeek Tool Calls. Endast infrastruktur."""
+"""Tool definitions for DeepSeek Tool Calls. Infrastructure layer only."""
 from __future__ import annotations
 
 import json
 import subprocess
 from pathlib import Path
-from typing import Any
 
-# Vitlista för kommandon som får köras i worktreen
 ALLOWED_COMMANDS = (
     "python", "python3", "pytest", "git status", "git diff", "git log",
-    "ls", "cat", "head", "tail", "grep", "find",
+    "ls", "cat", "head", "tail", "grep", "find", "bash -n", "wc",
 )
+
+FORBIDDEN_SHELL_CHARS = (";", "&&", "||", "|", ">", "<", "`", "$(", "\\", "\n")
 
 FORBIDDEN_FILES = {"AGENTS.md", "pyproject.toml", "requirements.lock"}
 
@@ -19,11 +19,11 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "read_file",
-            "description": "Läs en fils innehåll i worktreen.",
+            "description": "Read a file inside the worktree.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "path": {"type": "string", "description": "Relativ sökväg, t.ex. application/foo.py"}
+                    "path": {"type": "string", "description": "Relative path, e.g. application/foo.py"}
                 },
                 "required": ["path"],
             },
@@ -33,12 +33,12 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "write_file",
-            "description": "Skriv innehåll till en fil i worktreen. Skapar filen om den inte finns.",
+            "description": "Write content to a file inside the worktree. Creates the file if it does not exist.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "path": {"type": "string", "description": "Relativ sökväg, t.ex. scripts/nytt.py"},
-                    "content": {"type": "string", "description": "Fullständigt filinnehåll"},
+                    "path": {"type": "string", "description": "Relative path, e.g. scripts/new.py"},
+                    "content": {"type": "string", "description": "Full file content"},
                 },
                 "required": ["path", "content"],
             },
@@ -48,11 +48,11 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "run_command",
-            "description": "Kör ett tillåtet shell-kommando i worktreen och returnera output.",
+            "description": "Run an allowed shell command in the worktree and return output.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "command": {"type": "string", "description": "Kommandot, t.ex. 'python -m pytest tests/'"}
+                    "command": {"type": "string", "description": "Command, e.g. 'python -m pytest tests/'"}
                 },
                 "required": ["command"],
             },
@@ -62,39 +62,49 @@ TOOLS = [
 
 
 def _validate_path(worktree: Path, rel: str) -> Path:
-    """Säkerställ att sökvägen ligger inom worktreen."""
     target = (worktree / rel).resolve()
     if worktree.resolve() not in target.parents and target != worktree.resolve():
-        raise ValueError(f"Sökväg utanför worktree: {rel}")
+        raise ValueError(f"Path outside worktree: {rel}")
     return target
 
 
-def execute_tool(worktree: Path, name: str, arguments: str) -> str:
-    """Utför ett verktygsanrop och returnera resultatet som sträng."""
+def _validate_command(cmd: str) -> str | None:
+    """Return an error message if the command is not allowed, else None."""
+    if any(ch in cmd for ch in FORBIDDEN_SHELL_CHARS):
+        return f"Command contains forbidden shell characters: {cmd!r}"
+    if not any(cmd == p or cmd.startswith(p + " ") for p in ALLOWED_COMMANDS):
+        return f"Command is not allowed: {cmd!r}"
+    return None
+
+
+def execute_tool(worktree: Path, name: str, arguments: str,
+                 forbidden_files: frozenset[str] | None = None) -> str:
     args = json.loads(arguments)
+    forbidden = forbidden_files if forbidden_files is not None else FORBIDDEN_FILES
 
     if name == "read_file":
         target = _validate_path(worktree, args["path"])
         if not target.exists():
-            return f"Filen finns inte: {args['path']}"
+            return f"File does not exist: {args['path']}"
         return target.read_text()
 
     if name == "write_file":
         target = _validate_path(worktree, args["path"])
-        if target.name in FORBIDDEN_FILES:
-            raise ValueError(f"Otillåten fil: {args['path']}")
+        if target.name in forbidden:
+            raise ValueError(f"Forbidden file: {args['path']}")
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(args["content"])
-        return f"Skrev {args['path']} ({len(args['content'])} tecken)"
+        return f"Wrote {args['path']} ({len(args['content'])} chars)"
 
     if name == "run_command":
         cmd = args["command"]
-        if not any(cmd.startswith(prefix) for prefix in ALLOWED_COMMANDS):
-            return f"Kommandot är inte tillåtet: {cmd}"
+        error = _validate_command(cmd)
+        if error:
+            return error
         proc = subprocess.run(
-            cmd, shell=True, cwd=worktree, capture_output=True, text=True, timeout=60,
+            cmd, shell=True, cwd=worktree, capture_output=True, text=True, timeout=120,
         )
         output = (proc.stdout + proc.stderr)[-4000:]
         return f"exit={proc.returncode}\n{output}"
 
-    return f"Okänt verktyg: {name}"
+    return f"Unknown tool: {name}"
