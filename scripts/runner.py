@@ -175,9 +175,57 @@ def _run_git(args: list[str], cwd: Path, *, check: bool = True) -> subprocess.Co
                           text=True, check=check)
 
 
+def _branch_exists(config: RootConfig, branch: str) -> bool:
+    """Return True if the local branch exists."""
+    proc = _run_git(["rev-parse", "--verify", branch],
+                    cwd=config.root, check=False)
+    return proc.returncode == 0
+
+
+def _cleanup_stale_worktree(config: RootConfig, date: str, run: int,
+                            force: bool) -> None:
+    """Remove a stale worktree and branch for the given run.
+
+    A worktree is stale if it exists but has no completed entry in
+    RUN_HISTORY.json - that means a previous attempt was aborted before
+    completion and left nothing of value. With force=True, remove
+    regardless of history.
+    """
+    worktree = config.worktree_path(date, run)
+    branch = config.branch_name(date, run)
+    history = _load_history(config)
+    has_completed = any(
+        r.get("date") == date and r.get("run") == run
+        and r.get("status") == "completed"
+        for r in history["runs"]
+    )
+    has_worktree = worktree.exists()
+    has_branch = _branch_exists(config, branch)
+
+    if not has_worktree and not has_branch:
+        return
+
+    if has_completed and not force:
+        raise SystemExit(
+            f"Run {date}_{run} is completed and its worktree still exists. "
+            f"Verify it with verify_run first, or pass --clean to overwrite."
+        )
+
+    if has_worktree:
+        print(f"Removing stale worktree {worktree}")
+        _run_git(["worktree", "remove", str(worktree), "--force"],
+                 cwd=config.root, check=False)
+    _run_git(["worktree", "prune"], cwd=config.root, check=False)
+
+    if has_branch:
+        print(f"Removing stale branch {branch}")
+        _run_git(["branch", "-D", branch], cwd=config.root, check=False)
+
+
 def _create_worktree(ctx: RunContext) -> None:
+    """Create a new worktree for this run. Caller must have cleaned any stale one."""
     if ctx.worktree.exists():
-        raise SystemExit(f"Worktree already exists: {ctx.worktree}")
+        raise SystemExit(f"Worktree still exists after cleanup: {ctx.worktree}")
     ctx.config.worktrees_root.mkdir(parents=True, exist_ok=True)
     _run_git(["worktree", "add", "-b", ctx.branch,
               str(ctx.worktree), "HEAD"], cwd=ctx.config.root)
@@ -381,6 +429,8 @@ def main(argv=None) -> int:
                         help="Use a fake client (no API cost)")
     parser.add_argument("--fast", action="store_true",
                         help="Use the per-root fast verify command")
+    parser.add_argument("--clean", action="store_true",
+                        help="Remove stale worktree/branch for this run before starting")
     args = parser.parse_args(argv)
 
     config = get_root_config(args.root)
@@ -422,6 +472,7 @@ def main(argv=None) -> int:
     counter = ApiCounter(limit=ctx.config.max_api_calls)
 
     try:
+        _cleanup_stale_worktree(config, ctx.date, ctx.run, force=args.clean)
         _create_worktree(ctx)
     except SystemExit:
         raise
@@ -478,13 +529,19 @@ def main(argv=None) -> int:
             continue
 
         diff = _diff_in_worktree(ctx)
-        counter.tick()
-        result: ReviewResult = review(
-            ReviewRequest(diff=diff, agents_rules=rules,
-                          changed_files=tuple(written),
-                          context=f"Run {ctx.date}_{ctx.run} ({ctx.config.name}), iteration {iteration}"),
-            client=client,
-        )
+        try:
+            counter.tick()
+            result: ReviewResult = review(
+                ReviewRequest(diff=diff, agents_rules=rules,
+                              changed_files=tuple(written),
+                              context=f"Run {ctx.date}_{ctx.run} ({ctx.config.name}), iteration {iteration}"),
+                client=client,
+            )
+        except (DeepSeekError, RuntimeError) as exc:
+            last_check_tail = f"Reviewer failed: {exc}"
+            print(last_check_tail)
+            status = "failed"
+            break
         last_findings = result.findings
         verdict = result.verdict
         print(f"Verdict: {verdict} - {result.summary}")
