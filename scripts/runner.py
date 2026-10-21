@@ -230,11 +230,17 @@ def _diff_in_worktree(ctx: RunContext) -> str:
 
 
 def _commit_in_worktree(ctx: RunContext, message: str) -> str | None:
+    """Stage all changes and commit. Return the new SHA, or None if nothing to commit."""
     _run_git(["add", "-A"], cwd=ctx.worktree)
     proc = _run_git(["diff", "--cached", "--quiet"], cwd=ctx.worktree, check=False)
     if proc.returncode == 0:
         return None
-    _run_git(["commit", "-m", message], cwd=ctx.worktree)
+    commit_proc = _run_git(["commit", "-m", message], cwd=ctx.worktree, check=False)
+    if commit_proc.returncode != 0:
+        raise RuntimeError(
+            f"git commit failed in {ctx.worktree}: "
+            f"{(commit_proc.stderr or commit_proc.stdout).strip()[-300:]}"
+        )
     return _run_git(["rev-parse", "HEAD"], cwd=ctx.worktree).stdout.strip()
 
 
@@ -484,10 +490,16 @@ def main(argv=None) -> int:
         print(f"Verdict: {verdict} - {result.summary}")
 
         if verdict == "approve":
-            commit = _commit_in_worktree(
-                ctx,
-                f"Autonomous {ctx.config.name} run {ctx.date}_{ctx.run} (iteration {iteration})",
-            )
+            try:
+                commit = _commit_in_worktree(
+                    ctx,
+                    f"Autonomous {ctx.config.name} run {ctx.date}_{ctx.run} (iteration {iteration})",
+                )
+            except RuntimeError as exc:
+                last_check_tail = f"Commit failed: {exc}"
+                print(last_check_tail)
+                status = "failed"
+                break
             status = "completed"
             break
         if verdict == "reject":
