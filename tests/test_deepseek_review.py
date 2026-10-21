@@ -17,10 +17,12 @@ def _make_client(response_text=None, error=None):
     calls = []
 
     class _FakeDeepSeekClient:
-        def chat(self, messages, *, temperature=0.2, max_tokens=None):
+        def chat(self, messages, *, temperature=0.2, max_tokens=None,
+                 response_format=None):
             calls.append({"messages": messages,
                           "temperature": temperature,
-                          "max_tokens": max_tokens})
+                          "max_tokens": max_tokens,
+                          "response_format": response_format})
             if error is not None:
                 raise error
             return response_text

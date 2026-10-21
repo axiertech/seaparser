@@ -210,7 +210,8 @@ def review(request: ReviewRequest, *,
     raw = client.chat([
         {"role": "system", "content": _SYSTEM_PROMPT},
         {"role": "user", "content": user_prompt},
-    ], temperature=0.1, max_tokens=2000)
+    ], temperature=0.1, max_tokens=4000,
+       response_format={"type": "json_object"})
 
     result = _parse_response(raw)
 
