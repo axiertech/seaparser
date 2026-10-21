@@ -443,7 +443,9 @@ def main(argv=None) -> int:
                              for p in written if (ctx.worktree / p).exists()]
             continue
 
-        diff = _diff_in_worktree(ctx)
+        _run_git(["add", "-A"], cwd=ctx.worktree)
+        diff = _run_git(["diff", "--cached", "--no-color"],
+                        cwd=ctx.worktree, check=False).stdout
         counter.tick()
         result: ReviewResult = review(
             ReviewRequest(diff=diff, agents_rules=rules,
