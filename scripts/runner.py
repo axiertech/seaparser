@@ -3,11 +3,10 @@
 Kör manuellt:  python -B -m scripts.runner [--force] [--dry-run] [--fast]
 
 Läser ~/app/AUTONOMOUS_TASK.md. Skapar en worktree under
-~/worktrees/run-<YYYY-MM-DD>_<run>/, låter DeepSeek föreslå ändringar,
-verifierar med scripts.check (eller en snabb delmängd med --fast),
-granskar med application.deepseek_review och committar endast vid
-verdict=approve. Pushar aldrig, mergar aldrig till main och rör aldrig
-~/app utanför AUTONOMOUS_TASK.md, RUN_HISTORY.json och RUN_REPORT_*.md.
+~/worktrees/run-<YYYY-MM-DD>_<run>/, låter DeepSeek föreslå ändringar
+via Tool Calls, verifierar med scripts.check (eller --fast), granskar
+med application.deepseek_review och committar endast vid verdict=approve.
+Pushar aldrig, mergar aldrig till main.
 """
 from __future__ import annotations
 
@@ -29,6 +28,7 @@ from application.deepseek_review import (
     review,
 )
 from infrastructure.deepseek import DeepSeekClient, DeepSeekError
+from infrastructure.deepseek_tools import TOOLS, execute_tool
 from infrastructure.settings import (
     DEEPSEEK_DEFAULT_MODEL,
     DEEPSEEK_STRONG_MODEL,
@@ -43,6 +43,7 @@ HISTORY_FILE = APP_ROOT / "RUN_HISTORY.json"
 REPORT_TEMPLATE = "RUN_REPORT_{date}_{run}.md"
 
 MAX_ITERATIONS = 8
+MAX_TOOL_ROUNDS = 10
 MAX_API_CALLS = 30
 MAX_TOKENS = 8000
 ALLOWED_PREFIXES = ("application/", "tests/", "docs/", "scripts/", "infrastructure/")
@@ -51,30 +52,22 @@ FORBIDDEN_FILES = {"pyproject.toml", "requirements.lock", "AGENTS.md"}
 STRONG_TASK_WORDS = (
     "beräkning", "rutt", "väder", "geometri", "polar",
     "test_planning", "test_weather", "test_forecast",
+    "git", "plan", "arkitektur", "refaktorera", "kodbas", "långsiktig",
 )
 
 EDIT_SYSTEM_PROMPT = """You are an autonomous coding assistant for SeaParser.
 
-You receive:
-- A task description in Swedish.
-- The project rules (AGENTS.md).
-- The current content of selected files.
+You have access to tools:
+- read_file(path)
+- write_file(path, content)
+- run_command(command)
 
-Return ONLY a JSON object of the form:
-{
-  "reasoning": "<one sentence>",
-  "changes": {
-    "<relative path>": "<full new file content>",
-    ...
-  }
-}
+Use them to complete the task. Follow all rules in AGENTS.md:
+domain boundaries, no secrets, deterministic route engine, tests must
+be meaningful. Never modify pyproject.toml, requirements.lock or
+AGENTS.md. Keep changes minimal and focused.
 
-Rules:
-- Only modify files that are listed in the input. Never create new files.
-- Never modify pyproject.toml, requirements.lock or AGENTS.md.
-- Follow all rules in AGENTS.md (domain boundaries, no secrets,
-  deterministic route engine, tests must be meaningful).
-- Keep changes minimal and focused on the task.
+When done, reply with a short Swedish summary and no more tool calls.
 """
 
 
@@ -207,23 +200,6 @@ def _select_candidate_files(task_text: str) -> list[Path]:
     return [p for _, p in candidates[:5]]
 
 
-def _apply_changes(worktree: Path, changes: dict[str, str]) -> list[str]:
-    written: list[str] = []
-    for rel, content in changes.items():
-        if not isinstance(rel, str) or not isinstance(content, str):
-            raise ValueError("Ogiltig change-post")
-        if rel in FORBIDDEN_FILES or not rel.startswith(ALLOWED_PREFIXES):
-            raise ValueError(f"Otillåten fil: {rel}")
-        target = (worktree / rel).resolve()
-        if worktree.resolve() not in target.parents:
-            raise ValueError(f"Sökväg utanför worktree: {rel}")
-        if not target.exists():
-            raise ValueError(f"Filen finns inte (inga nya filer tillåtna): {rel}")
-        target.write_text(content)
-        written.append(rel)
-    return written
-
-
 def _check_in_worktree(ctx: RunContext, *, fast: bool) -> tuple[bool, str]:
     if fast:
         proc = subprocess.run(
@@ -270,46 +246,49 @@ def _build_user_prompt(task_text: str, rules_text: str,
     return prompt
 
 
-def _request_changes(client: DeepSeekClient, counter: ApiCounter,
-                     prompt: str) -> str:
-    """Anropar DeepSeek med JSON-läge och en retry vid tomt svar."""
-    kwargs = dict(
-        temperature=0.2,
-        max_tokens=MAX_TOKENS,
-        response_format={"type": "json_object"},
-    )
-    counter.tick()
-    raw = client.chat(
-        [{"role": "system", "content": EDIT_SYSTEM_PROMPT},
-         {"role": "user", "content": prompt}],
-        **kwargs,
-    )
-    if not raw or not raw.strip():
+def _run_agent_loop(client: DeepSeekClient, ctx: RunContext, task_text: str,
+                    rules_text: str, initial_files: list[tuple[str, str]],
+                    counter: ApiCounter) -> tuple[list[str], str]:
+    """Kör en Tool Call-loop. Returnerar (skrivna filer, sista assistenttext)."""
+    written: list[str] = []
+    messages: list = [
+        {"role": "system", "content": EDIT_SYSTEM_PROMPT},
+        {"role": "user", "content": _build_user_prompt(task_text, rules_text, initial_files, "")},
+    ]
+    last_text = ""
+
+    for round_num in range(MAX_TOOL_ROUNDS):
+        print(f"  Tool-runda {round_num + 1}")
         counter.tick()
-        raw = client.chat(
-            [{"role": "system", "content": EDIT_SYSTEM_PROMPT},
-             {"role": "user", "content": prompt + "\n\nReturn ONLY the JSON object."}],
-            **kwargs,
-        )
-    if not raw or not raw.strip():
-        raise ValueError("DeepSeek returnerade tomt svar två gånger")
-    return raw
+        message = client.chat_with_tools(messages, tools=TOOLS, max_tokens=MAX_TOKENS)
+        messages.append(message)
 
+        if not getattr(message, "tool_calls", None):
+            last_text = getattr(message, "content", "") or ""
+            print(f"  Klar efter {round_num + 1} rundor: {last_text[:120]}")
+            return written, last_text
 
-def _propose_changes(client: DeepSeekClient, counter: ApiCounter,
-                     task_text: str, rules_text: str,
-                     files: list[tuple[str, str]],
-                     feedback: str = "") -> dict[str, str]:
-    prompt = _build_user_prompt(task_text, rules_text, files, feedback)
-    raw = _request_changes(client, counter, prompt)
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"Ogiltigt JSON från DeepSeek: {exc.msg}") from None
-    changes = data.get("changes")
-    if not isinstance(changes, dict):
-        raise ValueError("Saknar 'changes' i DeepSeek-svaret")
-    return changes
+        for tool_call in message.tool_calls:
+            name = tool_call.function.name
+            args = tool_call.function.arguments
+            print(f"    Verktyg: {name}")
+            try:
+                result = execute_tool(ctx.worktree, name, args)
+                if name == "write_file":
+                    try:
+                        written.append(json.loads(args)["path"])
+                    except Exception:
+                        pass
+            except Exception as exc:
+                result = f"Fel: {exc}"
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "content": result,
+            })
+
+    print(f"  Nådde max antal tool-rundor ({MAX_TOOL_ROUNDS}).")
+    return written, last_text
 
 
 def _format_findings(findings: tuple[ReviewFinding, ...]) -> str:
@@ -396,9 +375,12 @@ def main(argv=None) -> int:
         class _DryRunClient:
             def __init__(self):
                 self.calls = 0
-            def chat(self, messages, **kwargs):
+            def chat_with_tools(self, messages, **kwargs):
                 self.calls += 1
-                return json.dumps({"reasoning": "torrkörning", "changes": {}})
+                return type("Msg", (), {
+                    "content": "torrkörning",
+                    "tool_calls": None,
+                })()
         client = _DryRunClient()
     else:
         client = DeepSeekClient(load_deepseek(model_override=ctx.model), max_retries=0)
@@ -436,12 +418,18 @@ def main(argv=None) -> int:
         iterations_used = iteration
         print(f"\n--- Iteration {iteration} ---")
         try:
-            changes = _propose_changes(client, counter, task_text, rules,
-                                       current_files, feedback)
-            written = _apply_changes(ctx.worktree, changes)
-            print(f"Skrev: {', '.join(written) if written else '(inga ändringar)'}")
-        except (ValueError, DeepSeekError, RuntimeError) as exc:
-            last_check_tail = f"Ändringsförslag misslyckades: {exc}"
+            written, last_text = _run_agent_loop(
+                client, ctx, task_text + ("\n\n" + feedback if feedback else ""),
+                rules, current_files, counter,
+            )
+            if not written:
+                print("Inga filer skrevs. Avbryter.")
+                last_check_tail = last_text
+                status = "failed"
+                break
+            print(f"Skrev: {', '.join(written)}")
+        except (DeepSeekError, RuntimeError) as exc:
+            last_check_tail = f"Agentloop misslyckades: {exc}"
             print(last_check_tail)
             status = "failed"
             break
@@ -449,9 +437,10 @@ def main(argv=None) -> int:
         ok, tail = _check_in_worktree(ctx, fast=args.fast)
         last_check_tail = tail
         if not ok:
-            print("Verifieringen misslyckades. Skickar tillbaka till DeepSeek.")
+            print("Verifieringen misslyckades. Försöker igen.")
             feedback = f"Verifieringen misslyckades:\n{tail}"
-            current_files = [(p, (ctx.worktree / p).read_text()) for p in written]
+            current_files = [(p, (ctx.worktree / p).read_text())
+                             for p in written if (ctx.worktree / p).exists()]
             continue
 
         diff = _diff_in_worktree(ctx)
@@ -477,7 +466,8 @@ def main(argv=None) -> int:
             status = "rejected"
             break
         feedback = _format_findings(result.findings)
-        current_files = [(p, (ctx.worktree / p).read_text()) for p in written]
+        current_files = [(p, (ctx.worktree / p).read_text())
+                         for p in written if (ctx.worktree / p).exists()]
 
     _write_report(ctx, status=status, iterations=iterations_used,
                   api_calls=counter.used, verdict=verdict, commit=commit,

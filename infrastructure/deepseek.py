@@ -71,3 +71,23 @@ class DeepSeekClient:
         raise DeepSeekError(
             f"DeepSeek-anrop misslyckades: {type(last_error).__name__}"
         ) from None
+
+    def chat_with_tools(self, messages: list, *, tools: list | None = None,
+                        temperature: float = 0.2, max_tokens: int | None = None,
+                        thinking: bool = False) -> Any:
+        """Returnerar hela message-objektet (inkl. tool_calls och reasoning_content)."""
+        kwargs: dict[str, Any] = {
+            "model": self._settings.model,
+            "messages": messages,
+            "temperature": temperature,
+        }
+        if max_tokens is not None:
+            kwargs["max_tokens"] = max_tokens
+        if tools is not None:
+            kwargs["tools"] = tools
+            kwargs["extra_body"] = {
+                "thinking": {"type": "enabled" if thinking else "disabled"}
+            }
+
+        response = self._client.chat.completions.create(**kwargs)
+        return response.choices[0].message
