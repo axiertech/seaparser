@@ -78,6 +78,7 @@ class ReviewRequest:
     agents_rules: str
     changed_files: tuple[str, ...]
     context: str = ""
+    base_files: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -197,9 +198,17 @@ def review(request: ReviewRequest, *,
             message=f"Reglerna trunkerades till {MAX_RULES_CHARS} tecken.",
         ))
 
+    base_note = ""
+    if request.base_files:
+        base_note = (
+            "\n\nFiles already present in the base commit (do NOT report "
+            "them as missing - they exist in the tree):\n"
+            + "\n".join(request.base_files)
+        )
     user_prompt = (
         "Changed files:\n" + "\n".join(request.changed_files) +
         ("\n\nContext:\n" + request.context if request.context else "") +
+        base_note +
         "\n\nProject rules (AGENTS.md):\n" + rules_text +
         "\n\nDiff to review:\n```diff\n" + diff_text + "\n```\n"
     )
@@ -210,7 +219,7 @@ def review(request: ReviewRequest, *,
     raw = client.chat([
         {"role": "system", "content": _SYSTEM_PROMPT},
         {"role": "user", "content": user_prompt},
-    ], temperature=0.1, max_tokens=4000,
+    ], temperature=0.1, max_tokens=8000,
        response_format={"type": "json_object"})
 
     result = _parse_response(raw)
