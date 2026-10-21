@@ -56,6 +56,28 @@ Use them to complete the task. Follow the project rules provided in the
 user message. Never modify forbidden files listed there. Keep changes
 minimal and focused.
 
+IMPORTANT - work efficiently:
+- Read at most 3 files before deciding what to change. Do not re-read
+  files you have already seen.
+- Write files as soon as you understand the change. Do not spend more
+  than 3 tool rounds exploring before the first write_file.
+- If the task spans multiple files, write them one by one. Do not
+  batch-explore all of them first.
+- If you cannot complete the full task in the remaining rounds, write
+  the files you have figured out and stop cleanly. A partial change
+  that compiles is better than no change at all.
+
+IMPORTANT - work efficiently:
+- Read at most 3 files before deciding what to change. Do not re-read
+  files you have already seen.
+- Write files as soon as you understand the change. Do not spend more
+  than 3 tool rounds exploring before the first write_file.
+- If the task spans multiple files, write them one by one. Do not
+  batch-explore all of them first.
+- If you cannot complete the full task in the remaining rounds, write
+  the files you have figured out and stop cleanly. A partial change
+  that compiles is better than no change at all.
+
 Code style rules (from AGENTS.md):
 - Prefer module-level functions over nested functions or closures. Only
   use a nested function for decorators, single-call-site helpers, or
@@ -128,6 +150,15 @@ def _select_model(task_text: str) -> str:
     if any(word in lowered for word in STRONG_TASK_WORDS):
         return DEEPSEEK_STRONG_MODEL
     return DEEPSEEK_DEFAULT_MODEL
+
+
+def _max_tool_rounds_for_task(config: RootConfig, task_text: str) -> int:
+    """Allow per-task override of max_tool_rounds via 'Max tool rounds: N'."""
+    match = re.search(r"(?im)^\s*(?:Max tool rounds|Max tool calls):\s*(\d+)\s*$",
+                      task_text)
+    if match:
+        return min(int(match.group(1)), 40)
+    return config.max_tool_rounds
 
 
 def _timeout_for_model(model: str) -> float:
@@ -324,7 +355,8 @@ def _run_agent_loop(client: DeepSeekClient, ctx: RunContext, task_text: str,
     last_text = ""
     max_tokens = _max_tokens_for_model(ctx.config, ctx.model)
 
-    for round_num in range(ctx.config.max_tool_rounds):
+    max_rounds = _max_tool_rounds_for_task(ctx.config, task_text)
+    for round_num in range(max_rounds):
         print(f"  Tool round {round_num + 1}")
         counter.tick()
         message = client.chat_with_tools(messages, tools=TOOLS, max_tokens=max_tokens)
@@ -355,7 +387,7 @@ def _run_agent_loop(client: DeepSeekClient, ctx: RunContext, task_text: str,
                 "content": result,
             })
 
-    print(f"  Reached max tool rounds ({ctx.config.max_tool_rounds}).")
+    print(f"  Reached max tool rounds ({max_rounds}).")
     return written, last_text
 
 
