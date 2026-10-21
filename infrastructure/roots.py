@@ -90,10 +90,11 @@ ROOTS: dict[str, RootConfig] = {
             "splice_*.py", "patch_*.py", "fix_*.py",
         }),
         verify_cmd=(
+            "set -o pipefail; "
             "bash -n run.sh rotate-logs.sh update-status.sh start-probe.sh start-work.sh stop-work.sh"
-            " && python3 -B -m unittest test_capacity_retry 2>&1 | tail -10"
+            " && python3 -B -m unittest test_capacity_retry test_autonomy_conf 2>&1 | tail -20"
             " && python3 -c \"import ast; [ast.parse(open(f).read()) for f in"
-            " ['work_session.py','ssh_probe.py','test_capacity_retry.py']]; print('ast ok')\""
+            " ['work_session.py','ssh_probe.py','test_capacity_retry.py','test_autonomy_conf.py']]; print('ast ok')\""
         ),
         fast_verify_cmd=None,
         max_iterations=6,
