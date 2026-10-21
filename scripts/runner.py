@@ -70,11 +70,12 @@ IMPORTANT - work efficiently:
   that compiles is better than no change at all.
 - Never create temporary helper files like .tmp_*.py, *.tmp, *.bak,
   splice_*.py, patch_*.py or fix_*.py. These will be rejected.
-- For existing files larger than 100 lines, use edit_file (exact
-  substring replacement) instead of write_file. write_file requires the
-  full new content and is error-prone for large files.
-- Do NOT write helper scripts that modify other files. Use edit_file
-  directly on the target file.
+- For existing files larger than 100 lines, use edit_file instead of
+  write_file. edit_file tries exact match first and then falls back to
+  fuzzy line-level matching that tolerates whitespace differences, so
+  you do not need to reproduce the file's exact indentation.
+- Do NOT write helper scripts that modify other files (splice_*.py,
+  patch_*.py, fix_*.py). Use edit_file directly on the target file.
 
 IMPORTANT - work efficiently:
 - Read at most 3 files before deciding what to change. Do not re-read
