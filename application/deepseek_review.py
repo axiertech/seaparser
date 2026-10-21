@@ -219,10 +219,24 @@ def review(request: ReviewRequest, *,
     raw = client.chat([
         {"role": "system", "content": _SYSTEM_PROMPT},
         {"role": "user", "content": user_prompt},
-    ], temperature=0.1, max_tokens=8000,
+    ], temperature=0.1, max_tokens=16000,
        response_format={"type": "json_object"})
 
-    result = _parse_response(raw)
+    try:
+        result = _parse_response(raw)
+    except ReviewParseError:
+        # Retry once with a much smaller prompt on parse failure
+        small_prompt = (
+            "Changed files:\n" + "\n".join(request.changed_files) +
+            "\n\nDiff to review (truncated):\n```diff\n" +
+            diff_text[:8000] + "\n```\n"
+        )
+        raw = client.chat([
+            {"role": "system", "content": _SYSTEM_PROMPT},
+            {"role": "user", "content": small_prompt},
+        ], temperature=0.1, max_tokens=8000,
+           response_format={"type": "json_object"})
+        result = _parse_response(raw)
 
     if injected_findings:
         combined = tuple(injected_findings) + result.findings
