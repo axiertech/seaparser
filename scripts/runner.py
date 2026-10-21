@@ -657,10 +657,18 @@ def main(argv=None) -> int:
         diff = _diff_in_worktree(ctx)
         try:
             counter.tick()
+            base_files = sorted(
+                str(f.relative_to(ctx.config.root))
+                for f in ctx.config.root.rglob("*")
+                if f.is_file()
+                and not any(part in f.parts for part in
+                            (".git", "logs", "cache", "archive", "__pycache__"))
+            )[:50]
             result: ReviewResult = review(
                 ReviewRequest(diff=diff, agents_rules=rules,
                               changed_files=tuple(written),
-                              context=f"Run {ctx.date}_{ctx.run} ({ctx.config.name}), iteration {iteration}"),
+                              context=f"Run {ctx.date}_{ctx.run} ({ctx.config.name}), iteration {iteration}",
+                              base_files=tuple(base_files)),
                 client=client,
             )
         except (DeepSeekError, RuntimeError) as exc:
