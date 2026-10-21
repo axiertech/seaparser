@@ -34,3 +34,4 @@ RUN_REPORT_*.md
 
 # Task files for run_many.sh (local only)
 tasks/
+.runner.lock

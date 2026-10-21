@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import fcntl
 import hashlib
 import json
 import os
@@ -21,6 +22,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import IO
 
 from application.deepseek_review import (
     ReviewFinding,
@@ -116,6 +118,29 @@ class ApiCounter:
         self.used += 1
         if self.used > self.limit:
             raise RuntimeError(f"API limit reached ({self.limit} calls)")
+
+
+def _acquire_run_lock(config: RootConfig) -> IO:
+    """Take an exclusive per-root lock. Exit 75 if another runner is active.
+
+    The lock file lives at <root>/.runner.lock and is released automatically
+    when the process exits. Two concurrent runner.py invocations for the same
+    root would otherwise both read RUN_HISTORY.json and pick the same run
+    number, causing the second to fail on 'git worktree add'.
+    """
+    lock_path = config.root / ".runner.lock"
+    lock_path.touch(exist_ok=True)
+    lock_file = open(lock_path, "w")
+    try:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        lock_file.close()
+        raise SystemExit(
+            f"Another runner.py is already active for root {config.name!r}. "
+            f"If you are sure no other run is in progress, remove "
+            f"{lock_path} and try again."
+        )
+    return lock_file
 
 
 def _load_history(config: RootConfig) -> dict:
@@ -536,8 +561,10 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
 
     config = get_root_config(args.root)
+    lock_file = _acquire_run_lock(config)
 
     if not config.task_file.exists() or not config.task_file.read_text().strip():
+        lock_file.close()
         raise SystemExit(f"Missing task: {config.task_file}")
 
     task_text = config.task_file.read_text()
@@ -706,6 +733,7 @@ def main(argv=None) -> int:
                   notes=f"Worktree: {ctx.worktree}\nModel: {ctx.model}\n")
     _record(ctx, history, status=status, iterations=iterations_used,
             api_calls=counter.used, verdict=verdict, commit=commit)
+    lock_file.close()
     print(f"\nStatus: {status}")
     print(f"Report: {ctx.report}")
     return 0 if status == "completed" else 1
