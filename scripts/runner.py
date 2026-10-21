@@ -242,18 +242,24 @@ def _build_user_prompt(task_text: str, rules_text: str,
         f"Current files:\n{files_block}\n"
     )
     if feedback:
-        prompt += f"\nReviewer feedback to address:\n{feedback}\n"
+        prompt += (
+            "\n\nReviewer feedback (you MUST address this by calling write_file):\n"
+            + feedback
+            + "\n\nCall write_file to update the affected files, then call run_command "
+              "to verify. Do not just describe what you would do."
+        )
     return prompt
 
 
 def _run_agent_loop(client: DeepSeekClient, ctx: RunContext, task_text: str,
                     rules_text: str, initial_files: list[tuple[str, str]],
-                    counter: ApiCounter) -> tuple[list[str], str]:
+                    counter: ApiCounter, feedback: str = "") -> tuple[list[str], str]:
     """Kör en Tool Call-loop. Returnerar (skrivna filer, sista assistenttext)."""
     written: list[str] = []
     messages: list = [
         {"role": "system", "content": EDIT_SYSTEM_PROMPT},
-        {"role": "user", "content": _build_user_prompt(task_text, rules_text, initial_files, "")},
+        {"role": "user", "content": _build_user_prompt(task_text, rules_text,
+                                                       initial_files, feedback)},
     ]
     last_text = ""
 
@@ -419,8 +425,8 @@ def main(argv=None) -> int:
         print(f"\n--- Iteration {iteration} ---")
         try:
             written, last_text = _run_agent_loop(
-                client, ctx, task_text + ("\n\n" + feedback if feedback else ""),
-                rules, current_files, counter,
+                client, ctx, task_text, rules, current_files, counter,
+                feedback=feedback,
             )
             if not written:
                 print("Inga filer skrevs. Avbryter.")
