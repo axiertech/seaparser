@@ -29,7 +29,7 @@ from application.deepseek_review import (
     review,
 )
 from infrastructure.deepseek import DeepSeekClient, DeepSeekError
-from infrastructure.deepseek_tools import TOOLS, execute_tool
+from infrastructure.deepseek_tools import TOOLS, clean_temp_files, execute_tool
 from infrastructure.roots import RootConfig, get_root_config
 from infrastructure.settings import (
     DEEPSEEK_DEFAULT_MODEL,
@@ -66,6 +66,9 @@ IMPORTANT - work efficiently:
 - If you cannot complete the full task in the remaining rounds, write
   the files you have figured out and stop cleanly. A partial change
   that compiles is better than no change at all.
+- Never create temporary helper files like .tmp_*.py, *.tmp or *.bak.
+  Use write_file with the final content directly, or run_command with
+  sed/python inline if you must patch an existing file.
 
 IMPORTANT - work efficiently:
 - Read at most 3 files before deciding what to change. Do not re-read
@@ -159,6 +162,15 @@ def _max_tool_rounds_for_task(config: RootConfig, task_text: str) -> int:
     if match:
         return min(int(match.group(1)), 40)
     return config.max_tool_rounds
+
+
+def _max_api_calls_for_task(config: RootConfig, task_text: str) -> int:
+    """Allow per-task override of max_api_calls via 'Max api calls: N'."""
+    match = re.search(r"(?im)^\s*(?:Max api calls|Max api rounds):\s*(\d+)\s*$",
+                      task_text)
+    if match:
+        return min(int(match.group(1)), 80)
+    return config.max_api_calls
 
 
 def _timeout_for_model(model: str) -> float:
@@ -538,7 +550,8 @@ def main(argv=None) -> int:
             timeout_seconds=_timeout_for_model(ctx.model),
         )
 
-    counter = ApiCounter(limit=ctx.config.max_api_calls)
+    api_limit = _max_api_calls_for_task(ctx.config, task_text)
+    counter = ApiCounter(limit=api_limit)
 
     try:
         _cleanup_stale_worktree(config, ctx.date, ctx.run, force=args.clean)
@@ -591,6 +604,13 @@ def main(argv=None) -> int:
                 last_check_tail = last_text
                 status = "failed"
                 break
+            cleaned = clean_temp_files(ctx.worktree)
+            if cleaned:
+                print(f"  Cleaned temp files: {', '.join(cleaned)}")
+                written = [w for w in written if w not in cleaned]
+            if not written:
+                print("Only temp files were written. Treating as no progress.")
+                written = []
             print(f"Wrote: {', '.join(written)}")
         except (DeepSeekError, RuntimeError) as exc:
             last_check_tail = f"Agent loop failed: {exc}"

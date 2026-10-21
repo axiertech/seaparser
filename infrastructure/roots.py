@@ -62,7 +62,8 @@ ROOTS: dict[str, RootConfig] = {
         report_pattern="RUN_REPORT_{date}_{run}.md",
         rules_file=APP_ROOT / "AGENTS.md",
         allowed_prefixes=("application/", "tests/", "docs/", "scripts/", "infrastructure/"),
-        forbidden_files=frozenset({"pyproject.toml", "requirements.lock", "AGENTS.md"}),
+        forbidden_files=frozenset({"pyproject.toml", "requirements.lock", "AGENTS.md",
+                                   ".tmp_*", "*.tmp", "*.bak", "*~"}),
         verify_cmd="python3 -B -m scripts.check",
         fast_verify_cmd="python3 -B -m unittest tests.test_deepseek_review -v",
         max_iterations=8,
@@ -85,7 +86,7 @@ ROOTS: dict[str, RootConfig] = {
         forbidden_files=frozenset({
             "handoff.session", "run.lock", "ssh-probe-launch.lock",
             "work-launch.lock", "tmux.sock", "runner.pid",
-            ".tmp_add_comment.py",
+            ".tmp_*", "*.tmp", "*.bak", "*~",
         }),
         verify_cmd=(
             "bash -n run.sh rotate-logs.sh update-status.sh start-probe.sh start-work.sh stop-work.sh"
@@ -96,7 +97,7 @@ ROOTS: dict[str, RootConfig] = {
         fast_verify_cmd=None,
         max_iterations=6,
         max_tool_rounds=12,
-        max_api_calls=25,
+        max_api_calls=40,
         max_tokens_flash=8000,
         max_tokens_pro=16000,
     ),

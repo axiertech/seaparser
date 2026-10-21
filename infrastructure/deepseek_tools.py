@@ -1,6 +1,7 @@
 """Tool definitions for DeepSeek Tool Calls. Infrastructure layer only."""
 from __future__ import annotations
 
+import fnmatch
 import json
 import subprocess
 from pathlib import Path
@@ -12,7 +13,9 @@ ALLOWED_COMMANDS = (
 
 FORBIDDEN_SHELL_CHARS = (";", "&&", "||", "|", ">", "<", "`", "$(", "\\", "\n")
 
-FORBIDDEN_FILES = {"AGENTS.md", "pyproject.toml", "requirements.lock"}
+DEFAULT_FORBIDDEN = frozenset({"AGENTS.md", "pyproject.toml", "requirements.lock"})
+
+TEMP_PATTERNS = (".tmp_*", "*.tmp", "*.bak", "*~", ".DS_Store")
 
 TOOLS = [
     {
@@ -62,6 +65,7 @@ TOOLS = [
 
 
 def _validate_path(worktree: Path, rel: str) -> Path:
+    """Resolve a relative path and reject escapes from the worktree."""
     target = (worktree / rel).resolve()
     if worktree.resolve() not in target.parents and target != worktree.resolve():
         raise ValueError(f"Path outside worktree: {rel}")
@@ -77,10 +81,22 @@ def _validate_command(cmd: str) -> str | None:
     return None
 
 
+def _is_forbidden(name: str, forbidden: frozenset[str]) -> bool:
+    """Return True if name matches any exact entry or glob pattern."""
+    for pattern in forbidden:
+        if "*" in pattern or "?" in pattern:
+            if fnmatch.fnmatch(name, pattern):
+                return True
+        elif name == pattern:
+            return True
+    return False
+
+
 def execute_tool(worktree: Path, name: str, arguments: str,
                  forbidden_files: frozenset[str] | None = None) -> str:
+    """Execute a tool call and return its result as a string."""
     args = json.loads(arguments)
-    forbidden = forbidden_files if forbidden_files is not None else FORBIDDEN_FILES
+    forbidden = forbidden_files if forbidden_files is not None else DEFAULT_FORBIDDEN
 
     if name == "read_file":
         target = _validate_path(worktree, args["path"])
@@ -90,7 +106,7 @@ def execute_tool(worktree: Path, name: str, arguments: str,
 
     if name == "write_file":
         target = _validate_path(worktree, args["path"])
-        if target.name in forbidden:
+        if _is_forbidden(target.name, forbidden):
             raise ValueError(f"Forbidden file: {args['path']}")
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(args["content"])
@@ -108,3 +124,17 @@ def execute_tool(worktree: Path, name: str, arguments: str,
         return f"exit={proc.returncode}\n{output}"
 
     return f"Unknown tool: {name}"
+
+
+def clean_temp_files(worktree: Path) -> list[str]:
+    """Remove temp files matching TEMP_PATTERNS. Return relative paths removed."""
+    removed: list[str] = []
+    for pattern in TEMP_PATTERNS:
+        for path in worktree.rglob(pattern):
+            if path.is_file():
+                try:
+                    removed.append(str(path.relative_to(worktree)))
+                    path.unlink()
+                except OSError:
+                    pass
+    return removed
