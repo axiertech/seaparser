@@ -323,3 +323,18 @@ och kräver samlat administratörs-/publiceringsgodkännande innan aktivering.
 - Tom diff returnerar `approve` utan att anropa DeepSeek (sparar
   API-kostnad).
 - 6 offline-tester med fejkad klient i `tests/test_deepseek_review.py`.
+
+## 2026-10-21: Autonomy-plan för ~/autonomy
+
+- `docs/autonomy-plan.md` sammanfattar en analys av det separata
+  `~/autonomy`-repot (Codex/GPT-6.1-sol, 666-raders `work_session.py`).
+- Sex problem identifierade: sex överlappande statusfiler, tre
+  inkonsekventa lock-filer, 114 MiB loggar utan rotation, 10 fristående
+  preflight-skript, `work_session.py` med blandade ansvar, hårdkodade
+  konstanter.
+- Sex ändringar föreslagna med testplan och migreringsrisk.
+- Rekommenderad ordning: statuskonsolidering → loggrotation → flock-lås
+  → preflight-gränssnitt → centraliserade konstanter → dela upp
+  `work_session.py`.
+- Sex öppna frågor kräver användarens beslut innan implementation.
+- Inget i `~/autonomy` ändrades av analysen; endast `~/app` berördes.
