@@ -356,6 +356,10 @@ def _run_agent_loop(client: DeepSeekClient, ctx: RunContext, task_text: str,
     max_tokens = _max_tokens_for_model(ctx.config, ctx.model)
 
     max_rounds = _max_tool_rounds_for_task(ctx.config, task_text)
+    read_cache: dict[str, tuple[str, int]] = {}
+    commands_since_write = 0
+    files_written_so_far = 0
+
     for round_num in range(max_rounds):
         print(f"  Tool round {round_num + 1}")
         counter.tick()
@@ -370,15 +374,48 @@ def _run_agent_loop(client: DeepSeekClient, ctx: RunContext, task_text: str,
         for tool_call in message.tool_calls:
             name = tool_call.function.name
             args = tool_call.function.arguments
+
+            # Cached reads: skip file I/O, tell the model it already has this
+            if name == "read_file":
+                try:
+                    cached_path = json.loads(args)["path"]
+                except Exception:
+                    cached_path = None
+                if cached_path and cached_path in read_cache:
+                    _, first_round = read_cache[cached_path]
+                    print(f"    Tool: {name} (cached)")
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "content": (f"[cached] {cached_path} was already read at "
+                                    f"round {first_round}. Content is unchanged; "
+                                    f"see the earlier tool result for full text."),
+                    })
+                    continue
+
             print(f"    Tool: {name}")
             try:
                 result = execute_tool(ctx.worktree, name, args,
                                       forbidden_files=ctx.config.forbidden_files)
-                if name == "write_file":
+
+                if name == "read_file" and cached_path:
+                    read_cache[cached_path] = (result, round_num + 1)
+                elif name == "write_file":
                     try:
-                        written.append(json.loads(args)["path"])
+                        wp = json.loads(args)["path"]
+                        read_cache.pop(wp, None)
+                        written.append(wp)
+                        commands_since_write = 0
+                        files_written_so_far += 1
                     except Exception:
                         pass
+                elif name == "run_command":
+                    commands_since_write += 1
+                    if commands_since_write >= 3 and files_written_so_far == 0:
+                        result += (
+                            "\n\n[reminder] You have not written any files yet. "
+                            "Stop exploring and write the first file now."
+                        )
             except Exception as exc:
                 result = f"Error: {exc}"
             messages.append({
@@ -540,6 +577,16 @@ def main(argv=None) -> int:
                 feedback=feedback,
             )
             if not written:
+                if iteration == 1 and not feedback:
+                    print("No files written. Retrying with subtask decomposition.")
+                    feedback = (
+                        "Your previous attempt did not write any files. "
+                        "The task is too large for one pass. Decompose it into "
+                        "3-5 smaller subtasks and complete ONLY the first one "
+                        "in this iteration. Write the first file within 3 tool "
+                        "rounds. Do not explore further; write now."
+                    )
+                    continue
                 print("No files written. Aborting.")
                 last_check_tail = last_text
                 status = "failed"
