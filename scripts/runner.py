@@ -490,6 +490,14 @@ def _run_agent_loop(client: DeepSeekClient, ctx: RunContext, task_text: str,
     return written, last_text
 
 
+def _findings_signature(findings: tuple[ReviewFinding, ...]) -> frozenset:
+    """Return a stable set of (file, line, severity, message) for loop detection."""
+    return frozenset(
+        (f.file, f.line, f.severity, f.message)
+        for f in findings
+    )
+
+
 def _format_findings(findings: tuple[ReviewFinding, ...]) -> str:
     if not findings:
         return "(no findings)"
@@ -640,6 +648,7 @@ def main(argv=None) -> int:
     status = "failed"
     iterations_used = 0
     feedback = ""
+    prev_sig: frozenset | None = None
 
     for iteration in range(1, config.max_iterations + 1):
         iterations_used = iteration
@@ -709,6 +718,19 @@ def main(argv=None) -> int:
             print(last_check_tail)
             status = "failed"
             break
+        new_sig = _findings_signature(result.findings)
+        if prev_sig is not None and new_sig == prev_sig and verdict == "request_changes":
+            last_check_tail = (
+                f"Reviewer returned identical findings twice; aborting to "
+                f"avoid an oscillation loop. {len(result.findings)} findings unchanged."
+            )
+            print(last_check_tail)
+            last_findings = result.findings
+            verdict = result.verdict
+            status = "stuck"
+            break
+        prev_sig = new_sig
+
         last_findings = result.findings
         verdict = result.verdict
         print(f"Verdict: {verdict} - {result.summary}")
