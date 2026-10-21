@@ -225,44 +225,63 @@ def _branch_exists(config: RootConfig, branch: str) -> bool:
     return proc.returncode == 0
 
 
-def _cleanup_stale_worktree(config: RootConfig, date: str, run: int,
-                            force: bool) -> None:
-    """Remove a stale worktree and branch for the given run.
+def _cleanup_stale_worktrees(config: RootConfig, current_date: str,
+                              current_run: int,
+                              clean_completed: bool = False,
+                              keep_failed: bool = False) -> int:
+    """Remove worktrees and branches for runs not worth keeping.
 
-    A worktree is stale if it exists but has no completed entry in
-    RUN_HISTORY.json - that means a previous attempt was aborted before
-    completion and left nothing of value. With force=True, remove
-    regardless of history.
+    By default removes any run whose status is not 'completed' (failed,
+    rejected, aborted) - those contain nothing the user needs. Completed
+    runs are kept so verify_run can inspect and merge them first.
+
+    clean_completed=True also removes completed runs (use only after
+    deciding not to merge). keep_failed=True skips failed runs so they
+    can be inspected manually.
+
+    Returns the number of runs cleaned. Called at startup before the new
+    worktree is created.
     """
-    worktree = config.worktree_path(date, run)
-    branch = config.branch_name(date, run)
     history = _load_history(config)
-    has_completed = any(
-        r.get("date") == date and r.get("run") == run
-        and r.get("status") == "completed"
-        for r in history["runs"]
-    )
-    has_worktree = worktree.exists()
-    has_branch = _branch_exists(config, branch)
+    cleaned = 0
 
-    if not has_worktree and not has_branch:
-        return
+    def remove(date: str, run: int, worktree: str | None,
+               branch: str | None) -> None:
+        nonlocal cleaned
+        removed = False
+        if worktree and Path(worktree).exists():
+            print(f"Cleaning worktree {date}_{run}: {worktree}")
+            _run_git(["worktree", "remove", worktree, "--force"],
+                     cwd=config.root, check=False)
+            removed = True
+        if branch and _branch_exists(config, branch):
+            print(f"Cleaning branch {branch}")
+            _run_git(["branch", "-D", branch], cwd=config.root, check=False)
+            removed = True
+        if removed:
+            cleaned += 1
 
-    if has_completed and not force:
-        raise SystemExit(
-            f"Run {date}_{run} is completed and its worktree still exists. "
-            f"Verify it with verify_run first, or pass --clean to overwrite."
-        )
+    for entry in history["runs"]:
+        date = entry.get("date")
+        run = entry.get("run")
+        status = entry.get("status")
+        if date == current_date and run == current_run:
+            continue
+        if status == "completed":
+            if not clean_completed:
+                continue
+        elif keep_failed:
+            continue
+        remove(date, run, entry.get("worktree"), entry.get("branch"))
 
-    if has_worktree:
-        print(f"Removing stale worktree {worktree}")
-        _run_git(["worktree", "remove", str(worktree), "--force"],
-                 cwd=config.root, check=False)
+    # Defensive: orphaned worktree/branch for the run number about to be created
+    current_wt = config.worktree_path(current_date, current_run)
+    current_br = config.branch_name(current_date, current_run)
+    if current_wt.exists() or _branch_exists(config, current_br):
+        remove(current_date, current_run, str(current_wt), current_br)
+
     _run_git(["worktree", "prune"], cwd=config.root, check=False)
-
-    if has_branch:
-        print(f"Removing stale branch {branch}")
-        _run_git(["branch", "-D", branch], cwd=config.root, check=False)
+    return cleaned
 
 
 def _create_worktree(ctx: RunContext) -> None:
@@ -511,7 +530,9 @@ def main(argv=None) -> int:
     parser.add_argument("--fast", action="store_true",
                         help="Use the per-root fast verify command")
     parser.add_argument("--clean", action="store_true",
-                        help="Remove stale worktree/branch for this run before starting")
+                        help="Also remove completed runs (overwrite history)")
+    parser.add_argument("--keep-failed", action="store_true",
+                        help="Keep worktrees from failed runs for inspection")
     args = parser.parse_args(argv)
 
     config = get_root_config(args.root)
@@ -554,7 +575,13 @@ def main(argv=None) -> int:
     counter = ApiCounter(limit=api_limit)
 
     try:
-        _cleanup_stale_worktree(config, ctx.date, ctx.run, force=args.clean)
+        cleaned = _cleanup_stale_worktrees(
+            config, ctx.date, ctx.run,
+            clean_completed=args.clean,
+            keep_failed=args.keep_failed,
+        )
+        if cleaned:
+            print(f"Cleaned {cleaned} stale run(s)")
         _create_worktree(ctx)
     except SystemExit:
         raise
