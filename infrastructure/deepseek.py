@@ -17,7 +17,7 @@ class DeepSeekClient:
     """Tunn, testbar omslutning runt DeepSeeks OpenAI-kompatibla API."""
 
     def __init__(self, settings: DeepSeekSettings, *, client: OpenAI | None = None,
-                 timeout_seconds: float = 30.0, max_retries: int = 2,
+                 timeout_seconds: float = 120.0, max_retries: int = 2,
                  backoff_seconds: float = 0.5):
         self._settings = settings
         self._timeout = timeout_seconds

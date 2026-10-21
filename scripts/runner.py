@@ -45,7 +45,8 @@ REPORT_TEMPLATE = "RUN_REPORT_{date}_{run}.md"
 MAX_ITERATIONS = 8
 MAX_TOOL_ROUNDS = 10
 MAX_API_CALLS = 30
-MAX_TOKENS = 8000
+MAX_TOKENS_FLASH = 8000
+MAX_TOKENS_PRO = 16000
 ALLOWED_PREFIXES = ("application/", "tests/", "docs/", "scripts/", "infrastructure/")
 FORBIDDEN_FILES = {"pyproject.toml", "requirements.lock", "AGENTS.md"}
 
@@ -129,6 +130,19 @@ def _select_model(task_text: str) -> str:
     if any(word in lowered for word in STRONG_TASK_WORDS):
         return DEEPSEEK_STRONG_MODEL
     return DEEPSEEK_DEFAULT_MODEL
+
+
+def _timeout_for_model(model: str) -> float:
+    """Pro med reasoning behöver längre tid än Flash."""
+    if model == DEEPSEEK_STRONG_MODEL:
+        return 300.0
+    return 90.0
+
+
+def _max_tokens_for_model(model: str) -> int:
+    if model == DEEPSEEK_STRONG_MODEL:
+        return MAX_TOKENS_PRO
+    return MAX_TOKENS_FLASH
 
 
 def _make_context(history: dict, task_text: str, force: bool) -> RunContext:
@@ -262,11 +276,12 @@ def _run_agent_loop(client: DeepSeekClient, ctx: RunContext, task_text: str,
                                                        initial_files, feedback)},
     ]
     last_text = ""
+    max_tokens = _max_tokens_for_model(ctx.model)
 
     for round_num in range(MAX_TOOL_ROUNDS):
         print(f"  Tool-runda {round_num + 1}")
         counter.tick()
-        message = client.chat_with_tools(messages, tools=TOOLS, max_tokens=MAX_TOKENS)
+        message = client.chat_with_tools(messages, tools=TOOLS, max_tokens=max_tokens)
         messages.append(message)
 
         if not getattr(message, "tool_calls", None):
@@ -318,6 +333,8 @@ def _write_report(ctx: RunContext, *, status: str, iterations: int,
         f"- Startad: {ctx.started_at}\n"
         f"- Status: {status}\n"
         f"- Modell: {ctx.model}\n"
+        f"- Timeout: {_timeout_for_model(ctx.model)}s\n"
+        f"- Max tokens: {_max_tokens_for_model(ctx.model)}\n"
         f"- Worktree: `{ctx.worktree}`\n"
         f"- Branch: `{ctx.branch}`\n"
         f"- Iterationer: {iterations} (max {MAX_ITERATIONS})\n"
@@ -344,6 +361,7 @@ def _record(history: dict, ctx: RunContext, *, status: str, iterations: int,
         "branch": ctx.branch,
         "report": str(ctx.report),
         "model": ctx.model,
+        "timeout_seconds": _timeout_for_model(ctx.model),
         "iterations": iterations,
         "api_calls": api_calls,
         "final_verdict": verdict,
@@ -373,6 +391,8 @@ def main(argv=None) -> int:
 
     print(f"Run:       {ctx.date}_{ctx.run}")
     print(f"Modell:    {ctx.model}")
+    print(f"Timeout:   {_timeout_for_model(ctx.model)}s")
+    print(f"Max tokens:{_max_tokens_for_model(ctx.model)}")
     print(f"Branch:    {ctx.branch}")
     print(f"Worktree:  {ctx.worktree}")
     print(f"Rapport:   {ctx.report}")
@@ -389,7 +409,11 @@ def main(argv=None) -> int:
                 })()
         client = _DryRunClient()
     else:
-        client = DeepSeekClient(load_deepseek(model_override=ctx.model), max_retries=0)
+        client = DeepSeekClient(
+            load_deepseek(model_override=ctx.model),
+            max_retries=1,
+            timeout_seconds=_timeout_for_model(ctx.model),
+        )
 
     counter = ApiCounter()
 
