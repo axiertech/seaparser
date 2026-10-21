@@ -179,6 +179,52 @@ class EditFileFuzzyTests(unittest.TestCase):
         self.assertEqual(start, 0)
         self.assertEqual(end, 5)
 
+    def test_fuzzy_empty_old_string(self):
+        """An empty old_string must return None instead of crashing."""
+        with TemporaryDirectory() as tmp:
+            (Path(tmp) / "a.py").write_text("x = 1\n")
+            text = (Path(tmp) / "a.py").read_text()
+            self.assertIsNone(_find_fuzzy_match(text, ""))
+
+    def test_fuzzy_whitespace_only_old_string(self):
+        """A whitespace-only old_string must return None, not a match."""
+        with TemporaryDirectory() as tmp:
+            (Path(tmp) / "a.py").write_text("x = 1\n")
+            text = (Path(tmp) / "a.py").read_text()
+            self.assertIsNone(_find_fuzzy_match(text, "   "))
+
+    def test_fuzzy_single_line_file(self):
+        """A single-line file must be editable via exact or fuzzy match."""
+        with TemporaryDirectory() as tmp:
+            (Path(tmp) / "a.py").write_text("x = 1\n")
+            result = execute_tool(
+                Path(tmp), "edit_file",
+                _args(path="a.py", old_string="x = 1", new_string="x = 2")
+            )
+            self.assertIn("Edited a.py", result)
+            self.assertEqual((Path(tmp) / "a.py").read_text(), "x = 2\n")
+
+    def test_fuzzy_no_match_returns_none(self):
+        """Unrelated old_string must yield None from _find_fuzzy_match."""
+        with TemporaryDirectory() as tmp:
+            (Path(tmp) / "a.py").write_text("def foo():\n    return 1\n")
+            text = (Path(tmp) / "a.py").read_text()
+            self.assertIsNone(
+                _find_fuzzy_match(text, "zzz qqq totally unrelated content")
+            )
+
+    def test_fuzzy_identical_files_match_at_line_zero(self):
+        """Identical file and old_string must match starting at line 0."""
+        with TemporaryDirectory() as tmp:
+            content = "def foo():\n    return 1\n"
+            (Path(tmp) / "a.py").write_text(content)
+            text = (Path(tmp) / "a.py").read_text()
+            match = _find_fuzzy_match(text, content)
+            self.assertIsNotNone(match)
+            start, _, ratio = match
+            self.assertEqual(start, 0)
+            self.assertGreaterEqual(ratio, 0.85)
+
 
 if __name__ == "__main__":
     unittest.main()
