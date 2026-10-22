@@ -23,6 +23,7 @@ fi
 APP_DIR=/home/web/seaparser/app
 PYTHON="$APP_DIR/.venv/bin/python"
 TASK_DEST="/home/web/seaparser/${ROOT}/AUTONOMOUS_TASK.md"
+FAILED_TASKS=""
 
 for task in "$@"; do
     echo ""
@@ -59,9 +60,9 @@ PYEOF
     fi
 
     if ! "$PYTHON" -B -m scripts.runner --root "$ROOT" --fast; then
-        echo "FAILED: runner.py for $task" >&2
-        echo "Task file kept at $TASK_DEST for inspection" >&2
-        exit 1
+        echo "FAILED: runner.py for $task - continuing to next task" >&2
+        FAILED_TASKS="$FAILED_TASKS\n  - $task"
+        continue
     fi
 
     RUN_INFO=$("$PYTHON" - <<PYEOF
@@ -84,4 +85,9 @@ PYEOF
 done
 
 echo ""
-echo "All tasks completed."
+if [ -n "$FAILED_TASKS" ]; then
+    echo "Queue finished with failures:$FAILED_TASKS"
+    exit 1
+else
+    echo "All tasks completed successfully."
+fi
