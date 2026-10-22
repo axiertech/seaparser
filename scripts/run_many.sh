@@ -40,6 +40,13 @@ for task in "$@"; do
 
     cd "$APP_DIR"
 
+    # Validate the task file before running it (checks Allowed files against base tree)
+    if ! "$PYTHON" -B -m scripts.runner --root "$ROOT" --check; then
+        echo "FAILED: Task sanity check failed for $task - skipping" >&2
+        FAILED_TASKS="$FAILED_TASKS\n  - $task (sanity check failed)"
+        continue
+    fi
+
     # Skip tasks whose SHA-256 is already marked completed in RUN_HISTORY.json.
     # Without this, one already-run task blocks the whole queue.
     SKIP_INFO=$("$PYTHON" - <<PYEOF
