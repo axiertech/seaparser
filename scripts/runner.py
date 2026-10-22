@@ -237,10 +237,17 @@ def _sanity_check_task(config: RootConfig, task_text: str) -> bool:
 
     missing = []
     outside_prefix = []
+    task_lower = task_text.lower()
+    
     for f in allowed:
         # Check if the file exists in the base tree
         if not (config.root / f).exists():
-            missing.append(f)
+            # If the task explicitly says "create" and mentions the filename,
+            # it's a new file and allowed to be missing.
+            if "create" in task_lower and f in task_text:
+                pass
+            else:
+                missing.append(f)
         # Check if it's outside the allowed prefixes
         if not any(f.startswith(p) for p in config.allowed_prefixes):
             outside_prefix.append(f)

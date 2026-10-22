@@ -82,7 +82,7 @@ ROOTS: dict[str, RootConfig] = {
         ),
         max_iterations=8,
         max_tool_rounds=10,
-        max_api_calls=40,
+        max_api_calls=150,
         max_tokens_flash=8000,
         max_tokens_pro=16000,
     ),
