@@ -153,11 +153,56 @@ def objective(label, route):
     return f'<div class="objective"><strong>{label}</strong><p>{value}</p></div>'
 
 
+SUPPORTED_SCHEMA_VERSIONS = (1, 2)
+
+BOAT_MODEL_LABELS = {'sailboat': 'Segelbåt (uppskattad polar)',
+                     'motorboat': 'Motorbåt (uppskattad konstantfart)'}
+
+# Schema 1 reports have no ``boat_model`` key; the boat class is the only hint.
+LEGACY_BOAT_CLASS_LABELS = {'PolarBoat': 'Uppskattad segelpolar',
+                            'ConstantSpeedBoat': 'Uppskattad konstantfartsmodell'}
+
+UNKNOWN_BOAT_MODEL_LABEL = 'Uppskattad båttyp: okänd'
+
+
+def reject_constant(value):
+    """Reject non-finite JSON constants such as NaN and Infinity."""
+    raise ValueError('Icke-finita JSON-tal stöds inte')
+
+
+def boat_model_label(manifest):
+    """Return the display label for the manifest boat model.
+
+    Schema 2 stores the model name in ``manifest.boat.boat_model``. Schema 1
+    reports have no such key, so the label is derived from the known boat
+    class in ``manifest.boat.model``. Unknown names are shown verbatim rather
+    than hidden, and an unknown or missing boat class is reported explicitly
+    as unknown instead of being guessed as a constant-speed model.
+
+    Unknown names are still marked as estimated data and are HTML-escaped,
+    because the name comes from a user-supplied report file.
+
+    Args:
+        manifest: The report manifest mapping.
+
+    Returns:
+        A short human-readable, HTML-escaped label for the boat model.
+    """
+    boat = manifest.get('boat') or {}
+    name = boat.get('boat_model')
+    if name is None:
+        return LEGACY_BOAT_CLASS_LABELS.get(boat.get('model'), UNKNOWN_BOAT_MODEL_LABEL)
+    label = BOAT_MODEL_LABELS.get(name)
+    if label is None:
+        return f'Uppskattad modell: {text(name)}'
+    return label
+
+
 def load_report(raw):
-    def reject_constant(value):
-        raise ValueError('Icke-finita JSON-tal stöds inte')
+    """Parse and validate a report, accepting every supported schema version."""
     data=json.loads(raw, parse_constant=reject_constant)
-    if type(data['manifest']['schema_version']) is not int or data['manifest']['schema_version'] not in (1, 2):
+    version=data['manifest']['schema_version']
+    if type(version) is not int or version not in SUPPORTED_SCHEMA_VERSIONS:
         raise ValueError('Rapportens schemaversion stöds inte')
     if not data['comparison']['departures']:
         raise ValueError('Rapporten saknar undersökta avgångar')
@@ -165,8 +210,21 @@ def load_report(raw):
 
 
 def scenario_body(title, raw, index):
+    """Render one scenario section from an existing report.
+
+    Args:
+        title: Human-readable scenario title, escaped on output.
+        raw: The immutable report JSON string.
+        index: Zero-based scenario index used for element ids.
+
+    Returns:
+        An HTML ``<details>`` fragment for the scenario.
+
+    Raises:
+        ValueError: If the report is invalid or incomplete.
+    """
     data=load_report(raw); manifest=data['manifest']; comparison=data['comparison']; parameters=manifest['parameters']
-    boat=manifest['boat']; model='Uppskattad segelpolar' if boat['model']=='PolarBoat' else 'Uppskattad konstantfartsmodell'
+    boat=manifest['boat']; model=boat_model_label(manifest)
     if not manifest.get('boat_data_estimated'):
         model='Båtmodell: uppskattningsstatus okänd'
     meta=[('Dataset',text(manifest['dataset_id'])),('Datasetversion',text(manifest['dataset_version'])),
