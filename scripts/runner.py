@@ -375,9 +375,16 @@ def _select_candidate_files(config: RootConfig, task_text: str) -> list[Path]:
 
 
 def _check_in_worktree(ctx: RunContext, *, fast: bool) -> tuple[bool, str]:
+    """Run the per-root verify command in the worktree. Return (ok, tail)."""
     cmd = ctx.config.fast_verify_cmd if fast and ctx.config.fast_verify_cmd else ctx.config.verify_cmd
+    print(f"  [verify] cwd={ctx.worktree}")
+    print(f"  [verify] cmd={cmd}")
     proc = subprocess.run(["bash", "-c", cmd], cwd=ctx.worktree,
                           capture_output=True, text=True)
+    print(f"  [verify] returncode={proc.returncode}")
+    print(f"  [verify] stdout_len={len(proc.stdout)} stderr_len={len(proc.stderr)}")
+    if proc.returncode != 0:
+        print(f"  [verify] first stderr lines: {proc.stderr.splitlines()[:5]}")
     ok = proc.returncode == 0
     tail = "\n".join((proc.stdout + proc.stderr).splitlines()[-30:])
     return ok, tail

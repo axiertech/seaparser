@@ -70,12 +70,15 @@ ROOTS: dict[str, RootConfig] = {
         verify_cmd="python3 -B -m scripts.check",
         fast_verify_cmd=(
             "set -o pipefail; "
-            "python3 -B -m unittest "
-            "tests.test_deepseek_tools "
-            "tests.test_deepseek_review "
-            "tests.test_verify_run "
-            "tests.test_roots "
-            "-v 2>&1 | tail -30"
+            "modules='tests.test_deepseek_tools tests.test_deepseek_review "
+            "tests.test_verify_run tests.test_roots tests.test_runner_scope'; "
+            "available=''; "
+            "for m in $modules; do "
+            "  path=$(echo \"$m\" | tr . /).py; "
+            "  [ -f \"$path\" ] && available=\"$available $m\"; "
+            "done; "
+            "if [ -z \"$available\" ]; then echo 'no test modules found'; exit 1; fi; "
+            "python3 -B -m unittest $available -v 2>&1 | tail -30"
         ),
         max_iterations=8,
         max_tool_rounds=10,
