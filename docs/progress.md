@@ -134,6 +134,82 @@ CI-jobb och behörigheter dokumenterade, inte körda. Nästa steg: administratö
 för venv och separat godkännande av testdatabas/HBA/lösenord samt därefter
 anslutningsverifiering och testmigrationer. Push kräver fortfarande godkännande.
 
+## Miljö- och anslutningsverifiering 2026-10-12
+
+Aktuell uppgift: verifiera uppdaterad venv/Python/pip, köra alla befintliga
+tester och göra uttryckligen godkänd skrivskyddad databasdiagnostik med vanliga
+projektroller. Inga administratörsuppgifter, databasändringar eller migrationer.
+
+Verifierat som Linux-användaren seaparser:
+
+- Python 3.14.4 uppfyller projektets krav >=3.14,<3.15. Projektets interpreter
+  är `/home/web/seaparser/app/.venv/bin/python`, med separat prefix från `/usr`.
+  Systempaket och användarens site-packages är avstängda.
+- Pip saknades initialt trots att ensurepip nu finns. `make prepare-python`
+  slutförde miljön enligt befintligt mandat. Pip 25.1.1 finns i projektets venv;
+  `pip check` passerar. Den tomma, hashstyrda requirements.lock behandlades
+  utan externa projektpaket; `pip list` visar endast pip.
+- `make check` passerar: 38 prototyptester och 4 konfigurationstester,
+  syntax/TOML, beroendebas och domängränser. Frontendsyntax passerar och
+  `node --test` avslutas korrekt med 0 tester; inga frontendprodukttester finns.
+- psql-klienten är PostgreSQL 18.6. Detta verifierar inte serverversionen.
+
+Utvecklingskonfigurationen kunde laddas med projektets skyddade laddare, som
+kräver databasnamn och roll seaparser. Det är konfigurationsvalidering, inte
+verifierad serveridentitet. Anslutningsförsök med psql -X -w och
+default_transaction_read_only=on misslyckades före någon SQL-körning.
+Separat TCP-diagnostik mot samma konfigurerade mål gav PermissionError,
+errno 1 (operation inte tillåten i körmiljön). Ingen rå privat feltext,
+anslutningssträng eller något lösenord har skrivits ut.
+
+Databasnamn på servern, aktuell databasroll, PostGIS, rollmedlemskap samt
+databas-, schema- och tabellbehörigheter är därför **inte verifierade**.
+Vid denna tidigare kontroll kunde den då föreslagna testmiljön inte verifieras.
+Förslaget och dess administratörskommandon har nu ersatts av beslutet nedan.
+
+## En utvecklingsmiljö – genomförd uppdatering 2026-10-12
+
+AGENTS.md, konfigurationsladdare, exempelkonfiguration, tester, migrationsplan,
+CI och dokumentation är uppdaterade till endast development och seaparser.
+Separat testkonfiguration, SQL för testdatabasskapande, HBA-underlag och
+migrationsjobbet i CI är borttagna. Inget separat testlösenord krävs.
+Tidigare testmiljöinstruktioner ovan är historik, inte aktuella nästa steg.
+Privat konfiguration är orörd och Git-skyddet för hemligheter finns kvar.
+
+Enhetstester använder explicit syntetisk inmatning som ersätter privat fil helt.
+Fel och objektvisning döljer lösenord; fel miljö/identitet och äldre testnycklar
+avvisas. Databastester får endast använda rollback/testegna objekt, utan att
+ändra befintliga data, sekvenser eller externa sidoeffekter. Inga skrivande
+integrationstester har införts eller körts.
+
+Verifierat: make check passerar med 38 prototyp- och 4 konfigurationstester.
+Frontendens syntax passerar; testkommandot hittar fortfarande 0 tester.
+make migration-plan passerar utan konfigurationsläsning eller anslutning.
+Git diff --check passerar. Befintliga prototype/-ändringar lämnades orörda.
+
+Nytt kommando: `.venv/bin/python -B -m scripts.diagnose_database`.
+Det använder enbart projektrollen, ren psql-miljö, lästimeout och
+BEGIN READ ONLY/ROLLBACK. Rå feltext och privata värden visas inte.
+Försöket stoppades av PermissionError errno=1 vid TCP-anslutningen, innan
+PostgreSQL nåddes. Detta bevisar ett hinder i körmiljön, inte ett fel i
+PostgreSQL-autentisering eller HBA. Sessionens policy har sandbox_approval
+avstängt och tillåter därför ingen tillståndsbegäran för körning utanför sandboxen.
+Serveridentitet, PostGIS och behörigheter är fortfarande inte verifierade.
+
+Nästa steg: kör det förberedda diagnostikkommandot som seaparser i en tillåten
+körmiljö, eller ge en ny session begränsad nätverksåtkomst för samma skrivskyddade
+kontroll. Granska resultatet innan något migrationsgodkännande.
+Inför drift separeras miljön och en ny driftroll skapas med minsta rättigheter.
+Inga databaser, privata filer eller migrationsfiler ändrade; ingen migration eller push.
+
+### Förnyat anslutningstest 2026-10-12
+
+På användarens begäran kördes `.venv/bin/python -B -m scripts.diagnose_database`
+igen. Resultat: `Anslutning nekad av körmiljön; PermissionError errno=1`
+(exitkod 1). TCP-anslutningen blockeras fortfarande före PostgreSQL; databasens
+anslutning och autentisering kunde inte verifieras. Nästa steg är att köra samma
+skrivskyddade kommando som seaparser i en körmiljö med tillåten nätverksåtkomst.
+
 ## Första databasmigrationen – verifierad 2026-10-12
 
 Uppgift: dokumentera diagnostik, utreda anslutningshindret och införa versionerade
@@ -990,3 +1066,46 @@ passerar. Commitinnehåll granskas och push-CI följs. Tidigare 76 lokala loggra
 bevaras ostagade. Nytt samlat root-försök: /usr/bin/bash
 /home/web/seaparser/app/deployment/activate-demo.sh. Offentlig slutverifiering
 kvarstår tills detta körts; agenten har inte rootbehörighet eller aktiverat tjänsten.
+
+## 2026-10-14: Usage-gränser och överlämning
+
+Automatisk hantering vid 5 % och 1 % är inte implementerad. Tills vidare används
+tidsgräns och avgränsade arbetsuppgifter, med en kort lokal överlämning efter
+varje sammanhängande leverans. Vid `usage_exhausted` ska inga nya modellanrop
+startas; slutrapporten ska ange Git-status och senast verifierade kontroller.
+Kvotåterställning och automatiskt modellbyte är inte tillåtet. Tokenförbrukning
+per körning är inte kontokvot.
+
+Kontrollerat den här sessionen: installerad Codex CLI är 0.162.1. Dess
+`app-server generate-json-schema --experimental`-utdata innehåller
+`account/rateLimits/read`, `account/rateLimits/updated` och `usedPercent`.
+OpenAI:s app-server-dokumentation beskriver samma JSON-RPC-anrop och svarsfält.
+Alltså finns ett dokumenterat maskinläsbart gränssnitt i den installerade
+versionen; denna kontroll läste inte den faktiska kontokvoten och bevisar inte
+att tjänsteåtkomst finns i alla körmiljöer. Ingen automatik för 5/1-procent är
+implementerad.
+
+Nästa steg: vid nästa aktiva arbetspass fortsätt den dokumenterade backloggen
+inom en uttrycklig tidsgräns; vid `usage_exhausted`, skapa rapporten från
+tillgänglig lokal status och avsluta utan fler modellanrop. Om senare önskas,
+kan app-serverns kvot-RPC utvärderas separat för säker/robust tröskelstyrning.
+
+## 2026-10-20: DeepSeek-klient i infrastrukturlagret
+
+- `infrastructure/deepseek.py` (DeepSeekClient) anropar DeepSeeks
+  OpenAI-kompatibla API via `base_url=https://api.deepseek.com`.
+  Ingen domän-, API- eller UI-logik; ruttmotorn anropar aldrig klienten.
+- `infrastructure/settings.py` har `DeepSeekSettings` (api_key med
+  repr=False) och `load_deepseek()` som läser `DEEPSEEK_API_KEY` och
+  `DEEPSEEK_MODEL` via samma begränsade KEY=value-läsare som DB-konfig.
+- `openai==3.35.1` med transitiva beroenden (`httpx2`, `httpcore2`,
+  `jiter`) är hash-låsta i `requirements.lock`; `scripts/check.py`
+  godkänner beroendebasen och domängränserna.
+- 8 databasfria tester i `tests/test_deepseek_client.py`; inga
+  nätverksanrop. Verifierat att `repr()` inte läcker nyckeln.
+- `scripts/deepseek_smoke.py` är ett manuellt rökprov utanför
+  `make check`. Varje anrop är betalt; kräver saldo hos DeepSeek.
+- 2026-10-20: Inget saldo finns ännu, så ett riktigt API-anrop ger
+  `APIStatusError`. HTTP-lagret, base_url och auth-formatet är ändå
+  verifierat. Modellnamn (`deepseek-chat`) kan behöva justeras när
+  saldo finns, om DeepSeek då rapporterar okänt modellnamn.
