@@ -108,3 +108,68 @@ class ScenarioHtmlTests(unittest.TestCase):
                                        capture_output=True, text=True, check=True)
             self.assertIn('HTML-visning genererad', completed.stdout)
             self.assertEqual(Page(output_file.read_text()).exports, [self.raw])
+
+    def test_schema_two_renders_boat_model_label(self):
+        """Schema 2 reports show the sailboat model label."""
+        report = json.loads(self.raw)
+        self.assertEqual(report['manifest']['schema_version'], 2)
+        self.assertEqual(report['manifest']['boat']['boat_model'], 'sailboat')
+        source = render_report(self.raw)
+        self.assertIn('Segelbåt (uppskattad polar)', source)
+
+    def test_schema_one_report_without_boat_model_still_renders(self):
+        """Schema 1 reports without boat_model fall back to the boat class label."""
+        report = json.loads(self.raw)
+        report['manifest']['schema_version'] = 1
+        report['manifest']['boat'].pop('boat_model')
+        source = render_report(json.dumps(report))
+        self.assertIn('Uppskattad segelpolar', source)
+        self.assertEqual(Page(source).exports, [json.dumps(report)])
+
+    def test_schema_one_constant_speed_class_is_labelled(self):
+        """Schema 1 constant-speed boat class gets the constant-speed label."""
+        report = json.loads(self.raw)
+        report['manifest']['schema_version'] = 1
+        report['manifest']['boat'].pop('boat_model')
+        report['manifest']['boat']['model'] = 'ConstantSpeedBoat'
+        self.assertIn('Uppskattad konstantfartsmodell', render_report(json.dumps(report)))
+
+    def test_schema_one_unknown_boat_class_is_marked_unknown(self):
+        """Schema 1 unknown or missing boat class is reported as unknown."""
+        report = json.loads(self.raw)
+        report['manifest']['schema_version'] = 1
+        report['manifest']['boat'].pop('boat_model')
+        for model in ('HydrofoilBoat', None):
+            with self.subTest(model=model):
+                boat = report['manifest']['boat']
+                if model is None:
+                    boat.pop('model', None)
+                else:
+                    boat['model'] = model
+                source = render_report(json.dumps(report))
+                self.assertIn('Uppskattad båttyp: okänd', source)
+                self.assertNotIn('Uppskattad konstantfartsmodell', source)
+                self.assertNotIn('Uppskattad segelpolar', source)
+
+    def test_motorboat_model_is_labelled(self):
+        """Schema 2 motorboat model gets the motorboat label."""
+        report = json.loads(self.raw)
+        report['manifest']['boat']['boat_model'] = 'motorboat'
+        self.assertIn('Motorbåt (uppskattad konstantfart)', render_report(json.dumps(report)))
+
+    def test_unknown_boat_model_is_shown_and_marked_estimated(self):
+        """Unknown boat_model names are shown verbatim and marked estimated."""
+        report = json.loads(self.raw)
+        report['manifest']['boat']['boat_model'] = 'hydrofoil'
+        source = render_report(json.dumps(report))
+        self.assertIn('Uppskattad modell: hydrofoil', source)
+
+    def test_boat_model_name_is_escaped(self):
+        """Boat model names from report files are HTML-escaped."""
+        report = json.loads(self.raw)
+        attack = '<script>alert("x")</script>'
+        report['manifest']['boat']['boat_model'] = attack
+        source = render_report(json.dumps(report))
+        self.assertNotIn(attack, source)
+        self.assertIn('&lt;script&gt;', source)
+        self.assertNotIn('script', [tag for tag, _ in Page(source).tags])
