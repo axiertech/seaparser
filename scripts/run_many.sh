@@ -49,7 +49,7 @@ sha = hashlib.sha256(task_text.strip().encode("utf-8")).hexdigest()
 h = json.loads(Path("/home/web/seaparser/${ROOT}/RUN_HISTORY.json").read_text())
 for r in h["runs"]:
     if r.get("task_sha256") == sha and r.get("status") == "completed":
-        print(f"SKIP {r['date']}_{r['run']} {r.get('commit','?')[:10]}")
+        print(f"SKIP {r['date']}_{r['run']} {(r.get('commit') or '?')[:10]}")
         break
 PYEOF
 )
