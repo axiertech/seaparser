@@ -33,6 +33,26 @@ for task in "$@"; do
     cp "$task" "$TASK_DEST"
 
     cd "$APP_DIR"
+
+    # Skip tasks whose SHA-256 is already marked completed in RUN_HISTORY.json.
+    # Without this, one already-run task blocks the whole queue.
+    SKIP_INFO=$("$PYTHON" - <<PYEOF
+import hashlib, json
+from pathlib import Path
+task_text = Path("$TASK_DEST").read_text()
+sha = hashlib.sha256(task_text.strip().encode("utf-8")).hexdigest()
+h = json.loads(Path("/home/web/seaparser/${ROOT}/RUN_HISTORY.json").read_text())
+for r in h["runs"]:
+    if r.get("task_sha256") == sha and r.get("status") == "completed":
+        print(f"SKIP {r['date']}_{r['run']} {r.get('commit','?')[:10]}")
+        break
+PYEOF
+)
+    if [[ "$SKIP_INFO" == SKIP* ]]; then
+        echo "$SKIP_INFO - skipping $task"
+        continue
+    fi
+
     if ! "$PYTHON" -B -m scripts.runner --root "$ROOT" --fast; then
         echo "FAILED: runner.py for $task" >&2
         echo "Task file kept at $TASK_DEST for inspection" >&2
