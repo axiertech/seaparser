@@ -72,7 +72,7 @@ undo the merge; the overall result then reports `FAILED`.
 
 - `0` – all steps passed, or `--dry-run` verified successfully without merging.
 - `1` – a step failed (register, worktree, fast/full verify, clean, HEAD,
-  merge, post-merge verify, cleanup), or the run could not be resolved.
+  merge, post-merge verify, cleanup).
 - `SystemExit("Missing <history file>")` – `RUN_HISTORY.json` does not exist.
 - `SystemExit("Invalid RUN_HISTORY.json: ...")` – the history is not valid JSON.
 - `SystemExit("No run matches ...")` – `_resolve_run` found no matching entry.
