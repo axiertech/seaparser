@@ -157,7 +157,7 @@ def load_report(raw):
     def reject_constant(value):
         raise ValueError('Icke-finita JSON-tal stöds inte')
     data=json.loads(raw, parse_constant=reject_constant)
-    if type(data['manifest']['schema_version']) is not int or data['manifest']['schema_version'] != 1:
+    if type(data['manifest']['schema_version']) is not int or data['manifest']['schema_version'] not in (1, 2):
         raise ValueError('Rapportens schemaversion stöds inte')
     if not data['comparison']['departures']:
         raise ValueError('Rapporten saknar undersökta avgångar')
