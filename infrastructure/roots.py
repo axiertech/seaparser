@@ -68,7 +68,15 @@ ROOTS: dict[str, RootConfig] = {
         forbidden_files=frozenset({"pyproject.toml", "requirements.lock", "AGENTS.md",
                                    ".tmp_*", "*.tmp", "*.bak", "*~"}),
         verify_cmd="python3 -B -m scripts.check",
-        fast_verify_cmd="python3 -B -m unittest tests.test_deepseek_review -v",
+        fast_verify_cmd=(
+            "set -o pipefail; "
+            "python3 -B -m unittest "
+            "tests.test_deepseek_tools "
+            "tests.test_deepseek_review "
+            "tests.test_verify_run "
+            "tests.test_roots "
+            "-v 2>&1 | tail -30"
+        ),
         max_iterations=8,
         max_tool_rounds=10,
         max_api_calls=40,
