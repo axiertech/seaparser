@@ -76,6 +76,12 @@ IMPORTANT - work efficiently:
   you do not need to reproduce the file's exact indentation.
 - Do NOT write helper scripts that modify other files (splice_*.py,
   patch_*.py, fix_*.py). Use edit_file directly on the target file.
+- Respect the task scope. If the task has an "Allowed files:" line,
+  modify ONLY those files. If you accidentally modified a file outside
+  the allowlist, revert it with 'git checkout -- <path>' immediately.
+  Do NOT try to fix an out-of-scope change - the run will fail on the
+  next check and you will burn API calls. Revert first, then continue
+  with the allowed files.
 
 IMPORTANT - work efficiently:
 - Read at most 3 files before deciding what to change. Do not re-read
@@ -201,6 +207,20 @@ def _max_api_calls_for_task(config: RootConfig, task_text: str) -> int:
     if match:
         return min(int(match.group(1)), 80)
     return config.max_api_calls
+
+
+def _allowed_files_for_task(task_text: str) -> frozenset[str] | None:
+    """Parse 'Allowed files: a, b, c' from AUTONOMOUS_TASK.md.
+
+    Returns None when the line is absent (no restriction), or a frozenset
+    of relative paths that may be created or modified. Scope enforcement
+    is opt-in per task so existing tasks keep working.
+    """
+    match = re.search(r"(?im)^\s*Allowed files:\s*(.+)$", task_text)
+    if not match:
+        return None
+    paths = {part.strip() for part in match.group(1).split(",") if part.strip()}
+    return frozenset(paths) if paths else None
 
 
 def _timeout_for_model(model: str) -> float:
@@ -498,6 +518,28 @@ def _findings_signature(findings: tuple[ReviewFinding, ...]) -> frozenset:
     )
 
 
+def _check_scope(written: list[str], allowed: frozenset[str] | None) -> str | None:
+    """Return an error message if written files exceed the allowlist, else None.
+
+    When allowed is None the task has no explicit allowlist and any file
+    is permitted. When allowed is set, every written file must be in it.
+    Files that already exist in the tree but were not modified do not
+    count against the scope; only the written list is checked.
+    """
+    if allowed is None:
+        return None
+    extra = sorted(set(written) - allowed)
+    if not extra:
+        return None
+    return (
+        f"SCOPE VIOLATION: modified files not in the allowed list: "
+        f"{', '.join(extra)}. The task allows only: "
+        f"{', '.join(sorted(allowed))}. "
+        f"Revert each extra file with 'git checkout -- <path>' and do "
+        f"NOT try to fix it. Stay within the allowlist on the next try."
+    )
+
+
 def _format_findings(findings: tuple[ReviewFinding, ...]) -> str:
     if not findings:
         return "(no findings)"
@@ -681,6 +723,14 @@ def main(argv=None) -> int:
                 print("Only temp files were written. Treating as no progress.")
                 written = []
             print(f"Wrote: {', '.join(written)}")
+
+            allowed = _allowed_files_for_task(task_text)
+            scope_error = _check_scope(written, allowed)
+            if scope_error:
+                print(scope_error)
+                last_check_tail = scope_error
+                feedback = scope_error
+                continue
         except (DeepSeekError, RuntimeError) as exc:
             last_check_tail = f"Agent loop failed: {exc}"
             print(last_check_tail)
