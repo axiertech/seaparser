@@ -64,7 +64,7 @@ ROOTS: dict[str, RootConfig] = {
         history_file=APP_ROOT / "RUN_HISTORY.json",
         report_pattern="RUN_REPORT_{date}_{run}.md",
         rules_file=APP_ROOT / "AGENTS.md",
-        allowed_prefixes=("application/", "tests/", "docs/", "scripts/", "infrastructure/"),
+        allowed_prefixes=("application/", "tests/", "docs/", "scripts/", "infrastructure/", "frontend/map/", "frontend/src/"),
         forbidden_files=frozenset({"pyproject.toml", "requirements.lock", "AGENTS.md",
                                    ".tmp_*", "*.tmp", "*.bak", "*~"}),
         verify_cmd="python3 -B -m scripts.check",

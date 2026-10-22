@@ -223,6 +223,48 @@ def _allowed_files_for_task(task_text: str) -> frozenset[str] | None:
     return frozenset(paths) if paths else None
 
 
+def _sanity_check_task(config: RootConfig, task_text: str) -> bool:
+    """Check 'Allowed files:' against the base tree and prefix rules.
+
+    Returns True if the task is safe to start, False if there are
+    fatal errors. Warnings (e.g. missing files that might be created
+    by the task) are printed but do not fail the check.
+    """
+    allowed = _allowed_files_for_task(task_text)
+    if allowed is None:
+        print("INFO: No 'Allowed files:' line. The agent may modify any file.")
+        return True
+
+    missing = []
+    outside_prefix = []
+    for f in allowed:
+        # Check if the file exists in the base tree
+        if not (config.root / f).exists():
+            missing.append(f)
+        # Check if it's outside the allowed prefixes
+        if not any(f.startswith(p) for p in config.allowed_prefixes):
+            outside_prefix.append(f)
+
+    ok = True
+
+    if outside_prefix:
+        print(f"WARNING: Allowed files outside standard prefixes: {', '.join(outside_prefix)}")
+        print(f"  (Standard prefixes: {', '.join(config.allowed_prefixes)})")
+        print("  The agent can still read/write them, but _select_candidate_files will")
+        print("  NOT pick them automatically unless explicitly named in the task.")
+        # Vi gör detta till ett fel om filen inte finns alls, annars bara en varning
+        if missing:
+            ok = False
+
+    if missing:
+        print(f"ERROR: Allowed files do not exist in the base tree: {', '.join(missing)}")
+        print("  If the task is NOT creating these files, you probably have a typo.")
+        print("  (e.g. map.js instead of map-component.mjs).")
+        ok = False
+
+    return ok
+
+
 def _timeout_for_model(model: str) -> float:
     if model == DEEPSEEK_STRONG_MODEL:
         return 300.0
@@ -613,6 +655,8 @@ def main(argv=None) -> int:
                         help="Which project root to run against")
     parser.add_argument("--force", action="store_true",
                         help="Run even if the task already completed")
+    parser.add_argument("--check", action="store_true",
+                        help="Validate the task file and exit without running")
     parser.add_argument("--dry-run", action="store_true",
                         help="Use a fake client (no API cost)")
     parser.add_argument("--fast", action="store_true",
@@ -631,6 +675,16 @@ def main(argv=None) -> int:
         raise SystemExit(f"Missing task: {config.task_file}")
 
     task_text = config.task_file.read_text()
+
+    if getattr(args, "check", False):
+        print(f"Checking task: {config.task_file}")
+        if _sanity_check_task(config, task_text):
+            print("Task is valid.")
+            return 0
+        else:
+            print("Task has errors.")
+            return 1
+
     history = _load_history(config)
     ctx = _make_context(config, history, task_text, force=args.force)
 
