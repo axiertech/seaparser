@@ -1168,3 +1168,19 @@ förbättringen var resilient `fast_verify_cmd` - efter den gick app-07 på
   Högst risk, men `Allowed files:`-skyddet gör det genomförbart.
 - `systemd --user`-tjänst med `Linger=yes` är konfigurerad men inte testad
   över en riktig natt ännu.
+
+## 2026-10-22: ~/autonomy får eget Git-repo (temporärt)
+
+`~/autonomy` har tidigare varit ett lokalt Git-repo utan remote. Efter
+dagens arbete (59 tester, preflight-paket, städning av archive/) är
+arbetet säkrat i `axiertech/seaparser-autonomy` (privat).
+
+Detta är temporärt. Långsiktigt bör `~/autonomy` flyttas in i
+`~/app/autonomy/` med `git subtree` så att SeaParser har en enda
+historik. Det arbetet kräver:
+- RootConfig för autonomy pekar på ~/app/autonomy
+- run.sh, autonomy.conf, systemd-tjänster uppdaterade
+- tester flyttade till ~/app/tests/autonomy/
+- scripts.check verifierar nya filer
+
+Uppskattat 2-4 timmar. Inte påbörjat.
