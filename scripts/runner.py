@@ -698,6 +698,7 @@ def main(argv=None) -> int:
     iterations_used = 0
     feedback = ""
     prev_sig: frozenset | None = None
+    consecutive_scope_violations = 0
 
     for iteration in range(1, config.max_iterations + 1):
         iterations_used = iteration
@@ -730,6 +731,7 @@ def main(argv=None) -> int:
                 print("Only temp files were written. Treating as no progress.")
                 written = []
             print(f"Wrote: {', '.join(written)}")
+            consecutive_scope_violations = 0
 
             allowed = _allowed_files_for_task(task_text)
             scope_error = _check_scope(written, allowed)
@@ -737,6 +739,11 @@ def main(argv=None) -> int:
                 print(scope_error)
                 last_check_tail = scope_error
                 feedback = scope_error
+                consecutive_scope_violations += 1
+                if consecutive_scope_violations >= 2:
+                    print("Aborting: multiple SCOPE VIOLATIONs. The task allows wrong files.")
+                    status = "failed"
+                    break
                 continue
         except (DeepSeekError, RuntimeError) as exc:
             last_check_tail = f"Agent loop failed: {exc}"
