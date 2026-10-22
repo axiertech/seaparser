@@ -1,127 +1,71 @@
-"""Offline tests for the scope helpers in scripts/runner.py.
-
-The helpers are pure functions, so no mocking or worktree is needed.
-scripts/runner.py imports the DeepSeek client (which needs the optional
-`openai` package), so the module is loaded from source with stubbed
-dependencies when the real import is unavailable.
-"""
-import importlib.util
-import sys
-import types
+"""Tests for the scope enforcement helpers in infrastructure.safety."""
 import unittest
-from pathlib import Path
 
-RUNNER_PATH = Path(__file__).resolve().parent.parent / "scripts" / "runner.py"
-
-
-def _stub_runner_dependencies() -> None:
-    """Install minimal stand-ins for runner.py's heavy imports."""
-    review_mod = types.ModuleType("application.deepseek_review")
-    review_mod.ReviewFinding = type("ReviewFinding", (), {})
-    review_mod.ReviewRequest = type("ReviewRequest", (), {})
-    review_mod.ReviewResult = type("ReviewResult", (), {})
-    review_mod.review = lambda *args, **kwargs: None
-
-    deepseek_mod = types.ModuleType("infrastructure.deepseek")
-    deepseek_mod.DeepSeekClient = type("DeepSeekClient", (), {})
-    deepseek_mod.DeepSeekError = type("DeepSeekError", (Exception,), {})
-
-    tools_mod = types.ModuleType("infrastructure.deepseek_tools")
-    tools_mod.TOOLS = ()
-    tools_mod.clean_temp_files = lambda *args, **kwargs: []
-    tools_mod.execute_tool = lambda *args, **kwargs: ""
-
-    roots_mod = types.ModuleType("infrastructure.roots")
-    roots_mod.RootConfig = type("RootConfig", (), {})
-    roots_mod.get_root_config = lambda *args, **kwargs: None
-
-    settings_mod = types.ModuleType("infrastructure.settings")
-    settings_mod.DEEPSEEK_DEFAULT_MODEL = "deepseek-flash"
-    settings_mod.DEEPSEEK_STRONG_MODEL = "deepseek-pro"
-    settings_mod.load_deepseek = lambda *args, **kwargs: None
-
-    for name, module in (
-        ("application.deepseek_review", review_mod),
-        ("infrastructure.deepseek", deepseek_mod),
-        ("infrastructure.deepseek_tools", tools_mod),
-        ("infrastructure.roots", roots_mod),
-        ("infrastructure.settings", settings_mod),
-    ):
-        sys.modules.setdefault(name, module)
-
-
-def _load_runner_module() -> types.ModuleType:
-    """Import scripts.runner, stubbing dependencies if the import fails."""
-    try:
-        import scripts.runner as runner
-        return runner
-    except ImportError:
-        _stub_runner_dependencies()
-        import importlib.util
-
-        spec = importlib.util.spec_from_file_location("_runner_scope_under_test",
-                                                      RUNNER_PATH)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        return module
-
-
-_runner = _load_runner_module()
-_allowed_files_for_task = _runner._allowed_files_for_task
-_check_scope = _runner._check_scope
+from infrastructure.safety import allowed_files_for_task, check_scope
 
 
 class AllowedFilesForTaskTests(unittest.TestCase):
-    def test_missing_line_returns_none(self):
-        """A task without an 'Allowed files:' line has no restriction."""
-        task = "Fix the bug in application/foo.py.\nNo scope line here.\n"
-        self.assertIsNone(_allowed_files_for_task(task))
+    """Verify parsing of the 'Allowed files:' line."""
 
-    def test_comma_separated_list_returns_frozenset(self):
-        """A comma-separated list becomes a frozenset of paths."""
-        task = "Do the work.\nAllowed files: a, b, c\n"
-        self.assertEqual(_allowed_files_for_task(task),
-                         frozenset({"a", "b", "c"}))
-
-    def test_whitespace_is_trimmed(self):
-        """Surrounding whitespace around each path is stripped."""
-        task = "Allowed files:   tests/a.py ,  tests/b.py  \n"
-        self.assertEqual(_allowed_files_for_task(task),
-                         frozenset({"tests/a.py", "tests/b.py"}))
+    def test_no_allowed_line_returns_none(self):
+        """A task without 'Allowed files:' returns None (no restriction)."""
+        task = "Model: deepseek-flash\n\nDo the thing."
+        self.assertIsNone(allowed_files_for_task(task))
 
     def test_single_file(self):
-        """A single allowed file yields a one-element frozenset."""
-        task = "Allowed files: tests/test_runner_scope.py"
-        self.assertEqual(_allowed_files_for_task(task),
-                         frozenset({"tests/test_runner_scope.py"}))
+        """A single allowed file is parsed correctly."""
+        task = "Allowed files: docs/runner.md"
+        self.assertEqual(allowed_files_for_task(task),
+                         frozenset({"docs/runner.md"}))
+
+    def test_multiple_files_trimmed(self):
+        """Multiple files are split and whitespace-trimmed."""
+        task = "Allowed files: a.py, b.py,  c.py "
+        self.assertEqual(allowed_files_for_task(task),
+                         frozenset({"a.py", "b.py", "c.py"}))
+
+    def test_case_insensitive_key(self):
+        """The key 'allowed files:' is matched case-insensitively."""
+        task = "allowed files: x.py"
+        self.assertEqual(allowed_files_for_task(task),
+                         frozenset({"x.py"}))
 
 
 class CheckScopeTests(unittest.TestCase):
+    """Verify that written files are checked against the allowlist."""
+
+    def test_none_allowed_permits_anything(self):
+        """No allowlist means any written file is permitted."""
+        self.assertIsNone(check_scope(["any.py"], None))
+
     def test_written_equal_allowed_returns_none(self):
         """Writing exactly the allowed files is in scope."""
-        allowed = frozenset({"a.py", "b.py"})
-        self.assertIsNone(_check_scope(["a.py", "b.py"], allowed))
-
-    def test_subset_of_allowed_returns_none(self):
-        """Writing fewer files than allowed is in scope."""
-        allowed = frozenset({"a.py", "b.py"})
-        self.assertIsNone(_check_scope(["a.py"], allowed))
+        self.assertIsNone(check_scope(["a.py"], frozenset({"a.py"})))
 
     def test_extra_file_reports_violation(self):
         """An extra file yields a SCOPE VIOLATION naming that file."""
-        allowed = frozenset({"a.py"})
-        error = _check_scope(["a.py", "extra.py"], allowed)
-        self.assertIsNotNone(error)
-        self.assertIn("SCOPE VIOLATION", error)
-        self.assertIn("extra.py", error)
+        result = check_scope(["a.py", "b.py"], frozenset({"a.py"}))
+        self.assertIsNotNone(result)
+        self.assertIn("SCOPE VIOLATION", result)
+        self.assertIn("b.py", result)
+        self.assertNotIn("a.py,", result)  # only the extra file listed
 
-    def test_none_allowed_permits_anything(self):
-        """Without an allowlist any written file is permitted."""
-        self.assertIsNone(_check_scope(["anything.py", "else.md"], None))
+    def test_empty_written_returns_none(self):
+        """No writes means no scope violation."""
+        self.assertIsNone(check_scope([], frozenset({"a.py"})))
 
-    def test_none_allowed_with_empty_written(self):
-        """No allowlist and no writes is still in scope."""
-        self.assertIsNone(_check_scope([], None))
+    def test_directory_prefix_allowed(self):
+        """A directory prefix allows any file under that directory."""
+        allowed = frozenset({"frontend/map/"})
+        self.assertIsNone(check_scope(["frontend/map/map.js"], allowed))
+        self.assertIsNone(check_scope(["frontend/map/sub/foo.js"], allowed))
+
+    def test_directory_prefix_blocks_outside(self):
+        """Files outside the directory prefix are blocked."""
+        allowed = frozenset({"frontend/map/"})
+        result = check_scope(["frontend/src/Timeline.jsx"], allowed)
+        self.assertIsNotNone(result)
+        self.assertIn("frontend/src/Timeline.jsx", result)
 
 
 if __name__ == "__main__":

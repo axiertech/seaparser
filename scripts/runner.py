@@ -33,6 +33,7 @@ from application.deepseek_review import (
 from infrastructure.deepseek import DeepSeekClient, DeepSeekError
 from infrastructure.deepseek_tools import TOOLS, clean_temp_files, execute_tool
 from infrastructure.roots import RootConfig, get_root_config
+from infrastructure.safety import allowed_files_for_task, sanity_check_task, check_scope
 from infrastructure.settings import (
     DEEPSEEK_DEFAULT_MODEL,
     DEEPSEEK_STRONG_MODEL,
@@ -207,69 +208,6 @@ def _max_api_calls_for_task(config: RootConfig, task_text: str) -> int:
     if match:
         return min(int(match.group(1)), 80)
     return config.max_api_calls
-
-
-def _allowed_files_for_task(task_text: str) -> frozenset[str] | None:
-    """Parse 'Allowed files: a, b, c' from AUTONOMOUS_TASK.md.
-
-    Returns None when the line is absent (no restriction), or a frozenset
-    of relative paths that may be created or modified. Scope enforcement
-    is opt-in per task so existing tasks keep working.
-    """
-    match = re.search(r"(?im)^\s*Allowed files:\s*(.+)$", task_text)
-    if not match:
-        return None
-    paths = {part.strip() for part in match.group(1).split(",") if part.strip()}
-    return frozenset(paths) if paths else None
-
-
-def _sanity_check_task(config: RootConfig, task_text: str) -> bool:
-    """Check 'Allowed files:' against the base tree and prefix rules.
-
-    Returns True if the task is safe to start, False if there are
-    fatal errors. Warnings (e.g. missing files that might be created
-    by the task) are printed but do not fail the check.
-    """
-    allowed = _allowed_files_for_task(task_text)
-    if allowed is None:
-        print("INFO: No 'Allowed files:' line. The agent may modify any file.")
-        return True
-
-    missing = []
-    outside_prefix = []
-    task_lower = task_text.lower()
-    
-    for f in allowed:
-        # Check if the file exists in the base tree
-        if not (config.root / f).exists():
-            # If the task explicitly says "create" and mentions the filename,
-            # it's a new file and allowed to be missing.
-            if "create" in task_lower and f in task_text:
-                pass
-            else:
-                missing.append(f)
-        # Check if it's outside the allowed prefixes
-        if not any(f.startswith(p) for p in config.allowed_prefixes):
-            outside_prefix.append(f)
-
-    ok = True
-
-    if outside_prefix:
-        print(f"WARNING: Allowed files outside standard prefixes: {', '.join(outside_prefix)}")
-        print(f"  (Standard prefixes: {', '.join(config.allowed_prefixes)})")
-        print("  The agent can still read/write them, but _select_candidate_files will")
-        print("  NOT pick them automatically unless explicitly named in the task.")
-        # Vi gör detta till ett fel om filen inte finns alls, annars bara en varning
-        if missing:
-            ok = False
-
-    if missing:
-        print(f"ERROR: Allowed files do not exist in the base tree: {', '.join(missing)}")
-        print("  If the task is NOT creating these files, you probably have a typo.")
-        print("  (e.g. map.js instead of map-component.mjs).")
-        ok = False
-
-    return ok
 
 
 def _timeout_for_model(model: str) -> float:
@@ -574,28 +512,6 @@ def _findings_signature(findings: tuple[ReviewFinding, ...]) -> frozenset:
     )
 
 
-def _check_scope(written: list[str], allowed: frozenset[str] | None) -> str | None:
-    """Return an error message if written files exceed the allowlist, else None.
-
-    When allowed is None the task has no explicit allowlist and any file
-    is permitted. When allowed is set, every written file must be in it.
-    Files that already exist in the tree but were not modified do not
-    count against the scope; only the written list is checked.
-    """
-    if allowed is None:
-        return None
-    extra = sorted(set(written) - allowed)
-    if not extra:
-        return None
-    return (
-        f"SCOPE VIOLATION: modified files not in the allowed list: "
-        f"{', '.join(extra)}. The task allows only: "
-        f"{', '.join(sorted(allowed))}. "
-        f"Revert each extra file with 'git checkout -- <path>' and do "
-        f"NOT try to fix it. Stay within the allowlist on the next try."
-    )
-
-
 def _format_findings(findings: tuple[ReviewFinding, ...]) -> str:
     if not findings:
         return "(no findings)"
@@ -685,7 +601,7 @@ def main(argv=None) -> int:
 
     if getattr(args, "check", False):
         print(f"Checking task: {config.task_file}")
-        if _sanity_check_task(config, task_text):
+        if sanity_check_task(config, task_text):
             print("Task is valid.")
             return 0
         else:
@@ -794,8 +710,8 @@ def main(argv=None) -> int:
             print(f"Wrote: {', '.join(written)}")
             consecutive_scope_violations = 0
 
-            allowed = _allowed_files_for_task(task_text)
-            scope_error = _check_scope(written, allowed)
+            allowed = allowed_files_for_task(task_text)
+            scope_error = check_scope(written, allowed)
             if scope_error:
                 print(scope_error)
                 last_check_tail = scope_error
