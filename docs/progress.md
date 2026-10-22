@@ -1109,3 +1109,62 @@ kan app-serverns kvot-RPC utvärderas separat för säker/robust tröskelstyrnin
   `APIStatusError`. HTTP-lagret, base_url och auth-formatet är ändå
   verifierat. Modellnamn (`deepseek-chat`) kan behöva justeras när
   saldo finns, om DeepSeek då rapporterar okänt modellnamn.
+
+## 2026-10-22: Autonom nattkörning, resilient verifiering, preflight-paket
+
+### Vad som byggdes
+
+- `preflight/`-paket med `CheckResult`-dataclass och `run(name, fn, budget_mib)`-
+  funktion. Gemensamt gränssnitt för de 10 fristående `*preflight*.py`-skripten.
+- `docs/runner.md` (110 rader) och `docs/verify-run.md` (104 rader).
+- `tests/test_runner_scope.py` (9 tester) - täcker `_allowed_files_for_task`
+  och `_check_scope` med edge cases (tom lista, delmängd, extra fil).
+- `tests/test_cleanup.py` (4 tester) - täcker `clean_temp_files` med
+  .tmp_*, *.tmp, *.bak, nästlade kataloger.
+- `scripts/run_many.sh` med skip-logik: beräknar `sha256(task_text.strip())`
+  och hoppar över tasks som redan har en `completed`-post i RUN_HISTORY.json.
+- `infrastructure/roots.py`: `fast_verify_cmd` för app-rot kontrollerar vilka
+  testmoduler som finns i worktreen innan den kör dem. Saknade moduler hoppas
+  över istället för att krascha med ModuleNotFoundError.
+- `scripts/runner.py`: `_check_in_worktree` loggar `[verify]`-rader med
+  cwd/cmd/returncode/stdout_len/stderr_len/first_stderr_lines så att framtida
+  verifieringsfel är diagnostiserbara från loggen.
+
+### Vad som lärdes
+
+- **Agenten är bra på att lägga till, svag på att skapa från scratch.**
+  Docstrings, tester till befintlig kod och dokumentation går på 1-2 iterationer.
+  Att skriva nya testfiler från scratch kräver manuell handpåläggning (3 försök
+  med 40 API-anrop vardera konvergerade aldrig).
+- **`fast_verify_cmd` med hårdkodade modulnamn kraschar på saknade moduler.**
+  När en worktree skapas från HEAD innan en testfil committats saknas modulen,
+  `unittest` ger ModuleNotFoundError, och agenten får tom `check_tail`. Fyra
+  misslyckade körningar (app-04, app-06 x2, app-07) berodde på detta.
+- **`Allowed files:`-allowlist fungerar.** Den förhindrade scope creep i app-04
+  (agenten försökte fixa trasiga tester istället för att skriva docs).
+- **`git checkout <sha> -- <file>` räddar filer även när branchen är borta.**
+  Commit-SHA överlever branch-radering tills `git gc` körs.
+
+### Dagens runs
+
+| Run | Uppgift | Utfall | API |
+|---|---|---|---|
+| 1 | app-05 preflight | Manuell räddning | 14 |
+| 2-3 | app-06 (tidiga försök) | API-limit | 24+41 |
+| 4 | app-07 verify-docs | Manuell räddning | 41 |
+| 5 | app-07 verify-docs | Autonomt | 7 |
+| 6 | app-08 cleanup-tester | Återställd från commit | 41 |
+| 7 | app-06 scope-tester | Återställd från worktree | 0 |
+
+En helt autonom framgång (run 5). Fem manuellt räddade. Den avgörande
+förbättringen var resilient `fast_verify_cmd` - efter den gick app-07 på
+7 API-anrop istället för 41.
+
+### Vad som återstår
+
+- Ändring 4 (preflight): migrera de 10 `*preflight*.py`-skripten att använda
+  `preflight/common.py`. Infrastrukturen finns, migreringen återstår.
+- Ändring 5 (dela upp `work_session.py`): 666 rader, nästlade closures.
+  Högst risk, men `Allowed files:`-skyddet gör det genomförbart.
+- `systemd --user`-tjänst med `Linger=yes` är konfigurerad men inte testad
+  över en riktig natt ännu.
