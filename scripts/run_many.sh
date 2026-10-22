@@ -30,6 +30,11 @@ for task in "$@"; do
     echo "Running: $task -> $TASK_DEST"
     echo "=========================================="
 
+    if [ ! -f "$task" ]; then
+        echo "FAILED: task file not found: $task" >&2
+        exit 64
+    fi
+
     cp "$task" "$TASK_DEST"
 
     cd "$APP_DIR"
