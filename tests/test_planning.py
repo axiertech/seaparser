@@ -8,9 +8,9 @@ from dataclasses import FrozenInstanceError, asdict, replace
 from datetime import timedelta
 from unittest.mock import patch
 
-from application.planning import ALGORITHM_VERSION, digest, run_plan
+from application.planning import ALGORITHM_VERSION, boat_for_model, digest, run_plan
 from infrastructure.synthetic_forecast import synthetic_snapshot
-from prototype.model import Vector
+from prototype.model import KNOT, Vector
 from prototype.routes import RouteCandidate
 from prototype.weather import WeatherPolicy
 from scripts.plan_synthetic import demo_request
@@ -108,6 +108,47 @@ class PlanningTests(unittest.TestCase):
         self.assertEqual(invalid.returncode, 2)
         self.assertFalse(invalid.stdout)
         self.assertNotIn('Traceback', invalid.stderr)
+
+    def test_motorboat_planning(self):
+        """A motorboat profile yields a different route duration than the sailboat."""
+        sailboat_request = demo_request()
+        motorboat_request = replace(sailboat_request, boat_model='motorboat',
+                                    boat=boat_for_model('motorboat'))
+        sailboat = json.loads(run_plan(sailboat_request))
+        motorboat = json.loads(run_plan(motorboat_request))
+        sail_routes = {r['candidate']['name']: r for r in
+                       sailboat['comparison']['departures'][0]['routes']['candidates']}
+        motor_routes = {r['candidate']['name']: r for r in
+                        motorboat['comparison']['departures'][0]['routes']['candidates']}
+        self.assertEqual(sailboat['manifest']['boat']['boat_model'], 'sailboat')
+        self.assertEqual(motorboat['manifest']['boat']['boat_model'], 'motorboat')
+        self.assertNotEqual(sailboat['manifest']['boat_sha256'],
+                            motorboat['manifest']['boat_sha256'])
+        self.assertNotEqual(sail_routes['direct']['travel_seconds'],
+                            motor_routes['direct']['travel_seconds'])
+        # Estimated constant motorboat speed 12 knots (~6.17 m/s) over the 100 m direct leg.
+        self.assertAlmostEqual(motor_routes['direct']['travel_seconds'], 100/(12*KNOT), delta=.01)
+        self.assertEqual(type(boat_for_model('motorboat')).__name__, 'ConstantBoat')
+        with self.assertRaises(ValueError):
+            replace(sailboat_request, boat_model='submarine')
+
+    def test_motorboat_profile_is_marked_as_estimated(self):
+        """The estimated motorboat profile is explicitly flagged in the manifest."""
+        manifest = json.loads(run_plan(replace(demo_request(), boat_model='motorboat',
+                                               boat=boat_for_model('motorboat'))))['manifest']
+        self.assertTrue(manifest['boat_data_estimated'])
+        self.assertTrue(manifest['boat']['estimated'])
+        self.assertIn('uppskattad', manifest['boat']['estimation_note'].lower())
+        self.assertTrue(manifest['boat']['assumptions'])
+        self.assertEqual(manifest['schema_version'], 2)
+
+    def test_boat_model_must_match_boat_profile(self):
+        """A boat_model that contradicts the boat profile is rejected, not silently relabelled."""
+        with self.assertRaises(ValueError):
+            replace(demo_request(), boat_model='motorboat')
+        # A profile-only request derives its label from the profile.
+        derived = replace(demo_request(), boat=boat_for_model('motorboat'))
+        self.assertEqual(derived.boat_model, 'motorboat')
 
     def test_halved_step_comparison_has_documented_tolerances(self):
         reports = [json.loads(run_plan(demo_request(step_seconds=step))) for step in (10, 5)]

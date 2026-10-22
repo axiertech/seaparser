@@ -17,7 +17,58 @@ from prototype.weather import WeatherPolicy
 from prototype.segment_weather import METHOD as WEATHER_SEGMENT_METHOD, MAX_WEATHER_CELLS
 
 ALGORITHM_VERSION = 'explicit-candidates-midpoint-grid-weather-v3'
-REPORT_SCHEMA_VERSION = 1
+# Schema 2 adds the 'boat_model' key to the manifest boat block. The addition is
+# additive, but the key is part of the hashed boat provenance, so the version is
+# bumped to keep old and new reports distinguishable.
+REPORT_SCHEMA_VERSION = 2
+
+BOAT_MODELS = ('sailboat', 'motorboat')
+
+# Estimated motorboat cruise speed and leeway. These are documented assumptions,
+# not measured data; the manifest marks them as estimated.
+MOTORBOAT_CRUISE_KNOTS = 12
+MOTORBOAT_LEEWAY = 0
+
+# Boat class expected for each named model; used to reject contradictory requests.
+BOAT_MODEL_TYPES = {'sailboat': PolarBoat, 'motorboat': ConstantBoat}
+
+
+def boat_for_model(boat_model: str) -> ConstantBoat | PolarBoat:
+    """Return the built-in boat profile for a named model.
+
+    Args:
+        boat_model: One of BOAT_MODELS, e.g. 'sailboat' or 'motorboat'.
+
+    Returns:
+        A frozen built-in boat configuration. The motorboat profile is an
+        estimated constant-speed model, not measured data.
+
+    Raises:
+        ValueError: If the model name is unknown.
+    """
+    if boat_model == 'sailboat':
+        return PolarBoat()
+    if boat_model == 'motorboat':
+        return ConstantBoat(speed_knots=MOTORBOAT_CRUISE_KNOTS, leeway=MOTORBOAT_LEEWAY)
+    raise ValueError(f'Okänd båtmodell: {boat_model!r}; tillåtna: {", ".join(BOAT_MODELS)}')
+
+
+def boat_model_for(boat: ConstantBoat | PolarBoat) -> str:
+    """Return the model name matching a built-in boat configuration.
+
+    Args:
+        boat: A built-in boat configuration.
+
+    Returns:
+        The matching name from BOAT_MODELS.
+
+    Raises:
+        ValueError: If the boat type has no named model.
+    """
+    for name, boat_type in BOAT_MODEL_TYPES.items():
+        if type(boat) is boat_type:
+            return name
+    raise ValueError(f'Okänd båttyp: {type(boat).__name__}')
 
 
 def canonical(data):
@@ -51,6 +102,7 @@ class PlanRequest:
     weather_policy: WeatherPolicy
     forecast_policy: ForecastPolicy
     boat: ConstantBoat | PolarBoat = PolarBoat()
+    boat_model: str = 'sailboat'
     position: Vector = Vector(0, 0)
     obstacles: tuple[Rectangle | Polygon, ...] = ()
     step_seconds: float = 10
@@ -70,6 +122,17 @@ class PlanRequest:
                 or type(self.weather_policy) is not WeatherPolicy or type(self.forecast_policy) is not ForecastPolicy
                 or type(self.target) is not Vector or type(self.position) is not Vector):
             raise ValueError('Planeringen kräver fryst dataset, känd fryst båtmodell, positioner och båda policyerna')
+        if self.boat_model not in BOAT_MODELS:
+            raise ValueError(f'Okänd båtmodell: {self.boat_model!r}; tillåtna: {", ".join(BOAT_MODELS)}')
+        if type(self.boat) is not BOAT_MODEL_TYPES[self.boat_model]:
+            # A caller that only supplied a boat profile keeps the default
+            # 'sailboat' label; derive the label from the profile instead of
+            # silently mislabelling the manifest. Explicit contradictions fail.
+            if self.boat_model != 'sailboat':
+                raise ValueError(f'Båtmodellen {self.boat_model!r} kräver en '
+                                 f'{BOAT_MODEL_TYPES[self.boat_model].__name__}-profil, '
+                                 f'inte {type(self.boat).__name__}')
+            object.__setattr__(self, 'boat_model', boat_model_for(self.boat))
         object.__setattr__(self, 'planning_time', utc_time(self.planning_time, 'Planeringstid'))
         departures = bounded_tuple(self.departures, self.max_departures, 'Avgångar')
         object.__setattr__(self, 'departures', tuple(utc_time(t, 'Avgångstid') for t in departures))
@@ -99,7 +162,9 @@ def run_plan(request: PlanRequest) -> str:
         max_waypoints=request.max_waypoints, selection_criterion=request.selection_criterion)
     inputs = asdict(request)
     boat = {'model': type(request.boat).__name__, 'configuration': inputs['boat'],
-            'assumptions': request.boat.assumptions}
+            'assumptions': request.boat.assumptions, 'boat_model': request.boat_model,
+            'estimated': True,
+            'estimation_note': 'Uppskattad båtmodell; inte uppmätta prestandadata.'}
     dataset = inputs['dataset']
     algorithm_settings = {'forecast_segment_interval_limit': MAX_SEGMENT_INTERVALS,
                           'weather_segment_method': WEATHER_SEGMENT_METHOD,
