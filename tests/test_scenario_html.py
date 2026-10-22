@@ -88,7 +88,9 @@ class ScenarioHtmlTests(unittest.TestCase):
             self.assertEqual(Page(render_report(self.raw)).exports, [self.raw])
 
     def test_invalid_reports_and_limits(self):
-        for raw in ('{}', 'null', '{"bad":NaN}', self.raw.replace('"schema_version":1', '"schema_version":99')):
+        import json
+        bad_version_raw = json.dumps({**json.loads(self.raw), 'manifest': {**json.loads(self.raw)['manifest'], 'schema_version': 99}})
+        for raw in ('{}', 'null', '{"bad":NaN}', bad_version_raw):
             with self.subTest(raw=raw[:20]), self.assertRaises(ValueError):
                 render_report(raw)
         with self.assertRaises(ValueError):
