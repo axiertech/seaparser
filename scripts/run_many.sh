@@ -68,7 +68,8 @@ PYEOF
 
     if ! "$PYTHON" -B -m scripts.runner --root "$ROOT" --fast; then
         echo "FAILED: runner.py for $task - continuing to next task" >&2
-        FAILED_TASKS="$FAILED_TASKS\n  - $task"
+        FAILED_TASKS="${FAILED_TASKS}
+  - $task"
         continue
     fi
 
@@ -93,7 +94,7 @@ done
 
 echo ""
 if [ -n "$FAILED_TASKS" ]; then
-    echo "Queue finished with failures:$FAILED_TASKS"
+    echo -e "Queue finished with failures:$FAILED_TASKS"
     exit 1
 else
     echo "All tasks completed successfully."
