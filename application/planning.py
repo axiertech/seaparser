@@ -16,10 +16,9 @@ from prototype.sailing import PolarBoat
 from prototype.weather import WeatherPolicy
 from prototype.segment_weather import METHOD as WEATHER_SEGMENT_METHOD, MAX_WEATHER_CELLS
 
-ALGORITHM_VERSION = 'explicit-candidates-midpoint-grid-weather-v3'
-# Schema 2 adds the 'boat_model' key to the manifest boat block. The addition is
-# additive, but the key is part of the hashed boat provenance, so the version is
-# bumped to keep old and new reports distinguishable.
+ALGORITHM_VERSION = 'explicit-candidates-midpoint-grid-weather-v4'
+# v4: the hashed identity no longer carries a duplicated top-level 'boat_model'
+# key; the resolved name lives only in identity['request']['boat_model'].
 REPORT_SCHEMA_VERSION = 2
 
 BOAT_MODELS = ('sailboat', 'motorboat')
@@ -69,6 +68,32 @@ def boat_model_for(boat: ConstantBoat | PolarBoat) -> str:
         if type(boat) is boat_type:
             return name
     raise ValueError(f'Okänd båttyp: {type(boat).__name__}')
+
+
+def resolve_boat_model(boat_model: str | None, boat: ConstantBoat | PolarBoat) -> str:
+    """Return a model name from BOAT_MODELS consistent with the boat profile.
+
+    Args:
+        boat_model: An explicit model name, or None to derive it from the profile.
+        boat: A built-in boat configuration.
+
+    Returns:
+        The model name matching the profile. When boat_model is None the name is
+        derived via boat_model_for(boat).
+
+    Raises:
+        ValueError: If boat_model names a model whose expected boat type does not
+            match the supplied profile.
+    """
+    if boat_model is None:
+        return boat_model_for(boat)
+    if boat_model not in BOAT_MODELS:
+        raise ValueError(f'Okänd båtmodell: {boat_model!r}; tillåtna: {", ".join(BOAT_MODELS)}')
+    if type(boat) is not BOAT_MODEL_TYPES[boat_model]:
+        raise ValueError(f'Båtmodellen {boat_model!r} kräver en '
+                         f'{BOAT_MODEL_TYPES[boat_model].__name__}-profil, '
+                         f'inte {type(boat).__name__}')
+    return boat_model
 
 
 def canonical(data):
@@ -124,15 +149,13 @@ class PlanRequest:
             raise ValueError('Planeringen kräver fryst dataset, känd fryst båtmodell, positioner och båda policyerna')
         if self.boat_model not in BOAT_MODELS:
             raise ValueError(f'Okänd båtmodell: {self.boat_model!r}; tillåtna: {", ".join(BOAT_MODELS)}')
-        if type(self.boat) is not BOAT_MODEL_TYPES[self.boat_model]:
-            # A caller that only supplied a boat profile keeps the default
-            # 'sailboat' label; derive the label from the profile instead of
-            # silently mislabelling the manifest. Explicit contradictions fail.
-            if self.boat_model != 'sailboat':
-                raise ValueError(f'Båtmodellen {self.boat_model!r} kräver en '
-                                 f'{BOAT_MODEL_TYPES[self.boat_model].__name__}-profil, '
-                                 f'inte {type(self.boat).__name__}')
+        # A caller that only supplied a boat profile keeps the default
+        # 'sailboat' label; derive the label from the profile instead of
+        # silently mislabelling the manifest. Explicit contradictions fail.
+        if self.boat_model == 'sailboat' and type(self.boat) is not PolarBoat:
             object.__setattr__(self, 'boat_model', boat_model_for(self.boat))
+        else:
+            object.__setattr__(self, 'boat_model', resolve_boat_model(self.boat_model, self.boat))
         object.__setattr__(self, 'planning_time', utc_time(self.planning_time, 'Planeringstid'))
         departures = bounded_tuple(self.departures, self.max_departures, 'Avgångar')
         object.__setattr__(self, 'departures', tuple(utc_time(t, 'Avgångstid') for t in departures))
@@ -170,7 +193,7 @@ def run_plan(request: PlanRequest) -> str:
                           'weather_segment_method': WEATHER_SEGMENT_METHOD,
                           'weather_certificate_cell_limit': MAX_WEATHER_CELLS}
     identity = {'algorithm_settings': algorithm_settings, 'schema_version': REPORT_SCHEMA_VERSION, 'algorithm_version': ALGORITHM_VERSION,
-                'request': inputs, 'boat_model': boat['model']}
+                'request': inputs}
     parameters = {key: value for key, value in inputs.items() if key not in ('dataset', 'boat')}
     return canonical({
         'manifest': {'schema_version': REPORT_SCHEMA_VERSION, 'algorithm_version': ALGORITHM_VERSION,
