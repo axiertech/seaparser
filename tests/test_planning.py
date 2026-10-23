@@ -8,10 +8,11 @@ from dataclasses import FrozenInstanceError, asdict, replace
 from datetime import timedelta
 from unittest.mock import patch
 
-from application.planning import ALGORITHM_VERSION, boat_for_model, digest, run_plan
+from application.planning import ALGORITHM_VERSION, boat_for_model, digest, resolve_boat_model, run_plan
 from infrastructure.synthetic_forecast import synthetic_snapshot
 from prototype.model import KNOT, Vector
 from prototype.routes import RouteCandidate
+from prototype.sailing import PolarBoat
 from prototype.weather import WeatherPolicy
 from scripts.plan_synthetic import demo_request
 
@@ -149,6 +150,22 @@ class PlanningTests(unittest.TestCase):
         # A profile-only request derives its label from the profile.
         derived = replace(demo_request(), boat=boat_for_model('motorboat'))
         self.assertEqual(derived.boat_model, 'motorboat')
+
+    def test_resolve_boat_model(self):
+        """resolve_boat_model derives or validates the model name against the profile."""
+        self.assertEqual(resolve_boat_model('motorboat', boat_for_model('motorboat')), 'motorboat')
+        self.assertEqual(resolve_boat_model(None, PolarBoat()), 'sailboat')
+        self.assertEqual(resolve_boat_model(None, boat_for_model('motorboat')), 'motorboat')
+        with self.assertRaises(ValueError):
+            resolve_boat_model('motorboat', PolarBoat())
+        with self.assertRaises(ValueError):
+            resolve_boat_model('sailboat', boat_for_model('motorboat'))
+        with self.assertRaises(ValueError):
+            resolve_boat_model('submarine', PolarBoat())
+
+    def test_algorithm_version_is_v4(self):
+        """The algorithm version reflects the deduplicated boat_model identity."""
+        self.assertEqual(ALGORITHM_VERSION, 'explicit-candidates-midpoint-grid-weather-v4')
 
     def test_halved_step_comparison_has_documented_tolerances(self):
         reports = [json.loads(run_plan(demo_request(step_seconds=step))) for step in (10, 5)]
