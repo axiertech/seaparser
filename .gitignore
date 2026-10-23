@@ -3,7 +3,7 @@
 .env.*
 !.env.example
 app.env
-config/
+config/*
 *.pem
 *.key
 
