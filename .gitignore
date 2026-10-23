@@ -3,7 +3,7 @@
 .env.*
 !.env.example
 app.env
-config/
+config/*
 *.pem
 *.key
 
@@ -36,3 +36,4 @@ RUN_REPORT_*.md
 tasks/
 .runner.lock
 logs/queue/
+!config/budget.conf

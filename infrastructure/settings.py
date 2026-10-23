@@ -34,6 +34,64 @@ def read_env(path):
     return values
 
 
+BUDGET_PATH = ROOT / "config" / "budget.conf"
+
+BUDGET_KEYS = frozenset({
+    "APP_MAX_API_CALLS", "APP_MAX_TOOL_ROUNDS", "APP_MAX_ITERATIONS",
+    "APP_MAX_TOKENS_FLASH", "APP_MAX_TOKENS_PRO",
+    "AUTONOMY_MAX_API_CALLS", "AUTONOMY_MAX_TOOL_ROUNDS",
+    "AUTONOMY_MAX_ITERATIONS", "AUTONOMY_MAX_TOKENS_FLASH",
+    "AUTONOMY_MAX_TOKENS_PRO",
+    "DEEPSEEK_MAX_RETRIES", "DEEPSEEK_BACKOFF_SECONDS",
+    "DEEPSEEK_TIMEOUT_FLASH", "DEEPSEEK_TIMEOUT_PRO",
+})
+
+
+def load_budget(path=None):
+    """Läser budget.conf; tom dict om filen saknas.
+
+    Samma KEY=value-format som app.env men utan hemligheter.
+    Okända nycklar avvisas så att stavfel inte tystnar.
+    """
+    from pathlib import Path as _Path
+    p = _Path(path) if path is not None else BUDGET_PATH
+    if not p.exists():
+        return {}
+    values = {}
+    for line in p.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        key, sep, value = line.partition("=")
+        if not sep or not re.fullmatch(r"[A-Z][A-Z0-9_]*", key):
+            raise ValueError(f"Ogiltigt budgetformat i {p.name}")
+        if key not in BUDGET_KEYS:
+            raise ValueError(f"Okänd budgetnyckel: {key}")
+        if key in values:
+            raise ValueError(f"Duplicerad budgetnyckel: {key}")
+        values[key] = value.strip()
+    return values
+
+
+_BUDGET = load_budget()
+
+
+def budget_int(key, default):
+    """Return int from budget.conf, else default on missing or invalid."""
+    try:
+        return int(_BUDGET[key])
+    except (KeyError, ValueError, TypeError):
+        return default
+
+
+def budget_float(key, default):
+    """Return float from budget.conf, else default on missing or invalid."""
+    try:
+        return float(_BUDGET[key])
+    except (KeyError, ValueError, TypeError):
+        return default
+
+
 @dataclass(frozen=True)
 class DatabaseSettings:
     environment: str

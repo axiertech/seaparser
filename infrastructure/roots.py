@@ -10,8 +10,11 @@ verification commands. Worktrees for both roots live under
 """
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import dataclass
 from pathlib import Path
+
+from infrastructure.settings import budget_int
 
 
 @dataclass(frozen=True)
@@ -120,8 +123,21 @@ ROOTS: dict[str, RootConfig] = {
 }
 
 
+def _apply_budget(base: RootConfig) -> RootConfig:
+    """Applicera budget.conf på en RootConfig, med defaultvärden som fallback."""
+    prefix = base.name.upper() + "_"
+    return dataclasses.replace(
+        base,
+        max_api_calls=budget_int(prefix + "MAX_API_CALLS", base.max_api_calls),
+        max_tool_rounds=budget_int(prefix + "MAX_TOOL_ROUNDS", base.max_tool_rounds),
+        max_iterations=budget_int(prefix + "MAX_ITERATIONS", base.max_iterations),
+        max_tokens_flash=budget_int(prefix + "MAX_TOKENS_FLASH", base.max_tokens_flash),
+        max_tokens_pro=budget_int(prefix + "MAX_TOKENS_PRO", base.max_tokens_pro),
+    )
+
+
 def get_root_config(name: str) -> RootConfig:
     """Return the RootConfig for name; raise SystemExit if the root is unknown."""
     if name not in ROOTS:
         raise SystemExit(f"Unknown root: {name!r}. Choose one of: {', '.join(ROOTS)}")
-    return ROOTS[name]
+    return _apply_budget(ROOTS[name])

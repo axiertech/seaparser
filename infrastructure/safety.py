@@ -11,16 +11,48 @@ from infrastructure.roots import RootConfig
 
 
 def allowed_files_for_task(task_text: str) -> frozenset[str] | None:
-    """Parse 'Allowed files: a, b, c' from AUTONOMOUS_TASK.md.
+    """Parse 'Allowed files:' from AUTONOMOUS_TASK.md.
 
-    Returns None when the line is absent (no restriction), or a frozenset
-    of relative paths that may be created or modified. Scope enforcement
-    is opt-in per task so existing tasks keep working.
+    Supports both inline form and markdown header + bullet list:
+        Allowed files: a, b, c
+        ## Allowed files:
+        - a
+        - b
+
+    Returns None when the section is absent (no restriction), or a
+    frozenset of relative paths that may be created or modified.
     """
-    match = re.search(r"(?im)^\s*Allowed files:\s*(.+)$", task_text)
-    if not match:
+    lines = task_text.splitlines()
+    paths: set[str] = set()
+    found = False
+    i = 0
+    while i < len(lines):
+        stripped = lines[i].lstrip("# ").rstrip()
+        if stripped.lower().startswith("allowed files:"):
+            found = True
+            rest = stripped.split(":", 1)[1].strip()
+            if rest:
+                for part in rest.split(","):
+                    part = part.strip()
+                    if part:
+                        paths.add(part)
+            j = i + 1
+            while j < len(lines):
+                nxt = lines[j].strip()
+                if not nxt:
+                    j += 1
+                    continue
+                if nxt[:1] in "-*+":
+                    item = nxt[1:].strip()
+                    if item:
+                        paths.add(item)
+                    j += 1
+                else:
+                    break
+            i = j - 1
+        i += 1
+    if not found:
         return None
-    paths = {part.strip() for part in match.group(1).split(",") if part.strip()}
     return frozenset(paths) if paths else None
 
 
