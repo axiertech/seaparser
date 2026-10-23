@@ -36,3 +36,4 @@ RUN_REPORT_*.md
 tasks/
 .runner.lock
 logs/queue/
+!config/budget.conf

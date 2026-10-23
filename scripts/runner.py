@@ -37,6 +37,8 @@ from infrastructure.safety import allowed_files_for_task, sanity_check_task, che
 from infrastructure.settings import (
     DEEPSEEK_DEFAULT_MODEL,
     DEEPSEEK_STRONG_MODEL,
+    budget_float,
+    budget_int,
     load_deepseek,
 )
 
@@ -132,6 +134,64 @@ class ApiCounter:
             raise RuntimeError(f"API limit reached ({self.limit} calls)")
 
 
+def _read_task_meta(task_path):
+    """Return (verify_cmd, task_text, scope_block) from the task Markdown.
+
+    Tolerant of both 'Key: value' and markdown header + bullet list forms:
+        Verify: cmd
+        Verify:
+        cmd
+        ## Allowed files:
+        - path1
+        - path2
+    """
+    try:
+        text = Path(task_path).read_text()
+    except (OSError, TypeError):
+        return "", "", ""
+    verify = ""
+    scope_lines = []
+    lines = text.splitlines()
+    i = 0
+    while i < len(lines):
+        stripped = lines[i].lstrip("# ").rstrip()
+        lowered = stripped.lower()
+        if lowered.startswith("verify:"):
+            rest = stripped.split(":", 1)[1].strip()
+            if rest:
+                verify = rest
+            else:
+                j = i + 1
+                while j < len(lines) and not lines[j].strip():
+                    j += 1
+                if j < len(lines):
+                    verify = lines[j].strip()
+                    i = j
+        elif lowered.startswith(("allowed files:", "forbidden files:")):
+            key = "Allowed files:" if lowered.startswith("allowed") else "Forbidden files:"
+            rest = stripped.split(":", 1)[1].strip()
+            if rest:
+                scope_lines.append(f"{key} {rest}")
+            else:
+                items = []
+                j = i + 1
+                while j < len(lines):
+                    nxt = lines[j].strip()
+                    if not nxt:
+                        j += 1
+                        continue
+                    if nxt[:1] in "-*+":
+                        items.append(nxt[1:].strip())
+                        j += 1
+                    else:
+                        break
+                if items:
+                    scope_lines.append(f"{key} {', '.join(items)}")
+                i = j - 1
+        i += 1
+    return verify, text, "\n".join(scope_lines)
+
+
 def _acquire_run_lock(config: RootConfig) -> IO:
     """Take an exclusive per-root lock. Exit 75 if another runner is active.
 
@@ -183,7 +243,7 @@ def _next_run(history: dict, date: str) -> int:
 
 
 def _select_model(task_text: str) -> str:
-    explicit = re.search(r"(?im)^\s*(?:Modell|Model):\s*([A-Za-z0-9._:-]+)\s*$", task_text)
+    explicit = re.search(r"(?im)^\s*#*\s*(?:Modell|Model):\s*([A-Za-z0-9._:-]+)\s*$", task_text)
     if explicit:
         return explicit.group(1)
     lowered = task_text.lower()
@@ -194,26 +254,26 @@ def _select_model(task_text: str) -> str:
 
 def _max_tool_rounds_for_task(config: RootConfig, task_text: str) -> int:
     """Allow per-task override of max_tool_rounds via 'Max tool rounds: N'."""
-    match = re.search(r"(?im)^\s*(?:Max tool rounds|Max tool calls):\s*(\d+)\s*$",
+    match = re.search(r"(?im)^\s*#*\s*(?:Max tool rounds|Max tool calls):\s*(\d+)\s*$",
                       task_text)
     if match:
-        return min(int(match.group(1)), 40)
+        return min(int(match.group(1)), config.max_tool_rounds)
     return config.max_tool_rounds
 
 
 def _max_api_calls_for_task(config: RootConfig, task_text: str) -> int:
     """Allow per-task override of max_api_calls via 'Max api calls: N'."""
-    match = re.search(r"(?im)^\s*(?:Max api calls|Max api rounds):\s*(\d+)\s*$",
+    match = re.search(r"(?im)^\s*#*\s*(?:Max api calls|Max api rounds):\s*(\d+)\s*$",
                       task_text)
     if match:
-        return min(int(match.group(1)), 80)
+        return min(int(match.group(1)), config.max_api_calls)
     return config.max_api_calls
 
 
 def _timeout_for_model(model: str) -> float:
     if model == DEEPSEEK_STRONG_MODEL:
-        return 300.0
-    return 90.0
+        return budget_float("DEEPSEEK_TIMEOUT_PRO", 300.0)
+    return budget_float("DEEPSEEK_TIMEOUT_FLASH", 90.0)
 
 
 def _max_tokens_for_model(config: RootConfig, model: str) -> int:
@@ -363,7 +423,13 @@ def _select_candidate_files(config: RootConfig, task_text: str) -> list[Path]:
 
 def _check_in_worktree(ctx: RunContext, *, fast: bool) -> tuple[bool, str]:
     """Run the per-root verify command in the worktree. Return (ok, tail)."""
-    cmd = ctx.config.fast_verify_cmd if fast and ctx.config.fast_verify_cmd else ctx.config.verify_cmd
+    task_verify, task_text, _ = _read_task_meta(ctx.config.task_file)
+    if fast and task_verify:
+        cmd = task_verify
+    elif fast and ctx.config.fast_verify_cmd:
+        cmd = ctx.config.fast_verify_cmd
+    else:
+        cmd = ctx.config.verify_cmd
     print(f"  [verify] cwd={ctx.worktree}")
     print(f"  [verify] cmd={cmd}")
     proc = subprocess.run(["bash", "-c", cmd], cwd=ctx.worktree,
@@ -634,7 +700,7 @@ def main(argv=None) -> int:
     else:
         client = DeepSeekClient(
             load_deepseek(model_override=ctx.model),
-            max_retries=1,
+            max_retries=budget_int("DEEPSEEK_MAX_RETRIES", 1),
             timeout_seconds=_timeout_for_model(ctx.model),
         )
 
@@ -750,7 +816,11 @@ def main(argv=None) -> int:
             result: ReviewResult = review(
                 ReviewRequest(diff=diff, agents_rules=rules,
                               changed_files=tuple(written),
-                              context=f"Run {ctx.date}_{ctx.run} ({ctx.config.name}), iteration {iteration}",
+                              context=(
+            f"Run {ctx.date}_{ctx.run} ({ctx.config.name}), iteration {iteration}\n\n"
+            f"TASK:\n{task_text}\n\n"
+            f"SCOPE:\n{_read_task_meta(ctx.config.task_file)[2]}\n"
+        ),
                               base_files=tuple(base_files)),
                 client=client,
             )

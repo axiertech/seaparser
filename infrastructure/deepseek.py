@@ -89,5 +89,15 @@ class DeepSeekClient:
                 "thinking": {"type": "enabled" if thinking else "disabled"}
             }
 
-        response = self._client.chat.completions.create(**kwargs)
-        return response.choices[0].message
+        last_error: Exception | None = None
+        for attempt in range(self._max_retries + 1):
+            try:
+                response = self._client.chat.completions.create(**kwargs)
+                return response.choices[0].message
+            except Exception as exc:
+                last_error = exc
+                if attempt < self._max_retries:
+                    time.sleep(self._backoff * (2 ** attempt))
+        raise DeepSeekError(
+            f"chat_with_tools misslyckades: {type(last_error).__name__}"
+        ) from None
