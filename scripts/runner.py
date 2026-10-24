@@ -827,7 +827,18 @@ def main(argv=None) -> int:
         except (DeepSeekError, RuntimeError) as exc:
             last_check_tail = f"Reviewer failed: {exc}"
             print(last_check_tail)
-            status = "failed"
+            print("Verification passed but reviewer unavailable; committing without review.")
+            try:
+                commit = _commit_in_worktree(
+                    ctx,
+                    f"Autonomous {ctx.config.name} run {ctx.date}_{ctx.run} "
+                    f"(reviewer unavailable, iteration {iteration})",
+                )
+            except RuntimeError as commit_exc:
+                last_check_tail += f"\nCommit failed: {commit_exc}"
+                status = "failed"
+                break
+            status = "reviewer_unavailable"
             break
         new_sig = _findings_signature(result.findings)
         if prev_sig is not None and new_sig == prev_sig and verdict == "request_changes":
@@ -875,7 +886,7 @@ def main(argv=None) -> int:
     lock_file.close()
     print(f"\nStatus: {status}")
     print(f"Report: {ctx.report}")
-    return 0 if status == "completed" else 1
+    return 0 if status in ("completed", "reviewer_unavailable") else 1
 
 
 if __name__ == "__main__":

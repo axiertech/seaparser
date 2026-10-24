@@ -87,9 +87,10 @@ def _tail(text: str, lines: int = 30) -> str:
 
 
 def _check_completed(entry: dict) -> StepResult:
-    if entry.get("status") != "completed":
+    if entry.get("status") not in ("completed", "reviewer_unavailable"):
         return StepResult("status", False,
-                          f"status={entry.get('status')!r}, expected 'completed'")
+                          f"status={entry.get('status')!r}, "
+                          f"expected 'completed' or 'reviewer_unavailable'")
     if not entry.get("commit"):
         return StepResult("commit", False,
                           "commit is null (dry run or failed)")

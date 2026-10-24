@@ -163,6 +163,29 @@ def _parse_response(raw: str) -> ReviewResult:
                         findings=tuple(findings))
 
 
+def _review_chat(client, system, user, *, max_tokens):
+    """Call the reviewer model, halving max_tokens once on empty response.
+
+    deepseek-flash returns an empty content string when max_tokens exceeds
+    what the model can emit for the given prompt. Retrying with half the
+    budget avoids aborting the whole run on a single oversized request.
+    """
+    try:
+        return client.chat([
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ], temperature=0.1, max_tokens=max_tokens,
+           response_format={"type": "json_object"})
+    except DeepSeekError as exc:
+        if "Tomt svar" not in str(exc):
+            raise
+        return client.chat([
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ], temperature=0.1, max_tokens=max_tokens // 2,
+           response_format={"type": "json_object"})
+
+
 def review(request: ReviewRequest, *,
            client: DeepSeekClient | None = None) -> ReviewResult:
     """Granskar en diff och returnerar ett strukturerat ReviewResult.
@@ -218,11 +241,7 @@ def review(request: ReviewRequest, *,
     if client is None:
         client = DeepSeekClient(load_deepseek(), max_retries=0)
 
-    raw = client.chat([
-        {"role": "system", "content": _SYSTEM_PROMPT},
-        {"role": "user", "content": user_prompt},
-    ], temperature=0.1, max_tokens=16000,
-       response_format={"type": "json_object"})
+    raw = _review_chat(client, _SYSTEM_PROMPT, user_prompt, max_tokens=16000)
 
     try:
         result = _parse_response(raw)
@@ -233,11 +252,7 @@ def review(request: ReviewRequest, *,
             "\n\nDiff to review (truncated):\n```diff\n" +
             diff_text[:8000] + "\n```\n"
         )
-        raw = client.chat([
-            {"role": "system", "content": _SYSTEM_PROMPT},
-            {"role": "user", "content": small_prompt},
-        ], temperature=0.1, max_tokens=8000,
-           response_format={"type": "json_object"})
+        raw = _review_chat(client, _SYSTEM_PROMPT, small_prompt, max_tokens=8000)
         result = _parse_response(raw)
 
     if injected_findings:
