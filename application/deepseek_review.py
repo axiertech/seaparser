@@ -66,9 +66,9 @@ Return ONLY a JSON object with this exact shape:
 
 Rules for verdict:
 - Any blocker finding MUST force verdict to "request_changes" or "reject".
-- "approve" if there are no blocker findings and no warnings that violate the project's hard rules.
+- "approve" only when there are no blocker findings and no warning findings. Nits alone do not block approve.
 - Treat any finding that cannot be fixed inside the SCOPE block in the context as out of scope: do not raise it as a blocker or a warning.
-- Use "request_changes" only when at least one finding is actionable inside SCOPE.
+- Use "request_changes" when at least one blocker or warning finding is actionable inside SCOPE.
 - "reject" if the diff violates an absolute rule (secrets, domain
   boundary, hard weather limit bypass, test data as real data).
 """
