@@ -1,7 +1,17 @@
 // Hover popup for a sea point. Pure formatting; no map or network access.
 export const MISSING = '—';
 
-// Forecasts older than this are shown as unknown rather than as current.
+// Default maximum forecast age: 6 hours.
+//
+// Why 6 hours: the popup is a planning aid, not a live instrument. A forecast
+// issued more than six hours ago no longer describes the wind and waves at the
+// hovered point well enough, so it must be shown as unknown rather than as
+// current (AGENTS.md: unknown or old forecasts must never be treated as safe).
+// Six hours is also the shortest common forecast cycle for the weather
+// products SeaParser plans to consume, so an older value means at least one
+// newer model run should already have been available.
+// Callers that need another window pass `maxAgeMs` to `formatPoint`,
+// `popupLines`, `renderPopup` or `attachPopup`.
 export const MAX_AGE_MS = 6 * 60 * 60 * 1000;
 
 /**
@@ -31,6 +41,18 @@ function format(value, unit, digits) {
 }
 
 /**
+ * Resolve the maximum forecast age, falling back to MAX_AGE_MS.
+ *
+ * Args:
+ *   maxAgeMs: caller-supplied override, or undefined/null.
+ * Returns:
+ *   The override when it is a finite, non-negative number, else MAX_AGE_MS.
+ */
+function resolveMaxAge(maxAgeMs) {
+  return finite(maxAgeMs) && maxAgeMs >= 0 ? maxAgeMs : MAX_AGE_MS;
+}
+
+/**
  * Decide whether values may be shown for a forecast timestamp.
  *
  * A missing timestamp means the age of the forecast is unknown, and unknown
@@ -39,11 +61,12 @@ function format(value, unit, digits) {
  * Args:
  *   asOf: ISO timestamp string or epoch milliseconds, or undefined.
  *   now: current time in epoch milliseconds.
+ *   maxAgeMs: maximum accepted age in milliseconds (default MAX_AGE_MS).
  * Returns:
- *   true only when asOf parses to a time no older than MAX_AGE_MS and not in
+ *   true only when asOf parses to a time no older than maxAgeMs and not in
  *   the future; false for absent, unparseable or stale timestamps.
  */
-function isUsable(asOf, now) {
+function isUsable(asOf, now, maxAgeMs = MAX_AGE_MS) {
   if (asOf === undefined || asOf === null) {
     return false;
   }
@@ -52,7 +75,7 @@ function isUsable(asOf, now) {
     return false;
   }
   const age = now - stamp;
-  return age >= 0 && age <= MAX_AGE_MS;
+  return age >= 0 && age <= resolveMaxAge(maxAgeMs);
 }
 
 /**
@@ -62,14 +85,16 @@ function isUsable(asOf, now) {
  *   point: object with optional `wind_speed_ms`, `wave_height_m` numbers and
  *     a required `as_of` forecast timestamp.
  *   now: current time in epoch milliseconds, used for forecast age.
+ *   maxAgeMs: optional maximum accepted forecast age in milliseconds;
+ *     defaults to MAX_AGE_MS.
  * Returns:
  *   Object with `wind` and `waves` strings; missing or invalid values are an
  *   em dash, never a guessed number. Values without a usable forecast
  *   timestamp are also an em dash.
  */
-export function formatPoint(point, now = Date.now()) {
+export function formatPoint(point, now = Date.now(), maxAgeMs = MAX_AGE_MS) {
   const source = point && typeof point === 'object' ? point : {};
-  const usable = isUsable(source.as_of, now);
+  const usable = isUsable(source.as_of, now, maxAgeMs);
   return {
     wind: format(usable ? source.wind_speed_ms : undefined, 'm/s', 1),
     waves: format(usable ? source.wave_height_m : undefined, 'm', 1),
@@ -82,11 +107,13 @@ export function formatPoint(point, now = Date.now()) {
  * Args:
  *   point: object with optional `wind_speed_ms`, `wave_height_m` and `as_of`.
  *   now: current time in epoch milliseconds.
+ *   maxAgeMs: optional maximum accepted forecast age in milliseconds;
+ *     defaults to MAX_AGE_MS.
  * Returns:
  *   Array of two strings: "Wind: X m/s" and "Waves: Y m".
  */
-export function popupLines(point, now = Date.now()) {
-  const values = formatPoint(point, now);
+export function popupLines(point, now = Date.now(), maxAgeMs = MAX_AGE_MS) {
+  const values = formatPoint(point, now, maxAgeMs);
   return [`Wind: ${values.wind}`, `Waves: ${values.waves}`];
 }
 
@@ -97,13 +124,15 @@ export function popupLines(point, now = Date.now()) {
  *   document: DOM document used to create elements.
  *   point: object with optional `wind_speed_ms`, `wave_height_m` and `as_of`.
  *   now: current time in epoch milliseconds.
+ *   maxAgeMs: optional maximum accepted forecast age in milliseconds;
+ *     defaults to MAX_AGE_MS.
  * Returns:
  *   A detached element containing one line per measurement.
  */
-export function renderPopup(document, point, now = Date.now()) {
+export function renderPopup(document, point, now = Date.now(), maxAgeMs = MAX_AGE_MS) {
   const container = document.createElement('div');
   container.className = 'sea-popup';
-  for (const line of popupLines(point, now)) {
+  for (const line of popupLines(point, now, maxAgeMs)) {
     const row = document.createElement('div');
     row.className = 'sea-popup-row';
     row.textContent = line;
@@ -131,14 +160,31 @@ function safeLookup(lookup, point) {
 }
 
 /**
- * Handle one mousemove event by opening the popup at the hovered point.
+ * Create the single Leaflet popup reused for every mousemove.
  *
  * Args:
- *   state: object with `L`, `map`, `doc`, `lookup`, `minIntervalMs` and the
- *     mutable `lastRun` throttle timestamp.
+ *   L: Leaflet namespace.
+ *   map: Leaflet map instance.
+ * Returns:
+ *   The popup instance, already opened on the map.
+ */
+function createPopup(L, map) {
+  return L.popup({ className: 'sea-popup-container' }).openOn(map);
+}
+
+/**
+ * Handle one mousemove event by moving and refilling the shared popup.
+ *
+ * The same popup instance is reused for every move: creating a new popup per
+ * mousemove leaks Leaflet layers and makes the popup flicker.
+ *
+ * Args:
+ *   state: object with `L`, `map`, `doc`, `lookup`, `minIntervalMs`,
+ *     `maxAgeMs`, the mutable `lastRun` throttle timestamp and the mutable
+ *     `popup` instance (created lazily on the first accepted move).
  *   event: Leaflet mousemove event with `latlng`.
  * Returns:
- *   Nothing; the popup is opened on the map as a side effect.
+ *   Nothing; the popup is moved and refilled as a side effect.
  */
 function handleMouseMove(state, event) {
   const now = Date.now();
@@ -148,10 +194,33 @@ function handleMouseMove(state, event) {
   state.lastRun = now;
   const point = { latitude: event.latlng.lat, longitude: event.latlng.lng };
   const data = safeLookup(state.lookup, point);
-  state.L.popup({ className: 'sea-popup-container' })
+  if (!state.popup) {
+    state.popup = createPopup(state.L, state.map);
+  }
+  state.popup
     .setLatLng(event.latlng)
-    .setContent(renderPopup(state.doc, data, now))
-    .openOn(state.map);
+    .setContent(renderPopup(state.doc, data, now, state.maxAgeMs));
+}
+
+/**
+ * Resolve the document used to build popup content.
+ *
+ * Args:
+ *   options: object that may carry a `document`.
+ * Returns:
+ *   The supplied document, or the global document when one exists.
+ * Raises:
+ *   Error when no document is available; silently rendering nothing would
+ *   hide a wiring bug.
+ */
+function resolveDocument(options) {
+  const doc = options.document || (typeof document === 'undefined' ? null : document);
+  if (!doc || typeof doc.createElement !== 'function') {
+    throw new Error(
+      'attachPopup: no document available; pass options.document or run in a browser',
+    );
+  }
+  return doc;
 }
 
 /**
@@ -161,20 +230,25 @@ function handleMouseMove(state, event) {
  *   L: Leaflet namespace.
  *   map: Leaflet map instance.
  *   lookup: function (point) => data object, or null when data is unknown.
- *   options: optional object with `document` (defaults to global document)
- *     and `minIntervalMs` throttle for mousemove (default 100 ms).
+ *   options: optional object with `document` (defaults to global document),
+ *     `minIntervalMs` throttle for mousemove (default 100 ms) and `maxAgeMs`
+ *     maximum accepted forecast age (default MAX_AGE_MS).
  * Returns:
  *   Object with `dispose()` that removes the hover handler.
+ * Raises:
+ *   Error when no usable document is available.
  */
 export function attachPopup(L, map, lookup, options = {}) {
-  const doc = options.document || (typeof document === 'undefined' ? null : document);
+  const doc = resolveDocument(options);
   const state = {
     L,
     map,
     doc,
     lookup,
     minIntervalMs: finite(options.minIntervalMs) ? options.minIntervalMs : 100,
+    maxAgeMs: resolveMaxAge(options.maxAgeMs),
     lastRun: -Infinity,
+    popup: null,
   };
   const handler = event => handleMouseMove(state, event);
   map.on('mousemove', handler);
