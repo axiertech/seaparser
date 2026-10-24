@@ -166,10 +166,10 @@ function safeLookup(lookup, point) {
  *   L: Leaflet namespace.
  *   map: Leaflet map instance.
  * Returns:
- *   The popup instance, already opened on the map.
+ *   A detached popup instance; the caller opens it once content is set.
  */
 function createPopup(L, map) {
-  return L.popup({ className: 'sea-popup-container' }).openOn(map);
+  return L.popup({ className: 'sea-popup-container' });
 }
 
 /**
@@ -196,10 +196,15 @@ function handleMouseMove(state, event) {
   const data = safeLookup(state.lookup, point);
   if (!state.popup) {
     state.popup = createPopup(state.L, state.map);
+    state.popup
+      .setLatLng(event.latlng)
+      .setContent(renderPopup(state.doc, data, now, state.maxAgeMs))
+      .openOn(state.map);
+  } else {
+    state.popup
+      .setLatLng(event.latlng)
+      .setContent(renderPopup(state.doc, data, now, state.maxAgeMs));
   }
-  state.popup
-    .setLatLng(event.latlng)
-    .setContent(renderPopup(state.doc, data, now, state.maxAgeMs));
 }
 
 /**
