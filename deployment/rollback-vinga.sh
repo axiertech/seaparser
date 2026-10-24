@@ -2,8 +2,8 @@
 set -euo pipefail
 /usr/bin/test "$(/usr/bin/id -u)" -eq 0
 vinga_stage="${1:?Absolute prepared stage required}"
-cd /tmp/seaparser-real-map-data
-/usr/bin/python3 /tmp/seaparser-real-map-data/deployment/vinga_upgrade.py restore "$vinga_stage"
+cd /home/web/seaparser/worktrees/real-map-data
+/usr/bin/python3 /home/web/seaparser/worktrees/real-map-data/deployment/vinga_upgrade.py restore "$vinga_stage"
 /usr/bin/systemctl daemon-reload
 /usr/bin/systemctl restart seaparser-api.service
 /usr/sbin/apache2ctl configtest

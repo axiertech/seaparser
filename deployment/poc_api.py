@@ -11,7 +11,7 @@ from deployment.prepare_vinga import ROOT,PUBLIC,SYSTEM_FILES,digest
 from deployment.vinga_upgrade import tree_hashes,check_system
 from application.geographic_budget import coastal_api_budget
 
-CHECKOUT=Path('/tmp/seaparser-real-map-data')
+CHECKOUT=Path('/home/web/seaparser/worktrees/real-map-data')
 RUNTIME=Path('/home/web/seaparser/venvs/poc-'+digest(ROOT/'requirements.lock')[:12])
 UNIT=Path('/etc/systemd/system/seaparser-poc-api.service')
 PROXY=Path(SYSTEM_FILES['proxy'])

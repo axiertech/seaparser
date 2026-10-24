@@ -18,7 +18,7 @@ låst Pythonmiljö. Aktiva checkouten och tidigare lokala ändringar bevaras.
 Efter granskad ren commit, tester och CI:
 
 ```
-cd /tmp/seaparser-real-map-data
+cd /home/web/seaparser/worktrees/real-map-data
 make land-preview
 /home/web/seaparser/app/.venv/bin/python -B -m deployment.prepare_vinga /tmp/seaparser-vinga-publication
 ```
@@ -32,7 +32,7 @@ Ingen publicering eller systemändring görs i förberedelsesteget.
 ## Exakt root-kommando
 
 ```
-/usr/bin/bash /tmp/seaparser-real-map-data/deployment/activate-vinga.sh /tmp/seaparser-vinga-publication
+/usr/bin/bash /home/web/seaparser/worktrees/real-map-data/deployment/activate-vinga.sh /tmp/seaparser-vinga-publication
 ```
 
 Rootflödet kontrollerar ren rätt commit, oförändrat förberett innehåll och aktuell
@@ -60,7 +60,7 @@ Detta är DOM-/HTTP-verifiering; manuell visuell granskning är separat.
 ## Återställning
 
 ```
-/usr/bin/bash /tmp/seaparser-real-map-data/deployment/rollback-vinga.sh /tmp/seaparser-vinga-publication
+/usr/bin/bash /home/web/seaparser/worktrees/real-map-data/deployment/rollback-vinga.sh /tmp/seaparser-vinga-publication
 ```
 
 Vid aktiveringsfel försöker samma återställning automatiskt. Tidigare publika

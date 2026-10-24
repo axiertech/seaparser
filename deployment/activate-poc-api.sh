@@ -46,7 +46,7 @@ trap activation_failed ERR
 /usr/bin/curl --fail --silent --show-error --retry 10 --retry-connrefused --retry-delay 1 'http://127.0.0.1:8766/api/scene?profile=vinga-poc' --output "$poc_stage/active-scene.json"
 /usr/sbin/apache2ctl configtest
 /usr/bin/systemctl reload apache2
-/usr/sbin/runuser -u seaparser -- /usr/bin/env SEAPARSER_POC_URL=https://seaparser.com SEAPARSER_COASTAL_PUBLIC_TEST=1 /usr/bin/node --test --test-concurrency=1 /tmp/seaparser-real-map-data/frontend/tests/poc-live.test.mjs
+/usr/sbin/runuser -u seaparser -- /usr/bin/env SEAPARSER_POC_URL=https://seaparser.com SEAPARSER_COASTAL_PUBLIC_TEST=1 /usr/bin/node --test --test-concurrency=1 /home/web/seaparser/worktrees/real-map-data/frontend/tests/poc-live.test.mjs
 /usr/bin/test "$legacy_pid" = "$(/usr/bin/systemctl show seaparser-api.service --property=MainPID --value)"
 /usr/bin/python3 - "$poc_stage" <<'PY'
 import json,sys,datetime
